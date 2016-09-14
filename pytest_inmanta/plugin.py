@@ -52,14 +52,14 @@ def project():
         to add files to the unittest module, compile a model and access the results, stdout and stderr.
     """
     _sys_path = sys.path
-    _test_project_dir = tempfile.mkdtemp()
-    os.mkdir(os.path.join(_test_project_dir, "libs"))
+    test_project_dir = tempfile.mkdtemp()
+    os.mkdir(os.path.join(test_project_dir, "libs"))
 
     repos = []
     if "INMANTA_MODULE_REPO" in os.environ:
         repos = os.environ["INMANTA_MODULE_REPO"].split(" ")
 
-    with open(os.path.join(_test_project_dir, "project.yml"), "w+") as fd:
+    with open(os.path.join(test_project_dir, "project.yml"), "w+") as fd:
         fd.write("""name: testcase
 description: Project for testcase
 repo: [%(repo)s]
@@ -69,16 +69,16 @@ downloadpath: libs
 
     # copy the current module in
     module_dir, module_name = get_module_info()
-    shutil.copytree(module_dir, os.path.join(_test_project_dir, "libs", module_name))
+    shutil.copytree(module_dir, os.path.join(test_project_dir, "libs", module_name))
 
-    test_project = Project()
+    test_project = Project(test_project_dir)
 
     # create the unittest module
     test_project.create_module("unittest")
 
     yield test_project
 
-    shutil.rmtree(_test_project_dir)
+    shutil.rmtree(test_project_dir)
     sys.path = _sys_path
 
 
@@ -88,8 +88,8 @@ class Project():
         modules from the provided repositories. Additional repositories can be provided by setting the INMANTA_MODULE_REPO
         environment variable. Repositories are separated with spaces.
     """
-    def __init__(self):
-        self._test_project_dir = None
+    def __init__(self, project_dir):
+        self._test_project_dir = project_dir
         self._stdout = None
         self._stderr = None
         self._sys_path = None
