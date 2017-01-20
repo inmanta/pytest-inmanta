@@ -32,7 +32,7 @@ def get_module_info():
     curdir = CURDIR
     # Make sure that we are executed in a module
     dir_path = curdir.split(os.path.sep)
-    while not os.path.exists(os.path.join("/", *dir_path, "module.yml")) and len(dir_path) > 0:
+    while not os.path.exists(os.path.join(os.path.join("/", *dir_path), "module.yml")) and len(dir_path) > 0:
         dir_path.pop()
 
     if len(dir_path) == 0:
