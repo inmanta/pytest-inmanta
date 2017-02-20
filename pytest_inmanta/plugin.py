@@ -20,8 +20,15 @@ import os
 import shutil
 import sys
 import io
+from unittest import mock
 
-from inmanta import compiler, module, export, config
+
+from inmanta import compiler
+from inmanta import module
+from inmanta import export
+from inmanta import config
+from inmanta.agent import cache
+from inmanta.agent import handler
 import pytest
 
 
@@ -82,6 +89,20 @@ downloadpath: libs
     sys.path = _sys_path
 
 
+class MockAgent(object):
+    """
+        A mock agent for unit testing
+    """
+    def __init__(self, hostname):
+        self._hostname = hostname
+
+    def get_hostname(self):
+        return self._hostname
+
+    def is_local(self):
+        return True
+
+
 class Project():
     """
         This class provides a TestCase class for creating module unit tests. It uses the current module and loads required
@@ -97,6 +118,52 @@ class Project():
         self.version = None
         self.resources = None
         self._exporter = None
+        self._blobs = {}
+
+    def add_blob(self, key, content, allow_overwrite=True):
+        """
+            Add a blob identified with the hash of the content as key
+        """
+        if key in self._blobs and not allow_overwrite:
+            raise Exception("Key %s already stored in blobs" % key)
+        self._blobs[key] = content
+
+    def stat_blob(self, key):
+        return key in self._blobs
+
+    def get_blob(self, key):
+        return self._blobs[key]
+
+    def get_handler(self, resource):
+        c = cache.AgentCache()
+        agent = MockAgent(resource.id.agent_name)
+        try:
+            p = handler.Commander.get_provider(c, agent, resource)
+            p.set_cache(c)
+            p.get_file = lambda x: self.get_blob(x)
+            p.stat_file = lambda x: self.stat_blob(x)
+            p.upload_file = lambda x, y: self.add_blob(x, y)
+
+            return p
+        except Exception as e:
+            raise e
+
+    def deploy(self, resource, dry_run=False):
+        """
+            Deploy the given resource with a handler
+        """
+        h = self.get_handler(resource)
+
+        assert h is not None
+
+        ctx = handler.HandlerContext(resource)
+        h.execute(ctx, resource, False)
+
+        print(ctx.changes)
+        print([x.msg for x in ctx.logs])
+
+        return ctx.status
+
 
     def create_module(self, name, initcf="", initpy=""):
         module_dir = os.path.join(self._test_project_dir, "libs", name)
@@ -144,7 +211,10 @@ license: Test License
             (types, scopes) = compiler.do_compile()
 
             exporter = export.Exporter()
-            version, resources = exporter.run(types, scopes)
+            version, resources = exporter.run(types, scopes, no_commit=True)
+
+            for key, blob in exporter._file_store.items():
+                self.add_blob(key, blob)
 
             self.version = version
             self.resources = resources
