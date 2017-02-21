@@ -20,7 +20,6 @@ import os
 import shutil
 import sys
 import io
-from unittest import mock
 
 
 from inmanta import compiler
@@ -29,6 +28,7 @@ from inmanta import export
 from inmanta import config
 from inmanta.agent import cache
 from inmanta.agent import handler
+from inmanta.agent import io as agent_io
 import pytest
 
 
@@ -52,7 +52,7 @@ def get_module_info():
     return module_dir, module_name
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def project():
     """
         A test fixture that creates a new inmanta project with the current module in. The returned object can be used
@@ -93,14 +93,15 @@ class MockAgent(object):
     """
         A mock agent for unit testing
     """
-    def __init__(self, hostname):
+    def __init__(self, hostname, local=True):
         self._hostname = hostname
+        self.local = local
 
     def get_hostname(self):
         return self._hostname
 
     def is_local(self):
-        return True
+        return self.local
 
 
 class Project():
@@ -116,9 +117,10 @@ class Project():
         self._sys_path = None
         self.types = None
         self.version = None
-        self.resources = None
+        self.resources = {}
         self._exporter = None
         self._blobs = {}
+        config.Config.load_config()
 
     def add_blob(self, key, content, allow_overwrite=True):
         """
@@ -134,9 +136,15 @@ class Project():
     def get_blob(self, key):
         return self._blobs[key]
 
-    def get_handler(self, resource):
+    def get_handler(self, resource, run_as_root):
+        # TODO: if user is root, do not use remoting
         c = cache.AgentCache()
-        agent = MockAgent(resource.id.agent_name)
+        if run_as_root:
+            agent = MockAgent("root@localhost", local=False)
+        else:
+            agent = MockAgent("localhost")
+
+        c.open_version(resource.id.version)
         try:
             p = handler.Commander.get_provider(c, agent, resource)
             p.set_cache(c)
@@ -148,22 +156,53 @@ class Project():
         except Exception as e:
             raise e
 
-    def deploy(self, resource, dry_run=False):
+        c.close_version(resource.id.version)
+
+    def get_resource(self, resource_type: str, **filter_args: dict):
+        """
+            Get a resource of the given type and given filter on the resource attributes. If multiple resource match, the
+            first one is returned. If none match, None is returned.
+        """
+        def apply_filter(resource):
+            for arg, value in filter_args.items():
+                if not hasattr(resource, arg):
+                    return False
+
+                if getattr(resource, arg) != value:
+                    return False
+
+            return True
+
+        for resource in self.resources.values():
+            if not resource.is_type(resource_type):
+                continue
+
+            if not apply_filter(resource):
+                continue
+
+            return resource
+
+        return None
+
+    def deploy(self, resource, dry_run=False, run_as_root=False):
         """
             Deploy the given resource with a handler
         """
-        h = self.get_handler(resource)
+        h = self.get_handler(resource, run_as_root)
 
         assert h is not None
 
         ctx = handler.HandlerContext(resource)
         h.execute(ctx, resource, False)
 
-        print(ctx.changes)
-        print([x.msg for x in ctx.logs])
+        # print(ctx.changes)
+        # print([x.msg for x in ctx.logs])
+        return ctx
 
-        return ctx.status
-
+    def io(self, run_as_root=False):
+        if run_as_root:
+            return agent_io.get_io("root@localhost")
+        return agent_io.get_io()
 
     def create_module(self, name, initcf="", initpy=""):
         module_dir = os.path.join(self._test_project_dir, "libs", name)
@@ -194,7 +233,6 @@ license: Test License
             fd.write(main)
 
         # compile the model
-        config.Config.load_config()
         test_project = module.Project(self._test_project_dir)
         module.Project.set(test_project)
 
