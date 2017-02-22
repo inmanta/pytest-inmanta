@@ -69,10 +69,10 @@ def project():
     with open(os.path.join(test_project_dir, "project.yml"), "w+") as fd:
         fd.write("""name: testcase
 description: Project for testcase
-repo: [%(repo)s]
+repo: ['%(repo)s']
 modulepath: libs
 downloadpath: libs
-""" % {"repo": ", ".join(repos)})
+""" % {"repo": "', '".join(repos)})
 
     # copy the current module in
     module_dir, module_name = get_module_info()
