@@ -26,10 +26,12 @@ from inmanta import compiler
 from inmanta import module
 from inmanta import export
 from inmanta import config
+from inmanta import const
 from inmanta.agent import cache
 from inmanta.agent import handler
 from inmanta.agent import io as agent_io
 import pytest
+from collections import defaultdict
 
 
 CURDIR = os.getcwd()
@@ -120,6 +122,7 @@ class Project():
         self.resources = {}
         self._exporter = None
         self._blobs = {}
+        self._facts = defaultdict(dict)
         config.Config.load_config()
 
     def add_blob(self, key, content, allow_overwrite=True):
@@ -135,6 +138,9 @@ class Project():
 
     def get_blob(self, key):
         return self._blobs[key]
+
+    def add_fact(self, resource_id, name, value):
+        self._facts[resource_id][name] = value
 
     def get_handler(self, resource, run_as_root):
         # TODO: if user is root, do not use remoting
@@ -195,9 +201,24 @@ class Project():
         ctx = handler.HandlerContext(resource)
         h.execute(ctx, resource, False)
 
-        # print(ctx.changes)
-        # print([x.msg for x in ctx.logs])
         return ctx
+
+    def deploy_resource(self, resource_type: str, status=const.ResourceState.deployed, run_as_root=False, **filter_args: dict):
+        res = self.get_resource(resource_type, **filter_args)
+        assert res is not None, "No resource found of given type and filter args"
+
+        ctx = self.deploy(res, run_as_root)
+        if ctx.status != status:
+            print("Deploy did not result in correct status")
+            print("Requested changes: ", ctx._changes)
+            for l in ctx.logs:
+                print("Log: ", l._data["msg"])
+                print("Kwargs: ", ["%s: %s" % (k, v) for k, v in l._data["kwargs"].items() if k != "traceback"])
+                if "traceback" in l._data["kwargs"]:
+                    print("Traceback:\n", l._data["kwargs"]["traceback"])
+
+        assert ctx.status == status
+        return res
 
     def io(self, run_as_root=False):
         if run_as_root:
@@ -246,7 +267,7 @@ license: Test License
             sys.stdout = stdout
             sys.stderr = stderr
 
-            (types, scopes) = compiler.do_compile()
+            (types, scopes) = compiler.do_compile(refs={"facts": self._facts})
 
             exporter = export.Exporter()
             version, resources = exporter.run(types, scopes, no_commit=True)
