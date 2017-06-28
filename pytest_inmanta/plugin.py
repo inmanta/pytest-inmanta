@@ -95,15 +95,8 @@ class MockAgent(object):
     """
         A mock agent for unit testing
     """
-    def __init__(self, hostname, local=True):
-        self._hostname = hostname
-        self.local = local
-
-    def get_hostname(self):
-        return self._hostname
-
-    def is_local(self):
-        return self.local
+    def __init__(self, uri):
+        self.uri = uri
 
 
 class Project():
@@ -146,9 +139,9 @@ class Project():
         # TODO: if user is root, do not use remoting
         c = cache.AgentCache()
         if run_as_root:
-            agent = MockAgent("root@localhost", local=False)
+            agent = MockAgent("ssh://root@localhost")
         else:
-            agent = MockAgent("localhost")
+            agent = MockAgent("local:")
 
         c.open_version(resource.id.version)
         try:
@@ -221,9 +214,12 @@ class Project():
         return res
 
     def io(self, run_as_root=False):
+        version = 1
         if run_as_root:
-            return agent_io.get_io("root@localhost")
-        return agent_io.get_io()
+            ret = agent_io.get_io(None, "ssh://root@localhost", version)
+        else:
+            ret = agent_io.get_io(None, "local:", version)
+        return ret
 
     def create_module(self, name, initcf="", initpy=""):
         module_dir = os.path.join(self._test_project_dir, "libs", name)
