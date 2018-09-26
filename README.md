@@ -55,6 +55,5 @@ std::print(std::template("unittest/test.tmpl"))
 And allows deploy
 
 ```python
-    ctx = project.deploy_resource("std::ConfigFile")
-    assert ctx.status == inmanta.const.ResourceState.deployed
+    project.deploy_resource("std::ConfigFile")
 ```
