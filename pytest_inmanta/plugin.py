@@ -32,7 +32,7 @@ from inmanta.agent import handler
 from inmanta.agent import io as agent_io
 import pytest
 from collections import defaultdict
-
+import yaml
 
 CURDIR = os.getcwd()
 
@@ -49,7 +49,8 @@ def get_module_info():
                         "%s not part of module path" % curdir)
 
     module_dir = os.path.join("/", *dir_path)
-    module_name = dir_path[-1]
+    with open("module.yml") as m:
+        module_name = yaml.load(m)["name"]
 
     return module_dir, module_name
 
@@ -67,6 +68,8 @@ def project():
     repos = []
     if "INMANTA_MODULE_REPO" in os.environ:
         repos = os.environ["INMANTA_MODULE_REPO"].split(" ")
+    else:
+        repos = ["https://github.com/inmanta/"]
 
     with open(os.path.join(test_project_dir, "project.yml"), "w+") as fd:
         fd.write("""name: testcase
