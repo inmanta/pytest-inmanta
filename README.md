@@ -64,3 +64,6 @@ The following options are available.
 
  * --venv: folder in which to place the virtual env for tests (will be shared by all tests), overrides INMANTA_TEST_ENV
  * --module_repo: location to download modules from, overrides INMANTA_MODULE_REPO. The default value is the inmanta github organisation.
+ 
+ Use the generic pytest options `--log-cli-level` to show Inmanta logger to see any setup or cleanup warnings. For example,
+ `--log-cli-level=INFO`
