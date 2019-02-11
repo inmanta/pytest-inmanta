@@ -93,7 +93,15 @@ def project(request):
 
     env_override = get_opt_or_env_or(request.config, "inm_venv", None)
     if env_override is not None:
-        os.symlink(env_override,os.path.join(test_project_dir, ".env"))
+        try:
+            os.symlink(env_override, os.path.join(test_project_dir, ".env"))
+        except OSError:
+            LOGGER.exception(
+                "Unable to use shared env (symlink creation from %s to %s failed).",
+                env_override,
+                os.path.join(test_project_dir, ".env")
+            )
+            raise
 
     with open(os.path.join(test_project_dir, "project.yml"), "w+") as fd:
         fd.write("""name: testcase
