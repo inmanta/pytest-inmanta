@@ -20,6 +20,8 @@ import os
 import shutil
 import sys
 import io
+import logging
+from distutils import dir_util
 
 
 from inmanta import compiler
@@ -34,8 +36,30 @@ import pytest
 from collections import defaultdict
 import yaml
 
-CURDIR = os.getcwd()
 
+CURDIR = os.getcwd()
+LOGGER = logging.getLogger()
+
+
+option_to_env = {
+    "inm_venv":"INMANTA_TEST_ENV",
+    "inm_module_repo":"INMANTA_MODULE_REPO"
+}
+
+def pytest_addoption(parser):
+    group = parser.getgroup(
+        'inmanta', 'inmanta module testing plugin')
+    group.addoption('--venv', dest='inm_venv',
+                    help='folder in which to place the virtual env for tests (will be shared by all tests), overrides INMANTA_TEST_ENV')
+    group.addoption('--module_repo', dest='inm_module_repo',
+                    help='location to download modules from, overrides INMANTA_MODULE_REPO')
+
+def get_opt_or_env_or(config, key, default):
+    if config.getoption(key):
+        return config.getoption(key)
+    if option_to_env[key] in os.environ:
+        return os.environ[option_to_env[key]]
+    return default
 
 def get_module_info():
     curdir = CURDIR
@@ -56,7 +80,7 @@ def get_module_info():
 
 
 @pytest.fixture(scope="session")
-def project():
+def project(request):
     """
         A test fixture that creates a new inmanta project with the current module in. The returned object can be used
         to add files to the unittest module, compile a model and access the results, stdout and stderr.
@@ -65,11 +89,11 @@ def project():
     test_project_dir = tempfile.mkdtemp()
     os.mkdir(os.path.join(test_project_dir, "libs"))
 
-    repos = []
-    if "INMANTA_MODULE_REPO" in os.environ:
-        repos = os.environ["INMANTA_MODULE_REPO"].split(" ")
-    else:
-        repos = ["https://github.com/inmanta/"]
+    repos = get_opt_or_env_or(request.config, "inm_module_repo", "https://github.com/inmanta/").split(" ")
+
+    env_override = get_opt_or_env_or(request.config, "inm_venv", None)
+    if env_override is not None:
+        os.symlink(env_override,os.path.join(test_project_dir, ".env"))
 
     with open(os.path.join(test_project_dir, "project.yml"), "w+") as fd:
         fd.write("""name: testcase
@@ -81,7 +105,7 @@ downloadpath: libs
 
     # copy the current module in
     module_dir, module_name = get_module_info()
-    shutil.copytree(module_dir, os.path.join(test_project_dir, "libs", module_name))
+    dir_util.copy_tree(module_dir, os.path.join(test_project_dir, "libs", module_name))
 
     test_project = Project(test_project_dir)
 
@@ -90,7 +114,14 @@ downloadpath: libs
 
     yield test_project
 
-    shutil.rmtree(test_project_dir)
+    try:
+        shutil.rmtree(test_project_dir)
+    except PermissionError:
+        LOGGER.warning(
+            "Cannot cleanup test project %s. This can be caused because we try to remove a virtual environment, "
+            "loaded by this python process. Try to use a shared environment with --venv", test_project_dir
+        )
+
     sys.path = _sys_path
 
 
