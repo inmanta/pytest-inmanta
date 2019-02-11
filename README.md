@@ -57,3 +57,15 @@ And allows deploy
 ```python
     project.deploy_resource("std::ConfigFile")
 ```
+
+## Options
+
+The following options are available.
+
+ * --venv: folder in which to place the virtual env for tests (will be shared by all tests), overrides INMANTA_TEST_ENV.
+   This options depends on symlink support. This does not work on all windows versions. On windows 10 you need to run pytest in an
+   admin shell.
+ * --module_repo: location to download modules from, overrides INMANTA_MODULE_REPO. The default value is the inmanta github organisation.
+ 
+ Use the generic pytest options `--log-cli-level` to show Inmanta logger to see any setup or cleanup warnings. For example,
+ `--log-cli-level=INFO`

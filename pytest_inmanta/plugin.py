@@ -20,6 +20,8 @@ import os
 import shutil
 import sys
 import io
+import logging
+from distutils import dir_util
 
 
 from inmanta import compiler
@@ -32,9 +34,12 @@ from inmanta.agent import handler
 from inmanta.agent import io as agent_io
 import pytest
 from collections import defaultdict
+import yaml
 
 
 CURDIR = os.getcwd()
+LOGGER = logging.getLogger()
+
 
 option_to_env = {
     "inm_venv":"INMANTA_TEST_ENV",
@@ -68,7 +73,8 @@ def get_module_info():
                         "%s not part of module path" % curdir)
 
     module_dir = os.path.join("/", *dir_path)
-    module_name = dir_path[-1]
+    with open("module.yml") as m:
+        module_name = yaml.load(m)["name"]
 
     return module_dir, module_name
 
@@ -79,8 +85,6 @@ def project(request):
         A test fixture that creates a new inmanta project with the current module in. The returned object can be used
         to add files to the unittest module, compile a model and access the results, stdout and stderr.
     """
-    
-
     _sys_path = sys.path
     test_project_dir = tempfile.mkdtemp()
     os.mkdir(os.path.join(test_project_dir, "libs"))
@@ -89,7 +93,15 @@ def project(request):
 
     env_override = get_opt_or_env_or(request.config, "inm_venv", None)
     if env_override is not None:
-        os.symlink(env_override,os.path.join(test_project_dir, ".env"))
+        try:
+            os.symlink(env_override, os.path.join(test_project_dir, ".env"))
+        except OSError:
+            LOGGER.exception(
+                "Unable to use shared env (symlink creation from %s to %s failed).",
+                env_override,
+                os.path.join(test_project_dir, ".env")
+            )
+            raise
 
     with open(os.path.join(test_project_dir, "project.yml"), "w+") as fd:
         fd.write("""name: testcase
@@ -101,7 +113,7 @@ downloadpath: libs
 
     # copy the current module in
     module_dir, module_name = get_module_info()
-    shutil.copytree(module_dir, os.path.join(test_project_dir, "libs", module_name))
+    dir_util.copy_tree(module_dir, os.path.join(test_project_dir, "libs", module_name))
 
     test_project = Project(test_project_dir)
 
@@ -110,7 +122,14 @@ downloadpath: libs
 
     yield test_project
 
-    shutil.rmtree(test_project_dir)
+    try:
+        shutil.rmtree(test_project_dir)
+    except PermissionError:
+        LOGGER.warning(
+            "Cannot cleanup test project %s. This can be caused because we try to remove a virtual environment, "
+            "loaded by this python process. Try to use a shared environment with --venv", test_project_dir
+        )
+
     sys.path = _sys_path
 
 
