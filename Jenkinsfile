@@ -1,4 +1,6 @@
-String upstream = BRANCH_NAME == "master" ? "inmanta-core/master" : ""
+// Nasty use of conditionals to make this work
+// https://issues.jenkins-ci.org/browse/JENKINS-42643
+String upstreamproject = BRANCH_NAME == "master" ? "inmanta-core/master" : ""
 
 pipeline {
     agent any
@@ -9,8 +11,7 @@ pipeline {
     }
 
     triggers { 
-        // Nasty use of conditionals to make this work
-        upstream(upstreamProjects: upstream, threshold: hudson.model.Result.SUCCESS) 
+        upstream upstreamproject
     }
 
     environment {
