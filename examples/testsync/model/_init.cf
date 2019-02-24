@@ -1,0 +1,10 @@
+entity Resource:
+    string name
+    string agent
+    string key
+    string value
+end
+
+index Resource(agent, name)
+
+implement Resource using std::none
