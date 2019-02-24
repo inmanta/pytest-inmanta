@@ -35,6 +35,7 @@ from inmanta.agent import io as agent_io
 import pytest
 from collections import defaultdict
 import yaml
+from tornado import ioloop
 
 
 CURDIR = os.getcwd()
@@ -133,12 +134,22 @@ downloadpath: libs
     sys.path = _sys_path
 
 
+class MockProcess(object):
+    """
+        A mock agentprocess
+    """
+
+    def __init__(self):
+        self._io_loop = ioloop.IOLoop.current()
+
+
 class MockAgent(object):
     """
         A mock agent for unit testing
     """
     def __init__(self, uri):
         self.uri = uri
+        self.process = MockProcess()
 
 
 class Project():
@@ -192,6 +203,7 @@ class Project():
             p.get_file = lambda x: self.get_blob(x)
             p.stat_file = lambda x: self.stat_blob(x)
             p.upload_file = lambda x, y: self.add_blob(x, y)
+            p.run_sync = ioloop.IOLoop.current().run_sync
 
             return p
         except Exception as e:
