@@ -21,6 +21,10 @@ import shutil
 import sys
 import io
 import logging
+import imp
+import glob
+import importlib
+import types
 from distutils import dir_util
 
 
@@ -47,6 +51,7 @@ option_to_env = {
     "inm_module_repo":"INMANTA_MODULE_REPO"
 }
 
+
 def pytest_addoption(parser):
     group = parser.getgroup(
         'inmanta', 'inmanta module testing plugin')
@@ -55,12 +60,14 @@ def pytest_addoption(parser):
     group.addoption('--module_repo', dest='inm_module_repo',
                     help='location to download modules from, overrides INMANTA_MODULE_REPO')
 
+
 def get_opt_or_env_or(config, key, default):
     if config.getoption(key):
         return config.getoption(key)
     if option_to_env[key] in os.environ:
         return os.environ[option_to_env[key]]
     return default
+
 
 def get_module_info():
     curdir = CURDIR
@@ -169,6 +176,7 @@ class Project():
         self._exporter = None
         self._blobs = {}
         self._facts = defaultdict(dict)
+        self._plugins = self._load_plugins()
         config.Config.load_config()
 
     def add_blob(self, key, content, allow_overwrite=True):
@@ -320,6 +328,7 @@ license: Test License
             (types, scopes) = compiler.do_compile(refs={"facts": self._facts})
 
             exporter = export.Exporter()
+
             version, resources = exporter.run(types, scopes, no_commit=True)
 
             for key, blob in exporter._file_store.items():
@@ -352,3 +361,30 @@ license: Test License
 
         with open(os.path.join(dir_name, name), "w+") as fd:
             fd.write(content)
+
+    def _load_plugins(self):
+        module_dir, _ = get_module_info()
+        plugin_dir = os.path.join(module_dir, "plugins")
+        if not os.path.exists(plugin_dir):
+            return
+        if not os.path.exists(os.path.join(plugin_dir, "__init__.py")):
+            raise Exception("Plugins directory doesn't have a __init__.py file.")
+        result = {}
+        mod_name = os.path.basename(module_dir)
+        imp.load_package("inmanta_plugins." + mod_name, plugin_dir)
+        for py_file in glob.glob(os.path.join(plugin_dir, "*.py")):
+            sub_mod_path = "inmanta_plugins." + mod_name + "." + os.path.basename(py_file).split(".")[0]
+            imp.load_source(sub_mod_path, py_file)
+            sub_mod = importlib.import_module(sub_mod_path)
+            for k, v in sub_mod.__dict__.items():
+                if isinstance(v, types.FunctionType):
+                    result[k] = v
+        return result
+
+    def get_plugin_function(self, function_name):
+        if function_name not in self._plugins:
+            raise Exception(f"Plugin function with name {function_name} not found")
+        return self._plugins[function_name]
+
+    def get_plugins(self):
+        return dict(self._plugins)
