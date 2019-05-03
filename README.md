@@ -58,6 +58,14 @@ And allows deploy
     project.deploy_resource("std::ConfigFile")
 ```
 
+And dryrun
+
+```python
+    changes = project.dryrun_resource("testmodule::Resource")
+    assert changes == {"value": {'current': 'read', 'desired': 'write'}}
+```
+
+
 ## Options
 
 The following options are available.
