@@ -39,6 +39,7 @@ from inmanta.agent import io as agent_io
 import pytest
 from collections import defaultdict
 import yaml
+from inmanta.protocol import json_encode
 from tornado import ioloop
 
 
@@ -219,6 +220,10 @@ class Project():
 
         c.close_version(resource.id.version)
 
+    def finalize_context(self, ctx: handler.HandlerContext):
+        # ensure logs can be serialized
+        json_encode({"message": ctx.logs})
+
     def get_resource(self, resource_type: str, **filter_args: dict):
         """
             Get a resource of the given type and given filter on the resource attributes. If multiple resource match, the
@@ -255,6 +260,7 @@ class Project():
 
         ctx = handler.HandlerContext(resource)
         h.execute(ctx, resource, dry_run)
+        self.finalize_context(ctx)
         return ctx
 
     def dryrun(self, resource, run_as_root=False):
@@ -275,6 +281,7 @@ class Project():
                     print("Traceback:\n", l._data["kwargs"]["traceback"])
 
         assert ctx.status == status
+        self.finalize_context(ctx)
         return res
 
     def dryrun_resource(self, resource_type: str, status=const.ResourceState.deployed, run_as_root=False,
