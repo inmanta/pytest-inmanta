@@ -36,6 +36,8 @@ from inmanta import const
 from inmanta.agent import cache
 from inmanta.agent import handler
 from inmanta.agent import io as agent_io
+from inmanta.execute.proxy import DynamicProxy
+
 import pytest
 from collections import defaultdict
 import yaml
@@ -388,3 +390,10 @@ license: Test License
 
     def get_plugins(self):
         return dict(self._plugins)
+
+    def get_instances(self, fortype: str="std::Entity"):
+        # extract all objects of a specific type from the compiler
+        allof = self.types[fortype].get_all_instances()
+        # wrap in DynamicProxy to hide internal compiler structure
+        # and get inmanta objects as if they were python objects
+        return [DynamicProxy.return_value(port) for port in allof]

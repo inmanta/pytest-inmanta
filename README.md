@@ -26,7 +26,8 @@ file = std::ConfigFile(host=host, path="/tmp/test", content="1234")
 The fixture also provides access to the model internals
 
 ```python
-    assert len(project.types["std::Host"].get_all_instances()) == 1
+    assert len(project.get_all_instances("std::Host")) == 1
+    assert project.get_all_instances("std::Host")[0].name == "myhost"
 ```
 
 To the exported resources
