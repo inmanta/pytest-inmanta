@@ -259,10 +259,12 @@ class Project():
         assert h is not None
 
         ctx = handler.HandlerContext(resource)
-        h.execute(ctx, resource, False)
+        h.execute(ctx, resource, dry_run)
         self.finalize_context(ctx)
-
         return ctx
+
+    def dryrun(self, resource, run_as_root=False):
+        return self.deploy(resource, True, run_as_root)
 
     def deploy_resource(self, resource_type: str, status=const.ResourceState.deployed, run_as_root=False, **filter_args: dict):
         res = self.get_resource(resource_type, **filter_args)
@@ -281,6 +283,15 @@ class Project():
         assert ctx.status == status
         self.finalize_context(ctx)
         return res
+
+    def dryrun_resource(self, resource_type: str, status=const.ResourceState.deployed, run_as_root=False,
+                        **filter_args: dict):
+        res = self.get_resource(resource_type, **filter_args)
+        assert res is not None, "No resource found of given type and filter args"
+
+        ctx = self.dryrun(res, run_as_root)
+        assert ctx.status == const.ResourceState.dry
+        return ctx.changes
 
     def io(self, run_as_root=False):
         version = 1
