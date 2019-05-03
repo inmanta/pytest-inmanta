@@ -87,8 +87,14 @@ def get_module_info():
     return module_dir, module_name
 
 
+@pytest.fixture()
+def project(project_shared, capsys):
+    project_shared.init(capsys)
+    return project_shared
+
+
 @pytest.fixture(scope="session")
-def project(request):
+def project_shared(request):
     """
         A test fixture that creates a new inmanta project with the current module in. The returned object can be used
         to add files to the unittest module, compile a model and access the results, stdout and stderr.
@@ -169,7 +175,6 @@ class Project():
         self._test_project_dir = project_dir
         self._stdout = None
         self._stderr = None
-        self._sys_path = None
         self.types = None
         self.version = None
         self.resources = {}
@@ -177,6 +182,17 @@ class Project():
         self._blobs = {}
         self._facts = defaultdict(dict)
         self._plugins = self._load_plugins()
+        self._capsys = None
+        config.Config.load_config()
+
+    def init(self, capsys):
+        self._capsys = capsys
+        self.types = None
+        self.version = None
+        self.resources = {}
+        self._exporter = None
+        self._blobs = {}
+        self._facts = defaultdict(dict)
         config.Config.load_config()
 
     def add_blob(self, key, content, allow_overwrite=True):
@@ -315,35 +331,27 @@ license: Test License
         test_project = module.Project(self._test_project_dir)
         module.Project.set(test_project)
 
-        try:
-            old_stdout = sys.stdout
-            old_stderr = sys.stderr
+        # flush io capture buffer
+        self._capsys.readouterr()
 
-            stdout = io.StringIO()
-            stderr = io.StringIO()
+        (types, scopes) = compiler.do_compile(refs={"facts": self._facts})
 
-            sys.stdout = stdout
-            sys.stderr = stderr
+        exporter = export.Exporter()
 
-            (types, scopes) = compiler.do_compile(refs={"facts": self._facts})
+        version, resources = exporter.run(types, scopes, no_commit=True)
 
-            exporter = export.Exporter()
+        for key, blob in exporter._file_store.items():
+            self.add_blob(key, blob)
 
-            version, resources = exporter.run(types, scopes, no_commit=True)
+        self.version = version
+        self.resources = resources
+        self.types = types
+        self._exporter = exporter
 
-            for key, blob in exporter._file_store.items():
-                self.add_blob(key, blob)
+        captured = self._capsys.readouterr()
 
-            self.version = version
-            self.resources = resources
-            self.types = types
-            self._exporter = exporter
-
-            self._stdout = stdout.getvalue()
-            self._stderr = stderr.getvalue()
-        finally:
-            sys.stdout = old_stdout
-            sys.stderr = old_stderr
+        self._stdout = captured.out
+        self._stderr = captured.err
 
     def get_stdout(self):
         return self._stdout
