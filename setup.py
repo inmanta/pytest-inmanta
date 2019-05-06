@@ -12,9 +12,10 @@ with io.open(os.path.join(cwd, 'README.md'), encoding='utf-8') as fd:
 
 setup(
     name='pytest-inmanta',
-    version='0.5.0',
+    version='0.6.0',
     description=('A py.test plugin providing fixtures to simplify inmanta modules testing.'),
     long_description=long_description,
+    long_description_content_type='text/markdown',
     url='https://github.com/inmanta/pytest-inmanta',
     author='Inmanta NV',
     author_email='code@inmanta.com',
