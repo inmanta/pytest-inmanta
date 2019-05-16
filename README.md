@@ -66,6 +66,40 @@ And dryrun
     assert changes == {"value": {'current': 'read', 'desired': 'write'}}
 ```
 
+## Testing plugins
+
+Take the following plugin as an example:
+
+```python
+    # <module-name>/plugins/__init__.py
+
+    from inmanta.plugins import plugin
+
+    @plugin
+    def hostname(fqdn: "string") -> "string":
+        """
+            Return the hostname part of the fqdn
+        """
+        return fqdn.split(".")[0]
+```
+
+
+A test case, to test this plugin looks like this:
+
+```python class: {.line-numbers}
+    # <module-name>/tests/test_hostname.py
+
+    def test_hostname(project):
+        host = "test"
+        fqdn = f"{host}.something.com"
+        assert project.get_plugin_function("hostname")(fqdn) == host
+```
+
+
+* **Line 3:** Creates a pytest test case, which requires the `project` fixture.
+* **Line 6:** Calls the function `project.get_plugin_function(plugin_name: str): FunctionType`, which returns the plugin
+  function named `plugin_name`. As such, this line tests whether `host` is returned when the plugin function
+  `hostname` is called with the parameter `fqdn`.
 
 ## Options
 
