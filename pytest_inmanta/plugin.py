@@ -85,7 +85,7 @@ def get_module_info():
 
     module_dir = os.path.join("/", *dir_path)
     with open("module.yml") as m:
-        module_name = yaml.load(m)["name"]
+        module_name = yaml.safe_load(m)["name"]
 
     return module_dir, module_name
 
