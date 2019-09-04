@@ -31,8 +31,13 @@ setup(
         'Topic :: Software Development',
         'Topic :: Software Development :: Testing',
     ],
+    package_data={
+        '': ["module/*"],
+    },
     keywords=('pytest py.test inmanta testing unit tests plugin'),
+    include_package_data=True,
     packages=find_packages(),
+    zip_safe=False,
     install_requires=['pytest', 'inmanta'],
     entry_points={
         'pytest11': ['inmanta = pytest_inmanta.plugin'],

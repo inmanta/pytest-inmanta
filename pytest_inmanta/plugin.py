@@ -1,5 +1,5 @@
 """
-    Copyright 2016 Inmanta
+    Copyright 2019 Inmanta
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -43,6 +43,9 @@ from collections import defaultdict
 import yaml
 from inmanta.protocol import json_encode
 from tornado import ioloop
+from typing import Dict, Union
+
+from .handler import DATA
 
 
 CURDIR = os.getcwd()
@@ -96,12 +99,24 @@ def project(project_shared, capsys):
     return project_shared
 
 
+def get_module_data(filename: str) -> str:
+    """
+        Get the given filename from the module directory in the source tree
+    """
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    with open(os.path.join(current_path, "module", filename), "r") as fd:
+        return fd.read()
+
+
+
 @pytest.fixture(scope="session")
 def project_shared(request):
     """
         A test fixture that creates a new inmanta project with the current module in. The returned object can be used
         to add files to the unittest module, compile a model and access the results, stdout and stderr.
     """
+    DATA.clear()
+
     _sys_path = sys.path
     test_project_dir = tempfile.mkdtemp()
     os.mkdir(os.path.join(test_project_dir, "libs"))
@@ -135,7 +150,7 @@ downloadpath: libs
     test_project = Project(test_project_dir)
 
     # create the unittest module
-    test_project.create_module("unittest")
+    test_project.create_module("unittest", initcf=get_module_data("init.cf"), initpy=get_module_data("init.py"))
 
     yield test_project
 
@@ -235,8 +250,8 @@ class Project():
             return p
         except Exception as e:
             raise e
-
-        c.close_version(resource.id.version)
+        finally:
+            c.close_version(resource.id.version)
 
     def finalize_context(self, ctx: handler.HandlerContext):
         # ensure logs can be serialized
@@ -246,6 +261,8 @@ class Project():
         """
             Get a resource of the given type and given filter on the resource attributes. If multiple resource match, the
             first one is returned. If none match, None is returned.
+
+            :param resource_type: The exact type used in the model (no super types)
         """
         def apply_filter(resource):
             for arg, value in filter_args.items():
@@ -272,6 +289,8 @@ class Project():
         """
             Deploy the given resource with a handler
         """
+        assert resource is not None
+
         h = self.get_handler(resource, run_as_root)
 
         assert h is not None
@@ -334,7 +353,7 @@ class Project():
             fd.write(initpy)
 
         with open(os.path.join(module_dir, "module.yml"), "w+") as fd:
-            fd.write("""name: unittest
+            fd.write(f"""name: {name}
 version: 0.1
 license: Test License
             """)
@@ -423,3 +442,21 @@ license: Test License
         # wrap in DynamicProxy to hide internal compiler structure
         # and get inmanta objects as if they were python objects
         return [DynamicProxy.return_value(port) for port in allof]
+
+    def unittest_resource_exists(self, name: str) -> bool:
+        """
+            Check if a unittest resource with name exists or not
+        """
+        return name in DATA
+
+    def unittest_resource_get(self, name: str) -> Dict[str, Union[str, bool, float, int]]:
+        """
+            Get the state of the unittest resource
+        """
+        return DATA[name]
+
+    def unittest_resource_set(self, name: str, **kwargs: Union[str, bool, float, int]) -> None:
+        """
+            Change a value of the unittest resource
+        """
+        DATA[name].update(kwargs)
