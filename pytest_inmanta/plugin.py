@@ -28,12 +28,12 @@ import types
 from distutils import dir_util
 
 
-from inmanta import compiler, module, export, config, const
+from inmanta import compiler, module, config, const, protocol
 from inmanta.protocol import json_encode
 from inmanta.agent import cache, handler
 from inmanta.agent import io as agent_io
 from inmanta.execute.proxy import DynamicProxy
-from inmanta.export import cfg_env
+from inmanta.export import cfg_env, Exporter
 
 
 import pytest
@@ -355,7 +355,7 @@ version: 0.1
 license: Test License
             """)
 
-    def compile(self, main):
+    def compile(self, main, export=False):
         """
             Compile the configuration model in main. This method will load all required modules.
         """
@@ -372,9 +372,12 @@ license: Test License
 
         (types, scopes) = compiler.do_compile(refs={"facts": self._facts})
 
-        exporter = export.Exporter()
+        class Options:
+            pass
 
-        version, resources = exporter.run(types, scopes, no_commit=True)
+        exporter = Exporter()
+
+        version, resources = exporter.run(types, scopes, no_commit=not export)
 
         for key, blob in exporter._file_store.items():
             self.add_blob(key, blob)
@@ -388,6 +391,16 @@ license: Test License
 
         self._stdout = captured.out
         self._stderr = captured.err
+
+    def deploy_latest_version(self, full_deploy=False):
+        """ Release and push the latest version to the server (uses the current configuration, either with a fixture or
+            set by the test.
+        """
+        conn = protocol.SyncClient("compiler")
+        LOGGER.info("Triggering deploy for version %d" % self.version)
+        tid = cfg_env.get()
+        agent_trigger_method = const.AgentTriggerMethod.get_agent_trigger_method(full_deploy)
+        conn.release_version(tid, self.version, True, agent_trigger_method)
 
     def get_stdout(self):
         return self._stdout
