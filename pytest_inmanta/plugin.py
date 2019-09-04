@@ -28,20 +28,17 @@ import types
 from distutils import dir_util
 
 
-from inmanta import compiler
-from inmanta import module
-from inmanta import export
-from inmanta import config
-from inmanta import const
-from inmanta.agent import cache
-from inmanta.agent import handler
+from inmanta import compiler, module, export, config, const
+from inmanta.protocol import json_encode
+from inmanta.agent import cache, handler
 from inmanta.agent import io as agent_io
 from inmanta.execute.proxy import DynamicProxy
+from inmanta.export import cfg_env
+
 
 import pytest
 from collections import defaultdict
 import yaml
-from inmanta.protocol import json_encode
 from tornado import ioloop
 from typing import Dict, Union
 
@@ -106,7 +103,6 @@ def get_module_data(filename: str) -> str:
     current_path = os.path.dirname(os.path.realpath(__file__))
     with open(os.path.join(current_path, "module", filename), "r") as fd:
         return fd.read()
-
 
 
 @pytest.fixture(scope="session")
@@ -181,6 +177,7 @@ class MockAgent(object):
     def __init__(self, uri):
         self.uri = uri
         self.process = MockProcess()
+        self._env_id = cfg_env.get()
 
 
 class Project():
