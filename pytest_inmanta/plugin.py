@@ -1,5 +1,5 @@
 """
-    Copyright 2016 Inmanta
+    Copyright 2019 Inmanta
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -28,21 +28,21 @@ import types
 from distutils import dir_util
 
 
-from inmanta import compiler
-from inmanta import module
-from inmanta import export
-from inmanta import config
-from inmanta import const
-from inmanta.agent import cache
-from inmanta.agent import handler
+from inmanta import compiler, module, config, const, protocol
+from inmanta.protocol import json_encode
+from inmanta.agent import cache, handler
 from inmanta.agent import io as agent_io
 from inmanta.execute.proxy import DynamicProxy
+from inmanta.export import cfg_env, Exporter
+
 
 import pytest
 from collections import defaultdict
 import yaml
-from inmanta.protocol import json_encode
 from tornado import ioloop
+from typing import Dict, Union
+
+from .handler import DATA
 
 
 CURDIR = os.getcwd()
@@ -92,8 +92,18 @@ def get_module_info():
 
 @pytest.fixture()
 def project(project_shared, capsys):
+    DATA.clear()
     project_shared.init(capsys)
     return project_shared
+
+
+def get_module_data(filename: str) -> str:
+    """
+        Get the given filename from the module directory in the source tree
+    """
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    with open(os.path.join(current_path, "module", filename), "r") as fd:
+        return fd.read()
 
 
 @pytest.fixture(scope="session")
@@ -135,7 +145,7 @@ downloadpath: libs
     test_project = Project(test_project_dir)
 
     # create the unittest module
-    test_project.create_module("unittest")
+    test_project.create_module("unittest", initcf=get_module_data("init.cf"), initpy=get_module_data("init.py"))
 
     yield test_project
 
@@ -166,6 +176,7 @@ class MockAgent(object):
     def __init__(self, uri):
         self.uri = uri
         self.process = MockProcess()
+        self._env_id = cfg_env.get()
 
 
 class Project():
@@ -235,8 +246,8 @@ class Project():
             return p
         except Exception as e:
             raise e
-
-        c.close_version(resource.id.version)
+        finally:
+            c.close_version(resource.id.version)
 
     def finalize_context(self, ctx: handler.HandlerContext):
         # ensure logs can be serialized
@@ -246,6 +257,8 @@ class Project():
         """
             Get a resource of the given type and given filter on the resource attributes. If multiple resource match, the
             first one is returned. If none match, None is returned.
+
+            :param resource_type: The exact type used in the model (no super types)
         """
         def apply_filter(resource):
             for arg, value in filter_args.items():
@@ -272,6 +285,8 @@ class Project():
         """
             Deploy the given resource with a handler
         """
+        assert resource is not None
+
         h = self.get_handler(resource, run_as_root)
 
         assert h is not None
@@ -334,12 +349,12 @@ class Project():
             fd.write(initpy)
 
         with open(os.path.join(module_dir, "module.yml"), "w+") as fd:
-            fd.write("""name: unittest
+            fd.write(f"""name: {name}
 version: 0.1
 license: Test License
             """)
 
-    def compile(self, main):
+    def compile(self, main, export=False):
         """
             Compile the configuration model in main. This method will load all required modules.
         """
@@ -356,9 +371,12 @@ license: Test License
 
         (types, scopes) = compiler.do_compile(refs={"facts": self._facts})
 
-        exporter = export.Exporter()
+        class Options:
+            pass
 
-        version, resources = exporter.run(types, scopes, no_commit=True)
+        exporter = Exporter()
+
+        version, resources = exporter.run(types, scopes, no_commit=not export)
 
         for key, blob in exporter._file_store.items():
             self.add_blob(key, blob)
@@ -372,6 +390,16 @@ license: Test License
 
         self._stdout = captured.out
         self._stderr = captured.err
+
+    def deploy_latest_version(self, full_deploy=False):
+        """ Release and push the latest version to the server (uses the current configuration, either with a fixture or
+            set by the test.
+        """
+        conn = protocol.SyncClient("compiler")
+        LOGGER.info("Triggering deploy for version %d" % self.version)
+        tid = cfg_env.get()
+        agent_trigger_method = const.AgentTriggerMethod.get_agent_trigger_method(full_deploy)
+        conn.release_version(tid, self.version, True, agent_trigger_method)
 
     def get_stdout(self):
         return self._stdout
@@ -423,3 +451,21 @@ license: Test License
         # wrap in DynamicProxy to hide internal compiler structure
         # and get inmanta objects as if they were python objects
         return [DynamicProxy.return_value(port) for port in allof]
+
+    def unittest_resource_exists(self, name: str) -> bool:
+        """
+            Check if a unittest resource with name exists or not
+        """
+        return name in DATA
+
+    def unittest_resource_get(self, name: str) -> Dict[str, Union[str, bool, float, int]]:
+        """
+            Get the state of the unittest resource
+        """
+        return DATA[name]
+
+    def unittest_resource_set(self, name: str, **kwargs: Union[str, bool, float, int]) -> None:
+        """
+            Change a value of the unittest resource
+        """
+        DATA[name].update(kwargs)

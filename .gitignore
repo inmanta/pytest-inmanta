@@ -87,3 +87,9 @@ ENV/
 
 # Rope project settings
 .ropeproject
+tmp
+.project
+.pydevproject
+.pyenv
+.idea
+.vscode

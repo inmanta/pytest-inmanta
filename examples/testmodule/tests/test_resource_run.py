@@ -12,5 +12,4 @@ def test_basic_run(project):
     """
 
     project.compile(basemodel)
-
     project.deploy_resource("testmodule::Resource")
