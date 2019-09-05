@@ -37,6 +37,7 @@ class ResourceHandler(handler.CRUDHandler):
 
         resource.desired_value = DATA[resource.name]["desired_value"]
 
+        ctx.info("Resource fail %(fail)s skip %(skip)s", fail=resource.fail, skip=resource.skip)
         if resource.skip:
             raise handler.SkipResource()
 

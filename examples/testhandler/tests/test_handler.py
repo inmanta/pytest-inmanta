@@ -16,7 +16,7 @@
     Contact: code@inmanta.com
 """
 import pytest
-
+from inmanta import const
 
 def test_resource(project):
     assert not project.unittest_resource_exists(name="res")
@@ -51,3 +51,19 @@ def test_resource(project):
         """)
     project.deploy_resource("unittest::Resource")
     assert not project.unittest_resource_exists(name="res")
+
+
+def test_resource_fail_skip(project):
+    project.compile("""
+    import unittest
+
+    unittest::Resource(name="res", desired_value="x", fail=true)
+    """)
+    project.deploy_resource("unittest::Resource", status=const.ResourceState.failed)
+
+    project.compile("""
+        import unittest
+
+        unittest::Resource(name="res", desired_value="x", skip=true)
+        """)
+    project.deploy_resource("unittest::Resource", status=const.ResourceState.skipped)

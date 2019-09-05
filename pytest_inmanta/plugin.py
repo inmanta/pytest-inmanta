@@ -92,6 +92,7 @@ def get_module_info():
 
 @pytest.fixture()
 def project(project_shared, capsys):
+    DATA.clear()
     project_shared.init(capsys)
     return project_shared
 
@@ -111,8 +112,6 @@ def project_shared(request):
         A test fixture that creates a new inmanta project with the current module in. The returned object can be used
         to add files to the unittest module, compile a model and access the results, stdout and stderr.
     """
-    DATA.clear()
-
     _sys_path = sys.path
     test_project_dir = tempfile.mkdtemp()
     os.mkdir(os.path.join(test_project_dir, "libs"))
