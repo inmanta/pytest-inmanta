@@ -32,17 +32,18 @@ class Resource(resources.PurgeableResource):
 @handler.provider("unittest::Resource", name="test")
 class ResourceHandler(handler.CRUDHandler):
     def read_resource(self, ctx: handler.HandlerContext, resource: resources.PurgeableResource) -> None:
-        if resource.name not in DATA:
-            raise handler.ResourcePurged()
-
-        resource.desired_value = DATA[resource.name]["desired_value"]
-
         ctx.info("Resource fail %(fail)s skip %(skip)s", fail=resource.fail, skip=resource.skip)
+
         if resource.skip:
             raise handler.SkipResource()
 
         if resource.fail:
             raise handler.InvalidOperation()
+
+        if resource.name not in DATA:
+            raise handler.ResourcePurged()
+
+        resource.desired_value = DATA[resource.name]["desired_value"]
 
     def create_resource(self, ctx: handler.HandlerContext, resource: resources.PurgeableResource) -> None:
         DATA[resource.name] = {}

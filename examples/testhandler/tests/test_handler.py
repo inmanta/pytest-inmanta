@@ -18,6 +18,7 @@
 import pytest
 from inmanta import const
 
+
 def test_resource(project):
     assert not project.unittest_resource_exists(name="res")
 
