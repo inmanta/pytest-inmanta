@@ -371,9 +371,6 @@ license: Test License
 
         (types, scopes) = compiler.do_compile(refs={"facts": self._facts})
 
-        class Options:
-            pass
-
         exporter = Exporter()
 
         version, resources = exporter.run(types, scopes, no_commit=not export)
