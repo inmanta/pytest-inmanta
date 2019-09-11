@@ -1,0 +1,2 @@
+include *.md
+include pytest_inmanta/module/*
