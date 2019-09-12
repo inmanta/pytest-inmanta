@@ -1,3 +1,7 @@
+# V 0.7.1
+Changes in this release:
+- Fix packaging bug
+
 # V 0.7.0
 Changes in this release:
 - Various bugfixes
