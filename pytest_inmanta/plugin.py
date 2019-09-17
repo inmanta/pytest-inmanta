@@ -246,8 +246,6 @@ class Project():
             return p
         except Exception as e:
             raise e
-        finally:
-            c.close_version(resource.id.version)
 
     def finalize_context(self, ctx: handler.HandlerContext):
         # ensure logs can be serialized
