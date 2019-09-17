@@ -1,3 +1,8 @@
+
+# V 0.7.2
+Changes in this release:
+- Prevent IOError when using remote IO
+
 # V 0.7.1
 Changes in this release:
 - Fix packaging bug
