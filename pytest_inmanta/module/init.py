@@ -37,6 +37,15 @@ class ResourceHandler(handler.CRUDHandler):
         if resource.skip:
             raise handler.SkipResource()
 
+        if resource.name in DATA:
+            ops = DATA[resource.name]
+
+            if ops.get("skip", False):
+                raise handler.SkipResource()
+
+            if ops.get("fail", False):
+                raise handler.InvalidOperation()
+
         if resource.fail:
             raise handler.InvalidOperation()
 
