@@ -1,4 +1,4 @@
-entity Resource:
+entity Resource extends std::PurgeableResource:
     string name
     string agent
     string key
