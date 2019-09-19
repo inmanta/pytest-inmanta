@@ -5,12 +5,12 @@
 """
 
 from inmanta.agent.handler import provider, CRUDHandler, HandlerContext
-from inmanta.resources import resource, Resource
+from inmanta.resources import resource, PurgeableResource
 from tornado import gen
 
 
 @resource("testsync::Resource", agent="agent", id_attribute="name")
-class ResourceResource(Resource):
+class ResourceResource(PurgeableResource):
     fields = ("name", "agent", "key", "value")
 
 
