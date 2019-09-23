@@ -18,6 +18,8 @@
 import pytest
 from inmanta import const
 
+from pytest_inmanta.handler import DATA
+
 
 def test_resource(project):
     assert not project.unittest_resource_exists(name="res")
@@ -68,3 +70,20 @@ def test_resource_fail_skip(project):
         unittest::Resource(name="res", desired_value="x", skip=true)
         """)
     project.deploy_resource("unittest::Resource", status=const.ResourceState.skipped)
+
+
+def test_resource_fail_skip_data(project):
+    project.compile("""
+    import unittest
+
+    unittest::Resource(name="res", desired_value="x")
+    """)
+
+    project.deploy_resource("unittest::Resource", status=const.ResourceState.deployed)
+
+    DATA["res"]["skip"] = True
+    project.deploy_resource("unittest::Resource", status=const.ResourceState.skipped)
+
+    DATA["res"]["skip"] = False
+    DATA["res"]["fail"] = True
+    project.deploy_resource("unittest::Resource", status=const.ResourceState.failed)
