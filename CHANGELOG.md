@@ -1,3 +1,6 @@
+# V 0.8.0
+Changes in this release:
+- Add suport for skip and fail through data global
 
 # V 0.7.2
 Changes in this release:
@@ -14,7 +17,7 @@ Changes in this release:
 - Documentation on how to test plugins
 - Add unittest handlers
 
-# V 1.0.0
+# V 0.6.0
 Changes in this release:
 - added log serialization to deploy, to better mimic agent behavior
 - added dryrun 
