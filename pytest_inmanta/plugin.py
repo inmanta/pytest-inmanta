@@ -277,6 +277,7 @@ class Project():
             if not apply_filter(resource):
                 continue
 
+            resource = self.check_serialization(resource)
             return resource
 
         return None
@@ -302,7 +303,6 @@ class Project():
     def deploy_resource(self, resource_type: str, status=const.ResourceState.deployed, run_as_root=False, **filter_args: dict):
         res = self.get_resource(resource_type, **filter_args)
         assert res is not None, "No resource found of given type and filter args"
-        res = self.check_serialization(res)
 
         ctx = self.deploy(res, run_as_root)
         if ctx.status != status:
@@ -322,7 +322,6 @@ class Project():
                         **filter_args: dict):
         res = self.get_resource(resource_type, **filter_args)
         assert res is not None, "No resource found of given type and filter args"
-        res = self.check_serialization(res)
 
         ctx = self.dryrun(res, run_as_root)
         assert ctx.status == const.ResourceState.dry
