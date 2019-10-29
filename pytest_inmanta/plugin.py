@@ -15,6 +15,7 @@
 
     Contact: code@inmanta.com
 """
+import json
 import tempfile
 import os
 import shutil
@@ -39,6 +40,7 @@ from inmanta.export import cfg_env, Exporter
 import pytest
 from collections import defaultdict
 import yaml
+from inmanta.resources import Resource
 from tornado import ioloop
 from typing import Dict, Union
 
@@ -276,6 +278,7 @@ class Project():
             if not apply_filter(resource):
                 continue
 
+            resource = self.check_serialization(resource)
             return resource
 
         return None
@@ -469,3 +472,9 @@ license: Test License
             Change a value of the unittest resource
         """
         DATA[name].update(kwargs)
+
+    def check_serialization(self, resource: Resource) -> Resource:
+        """ Check if the resource is serializable """
+        serialized = json.loads(json_encode(
+            resource.serialize()))
+        return Resource.deserialize(serialized)
