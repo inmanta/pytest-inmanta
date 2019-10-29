@@ -192,6 +192,7 @@ class Project():
         self.types = None
         self.version = None
         self.resources = {}
+        self._root_scope = {}
         self._exporter = None
         self._blobs = {}
         self._facts = defaultdict(dict)
@@ -376,6 +377,7 @@ license: Test License
         for key, blob in exporter._file_store.items():
             self.add_blob(key, blob)
 
+        self._root_scope = scopes
         self.version = version
         self.resources = resources
         self.types = types
@@ -401,6 +403,9 @@ license: Test License
 
     def get_stderr(self):
         return self._stderr
+
+    def get_root_scope(self):
+        return self._root_scope
 
     def add_mock_file(self, subdir, name, content):
         """
