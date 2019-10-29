@@ -15,6 +15,7 @@
 
     Contact: code@inmanta.com
 """
+import json
 import tempfile
 import os
 import shutil
@@ -39,8 +40,9 @@ from inmanta.export import cfg_env, Exporter
 import pytest
 from collections import defaultdict
 import yaml
+from inmanta.resources import Resource
 from tornado import ioloop
-from typing import Dict, Union
+from typing import Dict, Union, Any
 
 from .handler import DATA
 
@@ -300,6 +302,7 @@ class Project():
     def deploy_resource(self, resource_type: str, status=const.ResourceState.deployed, run_as_root=False, **filter_args: dict):
         res = self.get_resource(resource_type, **filter_args)
         assert res is not None, "No resource found of given type and filter args"
+        res = self.check_serialization(res)
 
         ctx = self.deploy(res, run_as_root)
         if ctx.status != status:
@@ -319,6 +322,7 @@ class Project():
                         **filter_args: dict):
         res = self.get_resource(resource_type, **filter_args)
         assert res is not None, "No resource found of given type and filter args"
+        res = self.check_serialization(res)
 
         ctx = self.dryrun(res, run_as_root)
         assert ctx.status == const.ResourceState.dry
@@ -464,3 +468,8 @@ license: Test License
             Change a value of the unittest resource
         """
         DATA[name].update(kwargs)
+
+    def check_serialization(self, resource: Any):
+        serialized = json.loads(json_encode(
+            resource.serialize()))
+        return Resource.deserialize(serialized)
