@@ -42,7 +42,7 @@ from collections import defaultdict
 import yaml
 from inmanta.resources import Resource
 from tornado import ioloop
-from typing import Dict, Union, Any
+from typing import Dict, Union
 
 from .handler import DATA
 
@@ -469,7 +469,8 @@ license: Test License
         """
         DATA[name].update(kwargs)
 
-    def check_serialization(self, resource: Any):
+    def check_serialization(self, resource: Resource) -> Resource:
+        """ Check if the resource is serializable """
         serialized = json.loads(json_encode(
             resource.serialize()))
         return Resource.deserialize(serialized)
