@@ -95,8 +95,10 @@ def get_module_info():
 @pytest.fixture()
 def project(project_shared, capsys):
     DATA.clear()
+    project_shared.clean()
     project_shared.init(capsys)
-    return project_shared
+    yield project_shared
+    project_shared.clean()
 
 
 def get_module_data(filename: str) -> str:
@@ -478,3 +480,7 @@ license: Test License
         serialized = json.loads(json_encode(
             resource.serialize()))
         return Resource.deserialize(serialized)
+
+    def clean(self) -> None:
+        shutil.rmtree(os.path.join(self._test_project_dir, "libs", "unittest"))
+        self.create_module("unittest", initcf=get_module_data("init.cf"), initpy=get_module_data("init.py"))
