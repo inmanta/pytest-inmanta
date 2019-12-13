@@ -1,6 +1,6 @@
 // Nasty use of conditionals to make this work
 // https://issues.jenkins-ci.org/browse/JENKINS-42643
-String upstreamproject = BRANCH_NAME == "master" ? "inmanta-core/master" : ""
+String upstreamproject = BRANCH_NAME == "master" ? "core/inmanta-core/master" : ""
 
 pipeline {
     agent any
