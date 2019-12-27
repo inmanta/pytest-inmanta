@@ -1,6 +1,12 @@
 # V 0.9.0
 Changes in this release:
-- 
+
+## Added
+- Added support to retrieve scopes in project fixture.
+- Test the serialization/deserialization of resources.
+
+## Fixed
+- Ensure that the project fixture doesn't leak any data across test cases.
 
 # V 0.8.0
 Changes in this release:
