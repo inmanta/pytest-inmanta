@@ -15,6 +15,7 @@
 
     Contact: code@inmanta.com
 """
+import json
 import tempfile
 import os
 import shutil
@@ -39,6 +40,7 @@ from inmanta.export import cfg_env, Exporter
 import pytest
 from collections import defaultdict
 import yaml
+from inmanta.resources import Resource
 from tornado import ioloop
 from typing import Dict, Union
 
@@ -93,8 +95,10 @@ def get_module_info():
 @pytest.fixture()
 def project(project_shared, capsys):
     DATA.clear()
+    project_shared.clean()
     project_shared.init(capsys)
-    return project_shared
+    yield project_shared
+    project_shared.clean()
 
 
 def get_module_data(filename: str) -> str:
@@ -192,6 +196,7 @@ class Project():
         self.types = None
         self.version = None
         self.resources = {}
+        self._root_scope = {}
         self._exporter = None
         self._blobs = {}
         self._facts = defaultdict(dict)
@@ -200,10 +205,13 @@ class Project():
         config.Config.load_config()
 
     def init(self, capsys):
+        self._stdout = None
+        self._stderr = None
         self._capsys = capsys
         self.types = None
         self.version = None
         self.resources = {}
+        self._root_scope = {}
         self._exporter = None
         self._blobs = {}
         self._facts = defaultdict(dict)
@@ -275,6 +283,7 @@ class Project():
             if not apply_filter(resource):
                 continue
 
+            resource = self.check_serialization(resource)
             return resource
 
         return None
@@ -376,6 +385,7 @@ license: Test License
         for key, blob in exporter._file_store.items():
             self.add_blob(key, blob)
 
+        self._root_scope = scopes
         self.version = version
         self.resources = resources
         self.types = types
@@ -401,6 +411,9 @@ license: Test License
 
     def get_stderr(self):
         return self._stderr
+
+    def get_root_scope(self):
+        return self._root_scope
 
     def add_mock_file(self, subdir, name, content):
         """
@@ -464,3 +477,13 @@ license: Test License
             Change a value of the unittest resource
         """
         DATA[name].update(kwargs)
+
+    def check_serialization(self, resource: Resource) -> Resource:
+        """ Check if the resource is serializable """
+        serialized = json.loads(json_encode(
+            resource.serialize()))
+        return Resource.deserialize(serialized)
+
+    def clean(self) -> None:
+        shutil.rmtree(os.path.join(self._test_project_dir, "libs", "unittest"))
+        self.create_module("unittest", initcf=get_module_data("init.cf"), initpy=get_module_data("init.py"))
