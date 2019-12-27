@@ -205,10 +205,13 @@ class Project():
         config.Config.load_config()
 
     def init(self, capsys):
+        self._stdout = None
+        self._stderr = None
         self._capsys = capsys
         self.types = None
         self.version = None
         self.resources = {}
+        self._root_scope = {}
         self._exporter = None
         self._blobs = {}
         self._facts = defaultdict(dict)
