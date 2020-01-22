@@ -109,6 +109,8 @@ The following options are available.
    This options depends on symlink support. This does not work on all windows versions. On windows 10 you need to run pytest in an
    admin shell.
  * --module_repo: location to download modules from, overrides INMANTA_MODULE_REPO. The default value is the inmanta github organisation.
+ * --use-module-in-place: makes inmanta add the parent directory of your module directory to it's directory path, instead of copying your
+    module to a temporary libs directory.
  
  Use the generic pytest options `--log-cli-level` to show Inmanta logger to see any setup or cleanup warnings. For example,
  `--log-cli-level=INFO`
