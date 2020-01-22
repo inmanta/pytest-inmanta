@@ -27,6 +27,7 @@ import glob
 import importlib
 import types
 from distutils import dir_util
+from pathlib import Path
 
 
 from inmanta import compiler, module, config, const, protocol
@@ -64,6 +65,8 @@ def pytest_addoption(parser):
                     help='folder in which to place the virtual env for tests (will be shared by all tests), overrides INMANTA_TEST_ENV')
     group.addoption('--module_repo', dest='inm_module_repo',
                     help='location to download modules from, overrides INMANTA_MODULE_REPO')
+    group.addoption('--use-module-in-place', action='store_true',
+                    help="tell pytest-inmanta to run with the module in place, usefull for debugging")
 
 
 def get_opt_or_env_or(config, key, default):
@@ -122,6 +125,11 @@ def project_shared(request):
 
     repos = get_opt_or_env_or(request.config, "inm_module_repo", "https://github.com/inmanta/").split(" ")
 
+    modulepath = ["libs"]
+    in_place = request.config.getoption("--use-module-in-place")
+    if in_place:
+        modulepath.append(str(Path(os.getcwd()).parent))
+
     env_override = get_opt_or_env_or(request.config, "inm_venv", None)
     if env_override is not None:
         try:
@@ -138,13 +146,14 @@ def project_shared(request):
         fd.write("""name: testcase
 description: Project for testcase
 repo: ['%(repo)s']
-modulepath: libs
+modulepath: ['%(modulepath)s']
 downloadpath: libs
-""" % {"repo": "', '".join(repos)})
+""" % {"repo": "', '".join(repos), "modulepath": "', '".join(modulepath)})
 
     # copy the current module in
     module_dir, module_name = get_module_info()
-    dir_util.copy_tree(module_dir, os.path.join(test_project_dir, "libs", module_name))
+    if not in_place:
+        dir_util.copy_tree(module_dir, os.path.join(test_project_dir, "libs", module_name))
 
     test_project = Project(test_project_dir)
 
