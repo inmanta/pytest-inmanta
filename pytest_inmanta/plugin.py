@@ -66,7 +66,7 @@ def pytest_addoption(parser):
     group.addoption('--module_repo', dest='inm_module_repo',
                     help='location to download modules from, overrides INMANTA_MODULE_REPO')
     group.addoption('--use-module-in-place', action='store_true',
-                    help="tell pytest-inmanta to run with the module in place, usefull for debugging")
+                    help="tell pytest-inmanta to run with the module in place, useful for debugging")
 
 
 def get_opt_or_env_or(config, key, default):
