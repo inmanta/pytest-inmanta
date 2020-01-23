@@ -1,0 +1,22 @@
+entity Resource extends std::PurgeableResource:
+    string name
+    string agent
+    string key
+    string value
+end
+
+index Resource(agent, name)
+
+implement Resource using std::none
+
+
+entity BadLog:
+    string name
+    string agent
+    string key
+    string value
+end
+
+index BadLog(agent, name)
+
+implement BadLog using std::none
