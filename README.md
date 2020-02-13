@@ -105,10 +105,11 @@ A test case, to test this plugin looks like this:
 
 The following options are available.
 
- * --venv: folder in which to place the virtual env for tests (will be shared by all tests), overrides INMANTA_TEST_ENV.
+ * `--venv`: folder in which to place the virtual env for tests (will be shared by all tests), overrides `INMANTA_TEST_ENV`.
    This options depends on symlink support. This does not work on all windows versions. On windows 10 you need to run pytest in an
    admin shell.
- * --module_repo: location to download modules from, overrides INMANTA_MODULE_REPO. The default value is the inmanta github organisation.
+ * `--module_repo`: location to download modules from, overrides `INMANTA_MODULE_REPO`. The default value is the inmanta github organisation.
+ * `--install_mode`: install mode to use for modules downloaded during this test, overrides `INMANTA_INSTALL_MODE`  
  
  Use the generic pytest options `--log-cli-level` to show Inmanta logger to see any setup or cleanup warnings. For example,
  `--log-cli-level=INFO`
