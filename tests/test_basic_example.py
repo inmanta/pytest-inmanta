@@ -15,6 +15,7 @@
 
     Contact: code@inmanta.com
 """
+import pytest
 
 # Note: These tests only function when the pytest output is not modified by plugins such as pytest-sugar!
 
@@ -84,3 +85,13 @@ def test_badlog(testdir):
     result = testdir.runpytest("tests/test_BadLog.py")
 
     result.assert_outcomes(failed=1)
+
+
+def test_release_mode_validation(testdir):
+    """Set invalid release mode"""
+
+    testdir.copy_example("testmodule")
+
+    result = testdir.runpytest("tests/test_resource_run.py", "--install_mode", "other")
+    assert "error: argument --install_mode: invalid choice: 'other' (choose from 'master', 'prerelease', 'release')" in "\n".join(result.errlines)
+    

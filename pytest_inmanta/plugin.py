@@ -66,7 +66,8 @@ def pytest_addoption(parser):
     group.addoption('--module_repo', dest='inm_module_repo',
                     help='location to download modules from, overrides INMANTA_MODULE_REPO')
     group.addoption('--install_mode', dest='inm_install_mode',
-                    help='Install mode for modules downloaded during this test')
+                    help='Install mode for modules downloaded during this test',
+                    choices=module.INSTALL_OPTS)
 
 
 def get_opt_or_env_or(config, key, default):
@@ -125,7 +126,7 @@ def project_shared(request):
 
     repos = get_opt_or_env_or(request.config, "inm_module_repo", "https://github.com/inmanta/").split(" ")
 
-    install_mode = get_opt_or_env_or(request.config, "inm_install_mode", "release")
+    install_mode = get_opt_or_env_or(request.config, "inm_install_mode", "release")        
 
     env_override = get_opt_or_env_or(request.config, "inm_venv", None)
     if env_override is not None:
