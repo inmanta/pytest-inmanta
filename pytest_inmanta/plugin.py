@@ -53,7 +53,8 @@ LOGGER = logging.getLogger()
 
 option_to_env = {
     "inm_venv":"INMANTA_TEST_ENV",
-    "inm_module_repo":"INMANTA_MODULE_REPO"
+    "inm_module_repo":"INMANTA_MODULE_REPO",
+    "inm_install_mode":"INMANTA_INSTALL_MODE",
 }
 
 
@@ -64,6 +65,9 @@ def pytest_addoption(parser):
                     help='folder in which to place the virtual env for tests (will be shared by all tests), overrides INMANTA_TEST_ENV')
     group.addoption('--module_repo', dest='inm_module_repo',
                     help='location to download modules from, overrides INMANTA_MODULE_REPO')
+    group.addoption('--install_mode', dest='inm_install_mode',
+                    help='Install mode for modules downloaded during this test',
+                    choices=module.INSTALL_OPTS)
 
 
 def get_opt_or_env_or(config, key, default):
@@ -122,6 +126,8 @@ def project_shared(request):
 
     repos = get_opt_or_env_or(request.config, "inm_module_repo", "https://github.com/inmanta/").split(" ")
 
+    install_mode = get_opt_or_env_or(request.config, "inm_install_mode", "release")        
+
     env_override = get_opt_or_env_or(request.config, "inm_venv", None)
     if env_override is not None:
         try:
@@ -140,7 +146,8 @@ description: Project for testcase
 repo: ['%(repo)s']
 modulepath: libs
 downloadpath: libs
-""" % {"repo": "', '".join(repos)})
+install_mode: %(install_mode)s
+""" % {"repo": "', '".join(repos), "install_mode": install_mode})
 
     # copy the current module in
     module_dir, module_name = get_module_info()
