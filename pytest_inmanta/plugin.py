@@ -320,7 +320,12 @@ class Project():
     def dryrun(self, resource, run_as_root=False):
         return self.deploy(resource, True, run_as_root)
 
-    def deploy_resource(self, resource_type: str, status=const.ResourceState.deployed, run_as_root=False, **filter_args: dict):
+    def deploy_resource(self, resource_type: str, status=const.ResourceState.deployed, run_as_root=False, return_logs=False,
+                        **filter_args: dict):
+        """
+            :param status: expected status
+            :param return_logs: if True, returns not only the resource, but the logs as well
+        """
         res = self.get_resource(resource_type, **filter_args)
         assert res is not None, "No resource found of given type and filter args"
 
@@ -336,15 +341,22 @@ class Project():
 
         assert ctx.status == status
         self.finalize_context(ctx)
+        if return_logs:
+            return res, ctx.logs
         return res
 
-    def dryrun_resource(self, resource_type: str, status=const.ResourceState.deployed, run_as_root=False,
+    def dryrun_resource(self, resource_type: str, status=const.ResourceState.deployed, run_as_root=False, return_logs=False,
                         **filter_args: dict):
+        """
+            :param return_logs: if True, returns not only the changes, but the logs as well
+        """
         res = self.get_resource(resource_type, **filter_args)
         assert res is not None, "No resource found of given type and filter args"
 
         ctx = self.dryrun(res, run_as_root)
         assert ctx.status == const.ResourceState.dry
+        if return_logs:
+            return ctx.changes, ctx.logs
         return ctx.changes
 
     def io(self, run_as_root=False):

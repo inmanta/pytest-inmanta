@@ -87,3 +87,19 @@ def test_resource_fail_skip_data(project):
     DATA["res"]["skip"] = False
     DATA["res"]["fail"] = True
     project.deploy_resource("unittest::Resource", status=const.ResourceState.failed)
+
+
+def test_retrieve_logs(project):
+
+    project.compile("""
+    import unittest
+
+    unittest::Resource(name="res", desired_value="x")
+    """)
+    resource, logs = project.deploy_resource("unittest::Resource", return_logs=True)
+
+    assert project.unittest_resource_exists(name="res")
+    assert len(logs) == 3
+
+    changes, logs = project.dryrun_resource("unittest::Resource", return_logs=True)
+    assert len(logs) == 2
