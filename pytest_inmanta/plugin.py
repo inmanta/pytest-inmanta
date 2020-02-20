@@ -63,8 +63,9 @@ def pytest_addoption(parser):
         'inmanta', 'inmanta module testing plugin')
     group.addoption('--venv', dest='inm_venv',
                     help='folder in which to place the virtual env for tests (will be shared by all tests), overrides INMANTA_TEST_ENV')
-    group.addoption('--module_repo', dest='inm_module_repo',
-                    help='location to download modules from, overrides INMANTA_MODULE_REPO')
+    group.addoption('--module_repo', dest='inm_module_repo', action="append",
+                    help='location to download modules from, overrides INMANTA_MODULE_REPO.'
+                         'Can be specified multiple times to add multiple locations')
     group.addoption('--install_mode', dest='inm_install_mode',
                     help='Install mode for modules downloaded during this test',
                     choices=module.INSTALL_OPTS)
@@ -124,7 +125,13 @@ def project_shared(request):
     test_project_dir = tempfile.mkdtemp()
     os.mkdir(os.path.join(test_project_dir, "libs"))
 
-    repos = get_opt_or_env_or(request.config, "inm_module_repo", "https://github.com/inmanta/").split(" ")
+    repo_options = get_opt_or_env_or(request.config, "inm_module_repo", "https://github.com/inmanta/")
+    repos = []
+    if isinstance(repo_options, list):
+        for repo in repo_options:
+            repos += repo.split(" ")
+    else:
+        repos = repo_options.split(" ")
 
     install_mode = get_opt_or_env_or(request.config, "inm_install_mode", "release")        
 
