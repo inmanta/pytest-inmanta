@@ -100,7 +100,7 @@ def test_multiple_repo_paths_option(testdir):
     testdir.copy_example("testmodule")
 
     result = testdir.runpytest(
-        "tests/test_resource_run.py",
+        "tests/test_multiple_repo_paths.py",
         "--module_repo",
         "https://github.com/inmanta2/ https://github.com/inmanta/"
     )
@@ -111,5 +111,5 @@ def test_multiple_repo_paths_env(testdir, monkeypatch):
     monkeypatch.setenv("INMANTA_MODULE_REPO", "https://github.com/inmanta2/ https://github.com/inmanta/")
     testdir.copy_example("testmodule")
 
-    result = testdir.runpytest("tests/test_resource_run.py")
+    result = testdir.runpytest("tests/test_multiple_repo_paths.py")
     result.assert_outcomes(passed=1)
