@@ -96,10 +96,12 @@ def test_retrieve_logs(project):
 
     unittest::Resource(name="res", desired_value="x")
     """)
-    resource, logs = project.deploy_resource("unittest::Resource", return_logs=True)
+    project.deploy_resource("unittest::Resource")
 
     assert project.unittest_resource_exists(name="res")
+    logs = project.get_last_logs()
     assert len(logs) == 3
 
-    changes, logs = project.dryrun_resource("unittest::Resource", return_logs=True)
+    project.dryrun_resource("unittest::Resource")
+    logs = project.get_last_logs()
     assert len(logs) == 2

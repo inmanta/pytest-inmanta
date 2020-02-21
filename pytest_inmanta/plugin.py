@@ -30,6 +30,8 @@ from distutils import dir_util
 
 
 from inmanta import compiler, module, config, const, protocol
+from inmanta.agent.handler import HandlerContext
+from inmanta.data import LogLine
 from inmanta.protocol import json_encode
 from inmanta.agent import cache, handler
 from inmanta.agent import io as agent_io
@@ -42,7 +44,7 @@ from collections import defaultdict
 import yaml
 from inmanta.resources import Resource
 from tornado import ioloop
-from typing import Dict, Union
+from typing import Dict, Union, Optional, List
 
 from .handler import DATA
 
@@ -216,6 +218,7 @@ class Project():
         self._facts = defaultdict(dict)
         self._plugins = self._load_plugins()
         self._capsys = None
+        self.ctx = None
         config.Config.load_config()
 
     def init(self, capsys):
@@ -229,6 +232,7 @@ class Project():
         self._exporter = None
         self._blobs = {}
         self._facts = defaultdict(dict)
+        self.ctx = None
         config.Config.load_config()
 
     def add_blob(self, key, content, allow_overwrite=True):
@@ -315,17 +319,13 @@ class Project():
         ctx = handler.HandlerContext(resource)
         h.execute(ctx, resource, dry_run)
         self.finalize_context(ctx)
+        self.ctx = ctx
         return ctx
 
     def dryrun(self, resource, run_as_root=False):
         return self.deploy(resource, True, run_as_root)
 
-    def deploy_resource(self, resource_type: str, status=const.ResourceState.deployed, run_as_root=False, return_logs=False,
-                        **filter_args: dict):
-        """
-            :param status: expected status
-            :param return_logs: if True, returns not only the resource, but the logs as well
-        """
+    def deploy_resource(self, resource_type: str, status=const.ResourceState.deployed, run_as_root=False, **filter_args: dict):
         res = self.get_resource(resource_type, **filter_args)
         assert res is not None, "No resource found of given type and filter args"
 
@@ -341,22 +341,14 @@ class Project():
 
         assert ctx.status == status
         self.finalize_context(ctx)
-        if return_logs:
-            return res, ctx.logs
         return res
 
-    def dryrun_resource(self, resource_type: str, status=const.ResourceState.deployed, run_as_root=False, return_logs=False,
-                        **filter_args: dict):
-        """
-            :param return_logs: if True, returns not only the changes, but the logs as well
-        """
+    def dryrun_resource(self, resource_type: str, status=const.ResourceState.deployed, run_as_root=False, **filter_args: dict):
         res = self.get_resource(resource_type, **filter_args)
         assert res is not None, "No resource found of given type and filter args"
 
         ctx = self.dryrun(res, run_as_root)
         assert ctx.status == const.ResourceState.dry
-        if return_logs:
-            return ctx.changes, ctx.logs
         return ctx.changes
 
     def io(self, run_as_root=False):
@@ -431,6 +423,14 @@ license: Test License
         tid = cfg_env.get()
         agent_trigger_method = const.AgentTriggerMethod.get_agent_trigger_method(full_deploy)
         conn.release_version(tid, self.version, True, agent_trigger_method)
+
+    def get_last_context(self) -> Optional[HandlerContext]:
+        return self.ctx
+
+    def get_last_logs(self) -> Optional[List[LogLine]]:
+        if self.ctx:
+            return self.ctx.logs
+        return None
 
     def get_stdout(self):
         return self._stdout
