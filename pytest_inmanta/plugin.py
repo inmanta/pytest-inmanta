@@ -30,6 +30,8 @@ from distutils import dir_util
 
 
 from inmanta import compiler, module, config, const, protocol
+from inmanta.agent.handler import HandlerContext
+from inmanta.data import LogLine
 from inmanta.protocol import json_encode
 from inmanta.agent import cache, handler
 from inmanta.agent import io as agent_io
@@ -42,7 +44,7 @@ from collections import defaultdict
 import yaml
 from inmanta.resources import Resource
 from tornado import ioloop
-from typing import Dict, Union
+from typing import Dict, Union, Optional, List
 
 from .handler import DATA
 
@@ -53,7 +55,8 @@ LOGGER = logging.getLogger()
 
 option_to_env = {
     "inm_venv":"INMANTA_TEST_ENV",
-    "inm_module_repo":"INMANTA_MODULE_REPO"
+    "inm_module_repo":"INMANTA_MODULE_REPO",
+    "inm_install_mode":"INMANTA_INSTALL_MODE",
 }
 
 
@@ -62,8 +65,12 @@ def pytest_addoption(parser):
         'inmanta', 'inmanta module testing plugin')
     group.addoption('--venv', dest='inm_venv',
                     help='folder in which to place the virtual env for tests (will be shared by all tests), overrides INMANTA_TEST_ENV')
-    group.addoption('--module_repo', dest='inm_module_repo',
-                    help='location to download modules from, overrides INMANTA_MODULE_REPO')
+    group.addoption('--module_repo', dest='inm_module_repo', action="append",
+                    help='location to download modules from, overrides INMANTA_MODULE_REPO.'
+                         'Can be specified multiple times to add multiple locations')
+    group.addoption('--install_mode', dest='inm_install_mode',
+                    help='Install mode for modules downloaded during this test',
+                    choices=module.INSTALL_OPTS)
 
 
 def get_opt_or_env_or(config, key, default):
@@ -120,7 +127,15 @@ def project_shared(request):
     test_project_dir = tempfile.mkdtemp()
     os.mkdir(os.path.join(test_project_dir, "libs"))
 
-    repos = get_opt_or_env_or(request.config, "inm_module_repo", "https://github.com/inmanta/").split(" ")
+    repo_options = get_opt_or_env_or(request.config, "inm_module_repo", "https://github.com/inmanta/")
+    repos = []
+    if isinstance(repo_options, list):
+        for repo in repo_options:
+            repos += repo.split(" ")
+    else:
+        repos = repo_options.split(" ")
+
+    install_mode = get_opt_or_env_or(request.config, "inm_install_mode", "release")        
 
     env_override = get_opt_or_env_or(request.config, "inm_venv", None)
     if env_override is not None:
@@ -140,7 +155,8 @@ description: Project for testcase
 repo: ['%(repo)s']
 modulepath: libs
 downloadpath: libs
-""" % {"repo": "', '".join(repos)})
+install_mode: %(install_mode)s
+""" % {"repo": "', '".join(repos), "install_mode": install_mode})
 
     # copy the current module in
     module_dir, module_name = get_module_info()
@@ -202,6 +218,7 @@ class Project():
         self._facts = defaultdict(dict)
         self._plugins = self._load_plugins()
         self._capsys = None
+        self.ctx = None
         config.Config.load_config()
 
     def init(self, capsys):
@@ -215,6 +232,7 @@ class Project():
         self._exporter = None
         self._blobs = {}
         self._facts = defaultdict(dict)
+        self.ctx = None
         config.Config.load_config()
 
     def add_blob(self, key, content, allow_overwrite=True):
@@ -301,6 +319,7 @@ class Project():
         ctx = handler.HandlerContext(resource)
         h.execute(ctx, resource, dry_run)
         self.finalize_context(ctx)
+        self.ctx = ctx
         return ctx
 
     def dryrun(self, resource, run_as_root=False):
@@ -324,8 +343,7 @@ class Project():
         self.finalize_context(ctx)
         return res
 
-    def dryrun_resource(self, resource_type: str, status=const.ResourceState.deployed, run_as_root=False,
-                        **filter_args: dict):
+    def dryrun_resource(self, resource_type: str, status=const.ResourceState.deployed, run_as_root=False, **filter_args: dict):
         res = self.get_resource(resource_type, **filter_args)
         assert res is not None, "No resource found of given type and filter args"
 
@@ -405,6 +423,14 @@ license: Test License
         tid = cfg_env.get()
         agent_trigger_method = const.AgentTriggerMethod.get_agent_trigger_method(full_deploy)
         conn.release_version(tid, self.version, True, agent_trigger_method)
+
+    def get_last_context(self) -> Optional[HandlerContext]:
+        return self.ctx
+
+    def get_last_logs(self) -> Optional[List[LogLine]]:
+        if self.ctx:
+            return self.ctx.logs
+        return None
 
     def get_stdout(self):
         return self._stdout

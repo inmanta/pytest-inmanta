@@ -22,4 +22,4 @@ def test_resource(testdir):
 
     result = testdir.runpytest("tests/test_handler.py")
 
-    result.assert_outcomes(passed=3)
+    result.assert_outcomes(passed=4)

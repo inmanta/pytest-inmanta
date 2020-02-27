@@ -1,3 +1,12 @@
+# V 1.0.0
+Changes in this release:
+- Added support to get logs from handler (#35)
+- Added support to specify multiple --repo-path options (#38)
+- Added --install_mode option
+
+# V 0.10.0
+Changes in this release:
+
 # V 0.9.0
 Changes in this release:
 
