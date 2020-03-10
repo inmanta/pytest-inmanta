@@ -27,6 +27,7 @@ import glob
 import importlib
 import types
 from distutils import dir_util
+from pathlib import Path
 
 
 from inmanta import compiler, module, config, const, protocol
@@ -65,6 +66,8 @@ def pytest_addoption(parser):
         'inmanta', 'inmanta module testing plugin')
     group.addoption('--venv', dest='inm_venv',
                     help='folder in which to place the virtual env for tests (will be shared by all tests), overrides INMANTA_TEST_ENV')
+    group.addoption('--use-module-in-place', action='store_true',
+                    help="tell pytest-inmanta to run with the module in place, useful for debugging")
     group.addoption('--module_repo', dest='inm_module_repo', action="append",
                     help='location to download modules from, overrides INMANTA_MODULE_REPO.'
                          'Can be specified multiple times to add multiple locations')
@@ -137,6 +140,11 @@ def project_shared(request):
 
     install_mode = get_opt_or_env_or(request.config, "inm_install_mode", "release")        
 
+    modulepath = ["libs"]
+    in_place = request.config.getoption("--use-module-in-place")
+    if in_place:
+        modulepath.append(str(Path(os.getcwd()).parent))
+
     env_override = get_opt_or_env_or(request.config, "inm_venv", None)
     if env_override is not None:
         try:
@@ -153,14 +161,15 @@ def project_shared(request):
         fd.write("""name: testcase
 description: Project for testcase
 repo: ['%(repo)s']
-modulepath: libs
+modulepath: ['%(modulepath)s']
 downloadpath: libs
 install_mode: %(install_mode)s
-""" % {"repo": "', '".join(repos), "install_mode": install_mode})
+""" % {"repo": "', '".join(repos), "install_mode": install_mode, "modulepath": "', '".join(modulepath)})
 
     # copy the current module in
     module_dir, module_name = get_module_info()
-    dir_util.copy_tree(module_dir, os.path.join(test_project_dir, "libs", module_name))
+    if not in_place:
+        dir_util.copy_tree(module_dir, os.path.join(test_project_dir, "libs", module_name))
 
     test_project = Project(test_project_dir)
 
