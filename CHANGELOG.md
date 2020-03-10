@@ -1,3 +1,7 @@
+# V 1.1.0
+Changes in this release:
+- Added --use-module-in-place option (#30)
+
 # V 1.0.0
 Changes in this release:
 - Added support to get logs from handler (#35)
