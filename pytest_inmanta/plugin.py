@@ -164,7 +164,7 @@ repo: ['%(repo)s']
 modulepath: ['%(modulepath)s']
 downloadpath: libs
 install_mode: %(install_mode)s
-""" % {"repo": "', '".join(repos), "install_mode": install_mode, "modulepath": "', '".join(modulepath)}
+""" % {"repo": "', '".join(repos), "install_mode": install_mode, "modulepath": "', '".join(modulepath)})
 
     # copy the current module in
     module_dir, module_name = get_module_info()
