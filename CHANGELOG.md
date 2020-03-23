@@ -1,6 +1,7 @@
 # V 1.1.0
 Changes in this release:
 - Added --use-module-in-place option (#30)
+- Added support to test regular functions and classes (#37) 
 
 # V 1.0.0
 Changes in this release:
