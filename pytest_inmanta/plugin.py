@@ -388,6 +388,15 @@ version: 0.1
 license: Test License
             """)
 
+    def load(self) -> None:
+        """
+            Load the current module and compile an empty project
+        """
+        Path(os.path.join(self._test_project_dir, "main.cf")).touch()
+        test_project = module.Project(self._test_project_dir)
+        module.Project.set(test_project)
+        test_project.load()
+
     def compile(self, main, export=False):
         """
             Compile the configuration model in main. This method will load all required modules.

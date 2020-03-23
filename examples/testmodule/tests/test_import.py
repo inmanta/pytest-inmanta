@@ -6,7 +6,7 @@
 
 
 def test_import(project):
-    project.compile("")
+    project.load()
     from inmanta_plugins.testmodule import regular_function
 
     assert regular_function() == "imported"

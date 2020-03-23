@@ -67,13 +67,13 @@ And dryrun
 ```
 
 Testing functions and classes defined in a module is also possible 
-by simply importing them after the project is compiled
+by simply importing them after the project is loaded or compiled
 
 ```python
-project.compile("") # Model to compile
-from inmanta_plugins.testmodule import regular_function
-
-regular_function("example")
+    project.load() # or project.compile("<your model here>")
+    from inmanta_plugins.testmodule import regular_function
+    
+    regular_function("example")
 ```
 ## Testing plugins
 
