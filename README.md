@@ -66,6 +66,15 @@ And dryrun
     assert changes == {"value": {'current': 'read', 'desired': 'write'}}
 ```
 
+Testing functions and classes defined in a module is also possible 
+by simply importing them inside a test case, after the project fixture is initialized
+
+```python
+    def test_example(project):
+        from inmanta_plugins.testmodule import regular_function
+    
+        regular_function("example")
+```
 ## Testing plugins
 
 Take the following plugin as an example:
