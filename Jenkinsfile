@@ -27,8 +27,30 @@ pipeline {
                 }
             }       
         }
-    }
+    
+        stage("release") {
+            when {
+                expression { return BRANCH_NAME == "master" }
+            }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'devpi-user', usernameVariable: 'DEVPI_USER', passwordVariable: 'DEVPI_PASS')]) {
+                sh'''
+                    "/opt/devpi-client/venv/bin/devpi" use https://artifacts.internal.inmanta.com/inmanta/dev/
 
+                    "/opt/devpi-client/venv/bin/devpi" login "${DEVPI_USER}" --password="${DEVPI_PASS}"
+
+                    rm -f dist/*
+
+                    "${WORKSPACE}/env/bin/python3" setup.py egg_info -Db ".dev$(date +'%Y%m%d%H%M%S' --utc)" sdist
+
+                    "/opt/devpi-client/venv/bin/devpi" upload dist/*.dev*
+
+                    "/opt/devpi-client/venv/bin/devpi" logoff
+                '''
+                }
+            }
+        }
+    }
     post {
         always {
             junit 'pytest/junit.xml'
