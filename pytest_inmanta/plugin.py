@@ -96,7 +96,7 @@ def get_module_info():
                         "%s not part of module path" % curdir)
 
     module_dir = os.path.join("/", *dir_path)
-    with open("module.yml") as m:
+    with open(os.path.join(module_dir, "module.yml")) as m:
         module_name = yaml.safe_load(m)["name"]
 
     return module_dir, module_name
@@ -243,6 +243,7 @@ class Project():
         self._facts = defaultdict(dict)
         self.ctx = None
         config.Config.load_config()
+        self._load()
 
     def add_blob(self, key, content, allow_overwrite=True):
         """
@@ -388,11 +389,13 @@ version: 0.1
 license: Test License
             """)
 
-    def load(self) -> None:
+    def _load(self) -> None:
         """
-            Load the current module and compile an empty project
+            Load the current module and compile an otherwise empty project
         """
-        Path(os.path.join(self._test_project_dir, "main.cf")).touch()
+        _, module_name = get_module_info()
+        with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
+            fd.write(f"import {module_name}")
         test_project = module.Project(self._test_project_dir)
         module.Project.set(test_project)
         test_project.load()
