@@ -489,6 +489,9 @@ license: Test License
         return dict(self._plugins)
 
     def get_instances(self, fortype: str="std::Entity"):
+        if fortype not in self.types:
+            raise Exception(f"No entities of type {fortype} found in the model")
+
         # extract all objects of a specific type from the compiler
         allof = self.types[fortype].get_all_instances()
         # wrap in DynamicProxy to hide internal compiler structure
