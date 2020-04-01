@@ -20,7 +20,6 @@ import tempfile
 import os
 import shutil
 import sys
-import io
 import logging
 import imp
 import glob
@@ -31,7 +30,7 @@ from pathlib import Path
 
 
 from inmanta import compiler, module, config, const, protocol
-from inmanta.agent.handler import HandlerContext
+from inmanta.agent.handler import HandlerContext, ResourceHandler
 from inmanta.data import LogLine
 from inmanta.protocol import json_encode
 from inmanta.agent import cache, handler
@@ -228,6 +227,7 @@ class Project():
         self._plugins = self._load_plugins()
         self._capsys = None
         self.ctx = None
+        self._handlers = set()
         config.Config.load_config()
 
     def init(self, capsys):
@@ -242,6 +242,7 @@ class Project():
         self._blobs = {}
         self._facts = defaultdict(dict)
         self.ctx = None
+        self._handlers = set()
         config.Config.load_config()
         self._load()
 
@@ -278,7 +279,7 @@ class Project():
             p.stat_file = lambda x: self.stat_blob(x)
             p.upload_file = lambda x, y: self.add_blob(x, y)
             p.run_sync = ioloop.IOLoop.current().run_sync
-
+            self._handlers.add(p)
             return p
         except Exception as e:
             raise e
@@ -536,4 +537,16 @@ license: Test License
 
     def clean(self) -> None:
         shutil.rmtree(os.path.join(self._test_project_dir, "libs", "unittest"))
+        self.finalize_all_handlers()
         self.create_module("unittest", initcf=get_module_data("init.cf"), initpy=get_module_data("init.py"))
+
+    def finalize_handler(self, handler: ResourceHandler) -> None:
+        versions = sorted(handler.cache.counterforVersion.keys())
+        for version in versions:
+            if handler.cache.is_open(version):
+                handler.cache.close_version(version)
+
+    def finalize_all_handlers(self):
+        for handler_instance in self._handlers:
+            self.finalize_handler(handler_instance)
+

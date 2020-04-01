@@ -105,3 +105,18 @@ def test_retrieve_logs(project):
     project.dryrun_resource("unittest::Resource")
     logs = project.get_last_logs()
     assert len(logs) == 2
+
+
+def test_close_cache(project):
+    project.compile("""
+        import unittest
+
+        unittest::Resource(name="res", desired_value="x")
+        """)
+
+    project.deploy_resource("unittest::Resource")
+    res = project.get_resource("unittest::Resource")
+    handler = project.get_handler(res, False)
+    project.finalize_handler(handler)
+    versions = handler.cache.counterforVersion.keys()
+    assert len(versions) == 0
