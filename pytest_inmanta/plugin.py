@@ -331,6 +331,7 @@ class Project():
         h.execute(ctx, resource, dry_run)
         self.finalize_context(ctx)
         self.ctx = ctx
+        self.finalize_handler(h)
         return ctx
 
     def dryrun(self, resource, run_as_root=False):
@@ -543,7 +544,7 @@ license: Test License
     def finalize_handler(self, handler: ResourceHandler) -> None:
         versions = sorted(handler.cache.counterforVersion.keys())
         for version in versions:
-            if handler.cache.is_open(version):
+            while handler.cache.is_open(version):
                 handler.cache.close_version(version)
 
     def finalize_all_handlers(self):
