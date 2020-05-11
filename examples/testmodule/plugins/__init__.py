@@ -3,9 +3,14 @@
     Contact: code@inmanta.com
     License: Apache 2.0
 """
+import os
+from pathlib import Path
+
 
 from inmanta.agent.handler import provider, CRUDHandler, HandlerContext
 from inmanta.resources import resource, PurgeableResource
+from inmanta.plugins import plugin
+
 
 @resource("testmodule::Resource", agent="agent", id_attribute="name")
 @resource("testmodule::BadLog", agent="agent", id_attribute="name")
@@ -15,7 +20,6 @@ class ResourceResource(PurgeableResource):
 
 @provider("testmodule::Resource", name="resourceprovider")
 class ResourceHandler(CRUDHandler):
-
     def read_resource(self, ctx: HandlerContext, resource: ResourceResource) -> None:
         resource.purged = False
         resource.value = "read"
@@ -36,8 +40,16 @@ class ResourceHandler(CRUDHandler):
 
 @provider("testmodule::BadLog", name="BadLog")
 class ResourceHandler(ResourceHandler):
-
     def read_resource(self, ctx: HandlerContext, resource: ResourceResource) -> None:
         resource.purged = False
         resource.value = "read"
         ctx.warning("argument can not be serialized", argument={"a":"b"}.values())
+
+
+@plugin
+def create_testfile():
+    Path(os.path.realpath(__file__)).parent.parent.joinpath("testfile").touch()
+
+
+def regular_function():
+    return "imported"

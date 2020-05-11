@@ -66,6 +66,15 @@ And dryrun
     assert changes == {"value": {'current': 'read', 'desired': 'write'}}
 ```
 
+Testing functions and classes defined in a module is also possible 
+by simply importing them inside a test case, after the project fixture is initialized
+
+```python
+    def test_example(project):
+        from inmanta_plugins.testmodule import regular_function
+    
+        regular_function("example")
+```
 ## Testing plugins
 
 Take the following plugin as an example:
@@ -108,6 +117,8 @@ The following options are available.
  * `--venv`: folder in which to place the virtual env for tests (will be shared by all tests), overrides `INMANTA_TEST_ENV`.
    This options depends on symlink support. This does not work on all windows versions. On windows 10 you need to run pytest in an
    admin shell.
+ * `--use-module-in-place`: makes inmanta add the parent directory of your module directory to it's directory path, instead of copying your
+    module to a temporary libs directory.
  * `--module_repo`: location to download modules from, overrides `INMANTA_MODULE_REPO`. The default value is the inmanta github organisation.
  * `--install_mode`: install mode to use for modules downloaded during this test, overrides `INMANTA_INSTALL_MODE`  
  

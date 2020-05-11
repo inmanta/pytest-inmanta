@@ -20,17 +20,17 @@ import tempfile
 import os
 import shutil
 import sys
-import io
 import logging
 import imp
 import glob
 import importlib
 import types
 from distutils import dir_util
+from pathlib import Path
 
 
 from inmanta import compiler, module, config, const, protocol
-from inmanta.agent.handler import HandlerContext
+from inmanta.agent.handler import HandlerContext, ResourceHandler
 from inmanta.data import LogLine
 from inmanta.protocol import json_encode
 from inmanta.agent import cache, handler
@@ -65,6 +65,8 @@ def pytest_addoption(parser):
         'inmanta', 'inmanta module testing plugin')
     group.addoption('--venv', dest='inm_venv',
                     help='folder in which to place the virtual env for tests (will be shared by all tests), overrides INMANTA_TEST_ENV')
+    group.addoption('--use-module-in-place', action='store_true',
+                    help="tell pytest-inmanta to run with the module in place, useful for debugging")
     group.addoption('--module_repo', dest='inm_module_repo', action="append",
                     help='location to download modules from, overrides INMANTA_MODULE_REPO.'
                          'Can be specified multiple times to add multiple locations')
@@ -93,7 +95,7 @@ def get_module_info():
                         "%s not part of module path" % curdir)
 
     module_dir = os.path.join("/", *dir_path)
-    with open("module.yml") as m:
+    with open(os.path.join(module_dir, "module.yml")) as m:
         module_name = yaml.safe_load(m)["name"]
 
     return module_dir, module_name
@@ -137,6 +139,11 @@ def project_shared(request):
 
     install_mode = get_opt_or_env_or(request.config, "inm_install_mode", "release")        
 
+    modulepath = ["libs"]
+    in_place = request.config.getoption("--use-module-in-place")
+    if in_place:
+        modulepath.append(str(Path(os.getcwd()).parent))
+
     env_override = get_opt_or_env_or(request.config, "inm_venv", None)
     if env_override is not None:
         try:
@@ -153,14 +160,15 @@ def project_shared(request):
         fd.write("""name: testcase
 description: Project for testcase
 repo: ['%(repo)s']
-modulepath: libs
+modulepath: ['%(modulepath)s']
 downloadpath: libs
 install_mode: %(install_mode)s
-""" % {"repo": "', '".join(repos), "install_mode": install_mode})
+""" % {"repo": "', '".join(repos), "install_mode": install_mode, "modulepath": "', '".join(modulepath)})
 
     # copy the current module in
     module_dir, module_name = get_module_info()
-    dir_util.copy_tree(module_dir, os.path.join(test_project_dir, "libs", module_name))
+    if not in_place:
+        dir_util.copy_tree(module_dir, os.path.join(test_project_dir, "libs", module_name))
 
     test_project = Project(test_project_dir)
 
@@ -219,6 +227,7 @@ class Project():
         self._plugins = self._load_plugins()
         self._capsys = None
         self.ctx = None
+        self._handlers = set()
         config.Config.load_config()
 
     def init(self, capsys):
@@ -233,7 +242,9 @@ class Project():
         self._blobs = {}
         self._facts = defaultdict(dict)
         self.ctx = None
+        self._handlers = set()
         config.Config.load_config()
+        self._load()
 
     def add_blob(self, key, content, allow_overwrite=True):
         """
@@ -268,7 +279,7 @@ class Project():
             p.stat_file = lambda x: self.stat_blob(x)
             p.upload_file = lambda x, y: self.add_blob(x, y)
             p.run_sync = ioloop.IOLoop.current().run_sync
-
+            self._handlers.add(p)
             return p
         except Exception as e:
             raise e
@@ -320,6 +331,7 @@ class Project():
         h.execute(ctx, resource, dry_run)
         self.finalize_context(ctx)
         self.ctx = ctx
+        self.finalize_handler(h)
         return ctx
 
     def dryrun(self, resource, run_as_root=False):
@@ -378,6 +390,17 @@ class Project():
 version: 0.1
 license: Test License
             """)
+
+    def _load(self) -> None:
+        """
+            Load the current module and compile an otherwise empty project
+        """
+        _, module_name = get_module_info()
+        with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
+            fd.write(f"import {module_name}")
+        test_project = module.Project(self._test_project_dir)
+        module.Project.set(test_project)
+        test_project.load()
 
     def compile(self, main, export=False):
         """
@@ -480,6 +503,9 @@ license: Test License
         return dict(self._plugins)
 
     def get_instances(self, fortype: str="std::Entity"):
+        if fortype not in self.types:
+            raise Exception(f"No entities of type {fortype} found in the model")
+
         # extract all objects of a specific type from the compiler
         allof = self.types[fortype].get_all_instances()
         # wrap in DynamicProxy to hide internal compiler structure
@@ -512,4 +538,16 @@ license: Test License
 
     def clean(self) -> None:
         shutil.rmtree(os.path.join(self._test_project_dir, "libs", "unittest"))
+        self.finalize_all_handlers()
         self.create_module("unittest", initcf=get_module_data("init.cf"), initpy=get_module_data("init.py"))
+
+    def finalize_handler(self, handler: ResourceHandler) -> None:
+        versions = sorted(handler.cache.counterforVersion.keys())
+        for version in versions:
+            while handler.cache.is_open(version):
+                handler.cache.close_version(version)
+
+    def finalize_all_handlers(self):
+        for handler_instance in self._handlers:
+            self.finalize_handler(handler_instance)
+

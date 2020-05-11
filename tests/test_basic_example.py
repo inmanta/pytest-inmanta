@@ -125,3 +125,12 @@ def test_multiple_repo_paths_env(testdir, monkeypatch):
 
     result = testdir.runpytest("tests/test_multiple_repo_paths.py")
     result.assert_outcomes(passed=1)
+
+def test_import(testdir):
+    """Make sure that importing functions works."""
+
+    testdir.copy_example("testmodule")
+
+    result = testdir.runpytest("tests/test_import.py")
+
+    result.assert_outcomes(passed=1)
