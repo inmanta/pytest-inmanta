@@ -1,3 +1,7 @@
+# V 1.2.0
+Changes in this release:
+- 
+
 # V 1.1.0
 Changes in this release:
 - Added --use-module-in-place option (#30)
