@@ -23,3 +23,10 @@ def test_resource(testdir):
     result = testdir.runpytest("tests/test_handler.py")
 
     result.assert_outcomes(passed=5)
+
+def test_dryrun(testdir):
+    testdir.copy_example("testhandler")
+
+    result = testdir.runpytest("tests/test_dryrun.py")
+
+    result.assert_outcomes(passed=2)

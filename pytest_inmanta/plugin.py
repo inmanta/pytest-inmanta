@@ -355,12 +355,20 @@ class Project():
         self.finalize_context(ctx)
         return res
 
-    def dryrun_resource(self, resource_type: str, status=const.ResourceState.deployed, run_as_root=False, **filter_args: dict):
+    def dryrun_resource(self, resource_type: str, status=const.ResourceState.dry, run_as_root=False, **filter_args: dict):
+        """
+            Run a dryrun for a specific resource.
+
+            :param resource_type: the type of resource to run, as a fully qualified inmanta type (e.g. `unittest::Resource`), see :py:meth:`get_resource`
+            :param status: the expected result status (for dryrun the success status is :py:attr:`inmanta.const.ResourceState.dry`)
+            :param run_as_root: run the mock agent as root
+            :param filter_args: filters for selecting the resource, see :py:meth:`get_resource`
+        """
         res = self.get_resource(resource_type, **filter_args)
         assert res is not None, "No resource found of given type and filter args"
 
         ctx = self.dryrun(res, run_as_root)
-        assert ctx.status == const.ResourceState.dry
+        assert ctx.status == status
         return ctx.changes
 
     def io(self, run_as_root=False):
