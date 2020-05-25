@@ -224,6 +224,7 @@ class Project():
         self._exporter = None
         self._blobs = {}
         self._facts = defaultdict(dict)
+        self._load()
         self._plugins = self._load_plugins()
         self._capsys = None
         self.ctx = None
@@ -244,7 +245,6 @@ class Project():
         self.ctx = None
         self._handlers = set()
         config.Config.load_config()
-        self._load()
 
     def add_blob(self, key, content, allow_overwrite=True):
         """
