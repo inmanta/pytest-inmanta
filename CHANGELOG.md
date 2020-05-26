@@ -1,3 +1,9 @@
+# V 1.2.0
+Changes in this release:
+- Fixed status field on dryrun_resource (#53)
+- Fixed error when running tests for module that imports other modules from its plugins
+- Added project_no_plugins fixture as workaround for plugins being loaded multiple times (inmanta/pytest-inmanta#49)
+
 # V 1.1.0
 Changes in this release:
 - Added --use-module-in-place option (#30)
