@@ -1,3 +1,6 @@
+# V 1.3.0
+Changes in this release:
+
 # V 1.2.0
 Changes in this release:
 - Fixed status field on dryrun_resource (#53)
