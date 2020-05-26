@@ -1,6 +1,7 @@
 # V 1.2.0
 Changes in this release:
 - Fixed status field on dryrun_resource (#53)
+- Fixed error when running tests for module that imports other modules from its plugins
 
 # V 1.1.0
 Changes in this release:
