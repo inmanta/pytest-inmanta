@@ -110,6 +110,15 @@ def project(project_shared, capsys):
     project_shared.clean()
 
 
+@pytest.fixture()
+def project_no_plugins(project_shared_no_plugins, capsys):
+    DATA.clear()
+    project_shared_no_plugins.clean()
+    project_shared_no_plugins.init(capsys)
+    yield project_shared_no_plugins
+    project_shared_no_plugins.clean()
+
+
 def get_module_data(filename: str) -> str:
     """
         Get the given filename from the module directory in the source tree
@@ -120,10 +129,29 @@ def get_module_data(filename: str) -> str:
 
 
 @pytest.fixture(scope="session")
-def project_shared(request):
+def project_shared(request, project_factory):
     """
         A test fixture that creates a new inmanta project with the current module in. The returned object can be used
         to add files to the unittest module, compile a model and access the results, stdout and stderr.
+    """
+    yield project_factory()
+
+
+# Temporary workaround for plugins loading multiple times (inmanta/pytest-inmanta#49)
+@pytest.fixture(scope="session")
+def project_shared_no_plugins(request, project_factory):
+    """
+        A test fixture that creates a new inmanta project with the current module in. The returned object can be used
+        to add files to the unittest module, compile a model and access the results, stdout and stderr.
+        This project is initialized with load_plugins == False.
+    """
+    yield project_factory(load_plugins=False)
+
+
+@pytest.fixture(scope="session")
+def project_factory()
+    """
+        A factory that constructs a single Project.
     """
     _sys_path = sys.path
     test_project_dir = tempfile.mkdtemp()
@@ -170,12 +198,15 @@ install_mode: %(install_mode)s
     if not in_place:
         dir_util.copy_tree(module_dir, os.path.join(test_project_dir, "libs", module_name))
 
-    test_project = Project(test_project_dir)
+    def create_project(*args, **kwargs):
+        test_project = Project(test_project_dir, *args, **kwargs)
 
-    # create the unittest module
-    test_project.create_module("unittest", initcf=get_module_data("init.cf"), initpy=get_module_data("init.py"))
+        # create the unittest module
+        test_project.create_module("unittest", initcf=get_module_data("init.cf"), initpy=get_module_data("init.py"))
 
-    yield test_project
+        return test_project
+
+    yield create_project
 
     try:
         shutil.rmtree(test_project_dir)
@@ -213,7 +244,7 @@ class Project():
         modules from the provided repositories. Additional repositories can be provided by setting the INMANTA_MODULE_REPO
         environment variable. Repositories are separated with spaces.
     """
-    def __init__(self, project_dir):
+    def __init__(self, project_dir, load_plugins = True):
         self._test_project_dir = project_dir
         self._stdout = None
         self._stderr = None
@@ -225,7 +256,7 @@ class Project():
         self._blobs = {}
         self._facts = defaultdict(dict)
         self._load()
-        self._plugins = self._load_plugins()
+        self._plugins = self._load_plugins() if load_plugins else None
         self._capsys = None
         self.ctx = None
         self._handlers = set()
@@ -503,11 +534,15 @@ license: Test License
         return result
 
     def get_plugin_function(self, function_name):
+        if self._plugins is None:
+            raise Exception("Plugins not loaded, perhaps you should use the `project` fixture or initialize the Project with load_plugins == True")
         if function_name not in self._plugins:
             raise Exception(f"Plugin function with name {function_name} not found")
         return self._plugins[function_name]
 
     def get_plugins(self):
+        if self._plugins is None:
+            raise Exception("Plugins not loaded, perhaps you should use the `project` fixture or initialize the Project with load_plugins == True")
         return dict(self._plugins)
 
     def get_instances(self, fortype: str="std::Entity"):
