@@ -57,6 +57,7 @@ option_to_env = {
     "inm_venv":"INMANTA_TEST_ENV",
     "inm_module_repo":"INMANTA_MODULE_REPO",
     "inm_install_mode":"INMANTA_INSTALL_MODE",
+    "inm_no_load_plugins":"INMANTA_TEST_NO_LOAD_PLUGINS",
 }
 
 
@@ -73,6 +74,8 @@ def pytest_addoption(parser):
     group.addoption('--install_mode', dest='inm_install_mode',
                     help='Install mode for modules downloaded during this test',
                     choices=module.INSTALL_OPTS)
+    group.addoption('--no_load_plugins', action='store_true', dest='inm_no_load_plugins',
+                    help='Don\'t load plugins in the Project class.')
 
 
 def get_opt_or_env_or(config, key, default):
@@ -198,8 +201,12 @@ install_mode: %(install_mode)s
     if not in_place:
         dir_util.copy_tree(module_dir, os.path.join(test_project_dir, "libs", module_name))
 
-    def create_project(*args, **kwargs):
-        test_project = Project(test_project_dir, *args, **kwargs)
+    def create_project(**kwargs):
+        extended_kwargs: Dict[str, object] = {
+            "load_plugins": not get_opt_or_env_or(request.config, "inm_no_load_plugins", False),
+            **kwargs,
+        }
+        test_project = Project(test_project_dir, **extended_kwargs)
 
         # create the unittest module
         test_project.create_module("unittest", initcf=get_module_data("init.cf"), initpy=get_module_data("init.py"))
