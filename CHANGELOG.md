@@ -1,3 +1,6 @@
+# V 1.4.0
+Changes in this release:
+
 # V 1.3.0
 Changes in this release:
 - Added INMANTA_TEST_NO_LOAD_PLUGINS environment variable as workaround for inmanta/pytest-inmanta#49
