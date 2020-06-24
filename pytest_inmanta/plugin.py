@@ -176,7 +176,7 @@ def project_factory(request):
         modulepath.append(str(Path(os.getcwd()).parent))
 
     env_override = get_opt_or_env_or(request.config, "inm_venv", None)
-    if env_override and not os.path.exists(env_override):
+    if env_override and not os.path.isdir(env_override):
         raise Exception("Specified venv %s does not exist", env_override)
     if env_override is not None:
         try:
