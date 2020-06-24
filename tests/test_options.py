@@ -31,8 +31,9 @@ def test_module_in_place(testdir):
 
 def test_not_existing_venv_option(testdir, tmpdir):
     testdir.copy_example("testmodule")
+    venv_path = os.path.join(tmpdir, str(uuid.uuid4()))
 
-    result = testdir.runpytest("tests/test_resource_run.py", "--venv", os.path.join(tmpdir, str(uuid.uuid4())))
+    result = testdir.runpytest("tests/test_resource_run.py", "--venv", venv_path)
 
     result.assert_outcomes(error=1)
-    assert "Specified venv %s does not exist" in "\n".join(result.outlines)
+    assert f"Specified venv {venv_path} does not exist" in "\n".join(result.outlines)
