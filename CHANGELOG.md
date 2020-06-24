@@ -1,3 +1,7 @@
+# V 1.5.0
+Changes in this release:
+- Added meaningful error message when --venv points to a non-existing directory (#62)
+
 # V 1.4.0
 Changes in this release:
 
