@@ -1,5 +1,6 @@
 import os
 import shutil
+import uuid
 
 import pytest_inmanta
 
@@ -26,3 +27,13 @@ def test_module_in_place(testdir):
     result.assert_outcomes(passed=1)
 
     assert os.path.exists(os.path.join(path, "testfile"))
+
+
+def test_not_existing_venv_option(testdir, tmpdir):
+    testdir.copy_example("testmodule")
+    venv_path = os.path.join(tmpdir, str(uuid.uuid4()))
+
+    result = testdir.runpytest("tests/test_resource_run.py", "--venv", venv_path)
+
+    result.assert_outcomes(error=1)
+    assert f"Specified venv {venv_path} does not exist" in "\n".join(result.outlines)
