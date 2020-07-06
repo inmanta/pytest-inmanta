@@ -594,10 +594,7 @@ license: Test License
         self.create_module("unittest", initcf=get_module_data("init.cf"), initpy=get_module_data("init.py"))
 
     def finalize_handler(self, handler: ResourceHandler) -> None:
-        versions = sorted(handler.cache.counterforVersion.keys())
-        for version in versions:
-            while handler.cache.is_open(version):
-                handler.cache.close_version(version)
+        handler.cache.close()
 
     def finalize_all_handlers(self):
         for handler_instance in self._handlers:

@@ -120,3 +120,4 @@ def test_close_cache(project):
     project.finalize_handler(handler)
     versions = handler.cache.counterforVersion.keys()
     assert len(versions) == 0
+    assert len(handler.cache.cache) == 0
