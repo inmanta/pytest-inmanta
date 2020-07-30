@@ -35,5 +35,5 @@ def test_not_existing_venv_option(testdir, tmpdir):
 
     result = testdir.runpytest("tests/test_resource_run.py", "--venv", venv_path)
 
-    result.assert_outcomes(error=1)
+    result.assert_outcomes(errors=1)
     assert f"Specified venv {venv_path} does not exist" in "\n".join(result.outlines)
