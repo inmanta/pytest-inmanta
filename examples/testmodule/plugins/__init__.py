@@ -12,6 +12,10 @@ from inmanta.resources import resource, PurgeableResource
 from inmanta.plugins import plugin
 
 
+# side effect for test_49_plugin_load_side_effects
+print("loading module...")
+
+
 @resource("testmodule::Resource", agent="agent", id_attribute="name")
 @resource("testmodule::BadLog", agent="agent", id_attribute="name")
 class ResourceResource(PurgeableResource):
@@ -53,3 +57,12 @@ def create_testfile():
 
 def regular_function():
     return "imported"
+
+
+class TestException(Exception):
+    pass
+
+
+@plugin
+def get_exception():
+    return TestException

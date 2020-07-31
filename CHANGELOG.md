@@ -3,6 +3,7 @@ Changes in this release:
 - Added meaningful error message when --venv points to a non-existing directory (#62)
 - Ensure that cache is closed completely (#57)
 - Fix incompatibility with pytest 6.0.0
+- Fixed plugin loading compatibility with compiler (#46, #49)
 
 # V 1.3.0
 Changes in this release:

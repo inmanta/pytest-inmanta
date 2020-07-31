@@ -29,6 +29,7 @@ from distutils import dir_util
 from pathlib import Path
 
 
+import inmanta.loader as loader
 from inmanta import compiler, module, config, const, protocol
 from inmanta.agent.handler import HandlerContext, ResourceHandler
 from inmanta.data import LogLine
@@ -531,12 +532,14 @@ license: Test License
         if not os.path.exists(os.path.join(plugin_dir, "__init__.py")):
             raise Exception("Plugins directory doesn't have a __init__.py file.")
         result = {}
-        mod_name = os.path.basename(module_dir)
-        imp.load_package("inmanta_plugins." + mod_name, plugin_dir)
-        for py_file in glob.glob(os.path.join(plugin_dir, "*.py")):
-            sub_mod_path = "inmanta_plugins." + mod_name + "." + os.path.basename(py_file).split(".")[0]
-            imp.load_source(sub_mod_path, py_file)
-            sub_mod = importlib.import_module(sub_mod_path)
+
+        importlib.invalidate_caches()
+        libs_dir: str = [Path(module_dir).parent]
+        loader.configure_module_finder([libs_dir])
+        for py_file in glob.iglob(os.path.join(plugin_dir, "**/*.py"), recursive=True):
+            relpath: str = os.path.relpath(py_file, start=libs_dir)
+            fq_submod_name: str = loader.PluginModuleLoader.convert_relative_path_to_module(relpath)
+            sub_mod = importlib.import_module(fq_submod_name)
             for k, v in sub_mod.__dict__.items():
                 if isinstance(v, types.FunctionType):
                     result[k] = v
