@@ -169,7 +169,7 @@ def project_factory(request):
     else:
         repos = repo_options.split(" ")
 
-    install_mode = get_opt_or_env_or(request.config, "inm_install_mode", "release")        
+    install_mode = get_opt_or_env_or(request.config, "inm_install_mode", "release")
 
     modulepath = ["libs"]
     in_place = request.config.getoption("--use-module-in-place")
@@ -534,7 +534,7 @@ license: Test License
         result = {}
 
         importlib.invalidate_caches()
-        libs_dir: str = [Path(module_dir).parent]
+        libs_dir: str = Path(module_dir).parent
         loader.configure_module_finder([libs_dir])
         for py_file in glob.iglob(os.path.join(plugin_dir, "**/*.py"), recursive=True):
             relpath: str = os.path.relpath(py_file, start=libs_dir)
