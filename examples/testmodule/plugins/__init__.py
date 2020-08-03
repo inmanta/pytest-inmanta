@@ -7,13 +7,17 @@ import os
 from pathlib import Path
 
 
+import inmanta
 from inmanta.agent.handler import provider, CRUDHandler, HandlerContext
 from inmanta.resources import resource, PurgeableResource
 from inmanta.plugins import plugin
 
 
-# side effect for test_49_plugin_load_side_effects
-print("loading module...")
+# perform side effect outside of the inmanta_plugins namespace to make sure
+# this module is only loaded once (test_49_plugin_load_side_effects)
+if not hasattr(inmanta, "pytest_inmanta_side_effect_count"):
+    inmanta.pytest_inmanta_side_effect_count = 0
+inmanta.pytest_inmanta_side_effect_count += 1
 
 
 @resource("testmodule::Resource", agent="agent", id_attribute="name")
