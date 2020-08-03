@@ -452,7 +452,7 @@ license: Test License
         module.Project.set(test_project)
         test_project.load()
         if load_plugins:
-            self._load_plugins = self._load_plugins(test_project)
+            self._plugins = self._load_plugins(test_project)
 
     def compile(self, main, export=False):
         """
