@@ -45,7 +45,7 @@ from collections import defaultdict
 import yaml
 from inmanta.resources import Resource
 from tornado import ioloop
-from typing import Dict, Union, Optional, List
+from typing import Dict, Union, Optional, List, Set
 
 from .handler import DATA
 
@@ -209,7 +209,7 @@ install_mode: %(install_mode)s
             "load_plugins": not get_opt_or_env_or(request.config, "inm_no_load_plugins", False),
             **kwargs,
         }
-        test_project = Project(test_project_dir, **extended_kwargs)
+        test_project = Project(test_project_dir, modulepath, **extended_kwargs)
 
         # create the unittest module
         test_project.create_module("unittest", initcf=get_module_data("init.cf"), initpy=get_module_data("init.py"))
@@ -254,8 +254,9 @@ class Project():
         modules from the provided repositories. Additional repositories can be provided by setting the INMANTA_MODULE_REPO
         environment variable. Repositories are separated with spaces.
     """
-    def __init__(self, project_dir, load_plugins = True):
+    def __init__(self, project_dir, module_path: List[str], load_plugins = True):
         self._test_project_dir = project_dir
+        self._module_path = module_path
         self._stdout = None
         self._stderr = None
         self.types = None
@@ -525,24 +526,28 @@ license: Test License
             fd.write(content)
 
     def _load_plugins(self):
-        module_dir, _ = get_module_info()
-        plugin_dir = os.path.join(module_dir, "plugins")
-        if not os.path.exists(plugin_dir):
-            return
-        if not os.path.exists(os.path.join(plugin_dir, "__init__.py")):
-            raise Exception("Plugins directory doesn't have a __init__.py file.")
+        _, module_name = get_module_info()
+        submodules: Set[str] = set(())
         result = {}
 
         importlib.invalidate_caches()
-        libs_dir: str = Path(module_dir).parent
-        loader.configure_module_finder([libs_dir])
-        for py_file in glob.iglob(os.path.join(plugin_dir, "**/*.py"), recursive=True):
-            relpath: str = os.path.relpath(py_file, start=libs_dir)
-            fq_submod_name: str = loader.PluginModuleLoader.convert_relative_path_to_module(relpath)
-            sub_mod = importlib.import_module(fq_submod_name)
-            for k, v in sub_mod.__dict__.items():
-                if isinstance(v, types.FunctionType):
-                    result[k] = v
+        loader.configure_module_finder(self._module_path)
+        for module_dir in self._module_path:
+            plugin_dir = os.path.join(module_dir, module_name, "plugins")
+            if not os.path.exists(plugin_dir):
+                continue
+            if not os.path.exists(os.path.join(plugin_dir, "__init__.py")):
+                raise Exception("Plugins directory doesn't have a __init__.py file.")
+            for py_file in glob.iglob(os.path.join(plugin_dir, "**/*.py"), recursive=True):
+                relpath: str = os.path.relpath(py_file, start=module_dir)
+                fq_submod_name: str = loader.PluginModuleLoader.convert_relative_path_to_module(relpath)
+                if fq_submod_name in submodules:
+                    continue
+                sub_mod = importlib.import_module(fq_submod_name)
+                for k, v in sub_mod.__dict__.items():
+                    if isinstance(v, types.FunctionType):
+                        result[k] = v
+                submodules.add(fq_submod_name)
         return result
 
     def get_plugin_function(self, function_name):
