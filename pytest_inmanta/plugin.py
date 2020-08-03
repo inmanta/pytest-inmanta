@@ -266,8 +266,8 @@ class Project():
         self._exporter = None
         self._blobs = {}
         self._facts = defaultdict(dict)
-        self._load()
-        self._plugins = self._load_plugins() if load_plugins else None
+        self._plugins: Optional[Dict[str, object]] = None
+        self._load(load_plugins)
         self._capsys = None
         self.ctx = None
         self._handlers = set()
@@ -441,7 +441,7 @@ version: 0.1
 license: Test License
             """)
 
-    def _load(self) -> None:
+    def _load(self, load_plugins: bool = True) -> Optional[Dict[str, object]]:
         """
             Load the current module and compile an otherwise empty project
         """
@@ -451,6 +451,8 @@ license: Test License
         test_project = module.Project(self._test_project_dir)
         module.Project.set(test_project)
         test_project.load()
+        if load_plugins:
+            self._load_plugins = self._load_plugins(test_project)
 
     def compile(self, main, export=False):
         """
@@ -525,29 +527,19 @@ license: Test License
         with open(os.path.join(dir_name, name), "w+") as fd:
             fd.write(content)
 
-    def _load_plugins(self):
+    def _load_plugins(self, project: module.Project):
         _, module_name = get_module_info()
-        submodules: Set[str] = set(())
         result = {}
+
+        modules: Dict[str, module.Module] = project.get_modules()
 
         importlib.invalidate_caches()
         loader.configure_module_finder(self._module_path)
-        for module_dir in self._module_path:
-            plugin_dir = os.path.join(module_dir, module_name, "plugins")
-            if not os.path.exists(plugin_dir):
-                continue
-            if not os.path.exists(os.path.join(plugin_dir, "__init__.py")):
-                raise Exception("Plugins directory doesn't have a __init__.py file.")
-            for py_file in glob.iglob(os.path.join(plugin_dir, "**/*.py"), recursive=True):
-                relpath: str = os.path.relpath(py_file, start=module_dir)
-                fq_submod_name: str = loader.PluginModuleLoader.convert_relative_path_to_module(relpath)
-                if fq_submod_name in submodules:
-                    continue
-                sub_mod = importlib.import_module(fq_submod_name)
-                for k, v in sub_mod.__dict__.items():
-                    if isinstance(v, types.FunctionType):
-                        result[k] = v
-                submodules.add(fq_submod_name)
+        for _, fq_submod_name in modules[module_name].get_plugin_files():
+            sub_mod = importlib.import_module(fq_submod_name)
+            for k, v in sub_mod.__dict__.items():
+                if isinstance(v, types.FunctionType):
+                    result[k] = v
         return result
 
     def get_plugin_function(self, function_name):
