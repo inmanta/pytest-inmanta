@@ -133,4 +133,4 @@ def test_import(testdir):
 
     result = testdir.runpytest("tests/test_import.py")
 
-    result.assert_outcomes(passed=1)
+    result.assert_outcomes(passed=5)
