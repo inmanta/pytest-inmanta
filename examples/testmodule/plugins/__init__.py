@@ -10,7 +10,7 @@ from pathlib import Path
 import inmanta_plugins.std as std
 from inmanta.agent.handler import provider, CRUDHandler, HandlerContext
 from inmanta.resources import resource, PurgeableResource
-from inmanta.plugins import plugin
+from inmanta.plugins import plugin, PluginException
 
 
 # perform side effect outside of the inmanta_plugins namespace to make sure
@@ -63,10 +63,15 @@ def regular_function():
     return "imported"
 
 
-class TestException(Exception):
+class TestException(PluginException):
     pass
 
 
 @plugin
 def get_exception():
     return TestException
+
+
+@plugin
+def raise_exception():
+    raise TestException("my exception")

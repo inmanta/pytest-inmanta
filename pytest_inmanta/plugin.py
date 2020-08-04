@@ -24,7 +24,6 @@ import logging
 import imp
 import glob
 import importlib
-import types
 from distutils import dir_util
 from pathlib import Path
 
@@ -45,6 +44,7 @@ from collections import defaultdict
 import yaml
 from inmanta.resources import Resource
 from tornado import ioloop
+from types import FunctionType, ModuleType
 from typing import Dict, Union, Optional, List, Set
 
 from .handler import DATA
@@ -103,6 +103,13 @@ def get_module_info():
         module_name = yaml.safe_load(m)["name"]
 
     return module_dir, module_name
+
+
+@pytest.fixture()
+def inmanta_plugins(project):
+    importer: InmantaPluginsImporter = InmantaPluginsImporter(project)
+    loader: InmantaPluginsImportLoader = InmantaPluginsImportLoader(importer)
+    yield loader
 
 
 @pytest.fixture()
@@ -248,6 +255,47 @@ class MockAgent(object):
         self._env_id = cfg_env.get()
 
 
+class InmantaPluginsImportLoader:
+    """
+        Makes inmanta_plugins packages (Python source for inmanta modules) available dynamically so that tests can use them
+        safely without having to refresh imports when the compiler is reset.
+    """
+    def __init__(self, importer: "InmantaPluginsImporter") -> None:
+        self._importer: InmantaPluginsImporter = importer
+
+    def __getattr__(self, name: str):
+        submodules: Optional[Dict[str, ModuleType]] = self._importer.get_submodules(name)
+        fq_mod_name: str = f"inmanta_plugins.{name}"
+        if submodules is None or fq_mod_name not in submodules:
+            raise AttributeError("No inmanta module named %s" % name)
+        return submodules[fq_mod_name]
+
+
+class InmantaPluginsImporter:
+    def __init__(self, project: "Project") -> None:
+        self.project: Project = project
+        self.loader: InmantaPluginsImportLoader = InmantaPluginsImportLoader(self)
+        # expose module imports from self.modules.some_module
+        self.modules: InmantaPluginsImportLoader = self.loader
+
+    def get_submodules(self, module_name: str) -> Optional[Dict[str, ModuleType]]:
+        inmanta_project: module.Project = module.Project.get()
+        if not inmanta_project.loaded:
+            raise Exception(
+                "Dynamically importing from inmanta_plugins requires a loaded inmanta.module.Project. Make sure to use the"
+                " project fixture."
+            )
+        modules: Dict[str, module.Module] = inmanta_project.get_modules()
+        importlib.invalidate_caches()
+        loader.configure_module_finder(self.project.module_path)
+        if module_name not in modules:
+            return None
+        result = {}
+        for _, fq_submod_name in modules[module_name].get_plugin_files():
+            result[str(fq_submod_name)] = importlib.import_module(fq_submod_name)
+        return result
+
+
 class Project():
     """
         This class provides a TestCase class for creating module unit tests. It uses the current module and loads required
@@ -256,7 +304,7 @@ class Project():
     """
     def __init__(self, project_dir, module_path: List[str], load_plugins = True):
         self._test_project_dir = project_dir
-        self._module_path = module_path
+        self.module_path = module_path
         self._stdout = None
         self._stderr = None
         self.types = None
@@ -266,8 +314,8 @@ class Project():
         self._exporter = None
         self._blobs = {}
         self._facts = defaultdict(dict)
-        self._plugins: Optional[Dict[str, object]] = None
-        self._load(load_plugins)
+        self._load()
+        self._plugins: Optional[Dict[str, object]] = self._load_plugins() if load_plugins else None
         self._capsys = None
         self.ctx = None
         self._handlers = set()
@@ -441,7 +489,7 @@ version: 0.1
 license: Test License
             """)
 
-    def _load(self, load_plugins: bool = True) -> Optional[Dict[str, object]]:
+    def _load(self) -> None:
         """
             Load the current module and compile an otherwise empty project
         """
@@ -451,8 +499,6 @@ license: Test License
         test_project = module.Project(self._test_project_dir)
         module.Project.set(test_project)
         test_project.load()
-        if load_plugins:
-            self._plugins = self._load_plugins(test_project)
 
     def compile(self, main, export=False):
         """
@@ -470,6 +516,10 @@ license: Test License
         self._capsys.readouterr()
 
         (types, scopes) = compiler.do_compile(refs={"facts": self._facts})
+
+        # refresh plugins
+        if self._plugins is not None:
+            self._plugins = self._load_plugins()
 
         exporter = Exporter()
 
@@ -527,20 +577,12 @@ license: Test License
         with open(os.path.join(dir_name, name), "w+") as fd:
             fd.write(content)
 
-    def _load_plugins(self, project: module.Project):
+    def _load_plugins(self) -> Dict[str, FunctionType]:
         _, module_name = get_module_info()
-        result = {}
-
-        modules: Dict[str, module.Module] = project.get_modules()
-
-        importlib.invalidate_caches()
-        loader.configure_module_finder(self._module_path)
-        for _, fq_submod_name in modules[module_name].get_plugin_files():
-            sub_mod = importlib.import_module(fq_submod_name)
-            for k, v in sub_mod.__dict__.items():
-                if isinstance(v, types.FunctionType):
-                    result[k] = v
-        return result
+        submodules: Optional[Dict[str, ModuleType]] = InmantaPluginsImporter(self).get_submodules(module_name)
+        return {} if submodules is None else {
+            k: v for submod in submodules.values() for k, v in submod.__dict__.items() if isinstance(v, FunctionType)
+        }
 
     def get_plugin_function(self, function_name):
         if self._plugins is None:
