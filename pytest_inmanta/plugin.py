@@ -511,15 +511,15 @@ license: Test License
         # compile the model
         test_project = module.Project(self._test_project_dir)
         module.Project.set(test_project)
+        test_project.load()
+        # refresh plugins
+        if self._plugins is not None:
+            self._plugins = self._load_plugins()
 
         # flush io capture buffer
         self._capsys.readouterr()
 
         (types, scopes) = compiler.do_compile(refs={"facts": self._facts})
-
-        # refresh plugins
-        if self._plugins is not None:
-            self._plugins = self._load_plugins()
 
         exporter = Exporter()
 

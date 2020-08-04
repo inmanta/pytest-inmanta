@@ -69,3 +69,4 @@ def test_inmanta_plugins_except(project, inmanta_plugins):
             """
         )
     assert isinstance(exception_info.value.__cause__, inmanta_plugins.testmodule.TestException)
+    assert project.get_plugin_function("get_exception")() is inmanta_plugins.testmodule.TestException
