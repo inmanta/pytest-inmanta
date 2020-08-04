@@ -124,3 +124,7 @@ The following options are available.
  
  Use the generic pytest options `--log-cli-level` to show Inmanta logger to see any setup or cleanup warnings. For example,
  `--log-cli-level=INFO`
+
+## Compatibility with pytest-cov
+
+The `--use-module-in-place` option should be set when pytest-inmanta is used in combination with the `pytest-cov` pytest plugin. Without the `--use-module-in-place` option, the reported test coverage will be incorrect.
