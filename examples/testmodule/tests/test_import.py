@@ -9,3 +9,23 @@ def test_import(project):
     from inmanta_plugins.testmodule import regular_function
 
     assert regular_function() == "imported"
+
+
+def test_49_plugin_load_side_effects(project):
+    """
+        Make sure side effects in the module are only executed once.
+    """
+    import inmanta_plugins.std as std
+
+    assert hasattr(std, "pytest_inmanta_side_effect_count")
+    assert std.pytest_inmanta_side_effect_count == 1
+
+    import inmanta_plugins.testmodule
+
+    assert std.pytest_inmanta_side_effect_count == 1
+    project.compile("import testmodule")
+    assert std.pytest_inmanta_side_effect_count == 1
+
+    import inmanta_plugins.testmodule
+
+    assert std.pytest_inmanta_side_effect_count == 1
