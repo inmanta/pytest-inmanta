@@ -322,9 +322,28 @@ class InmantaPluginsImporter:
             return None
         result = {}
         importlib.invalidate_caches()
-        for _, fq_submod_name in modules[module_name].get_plugin_files():
+        for _, fq_submod_name in self.get_plugin_files_for_module(modules[module_name]):
             result[str(fq_submod_name)] = importlib.import_module(fq_submod_name)
         return result
+
+    # TODO: this method duplicates inmanta.module.Module.get_plugin_files (2020.4), see #76
+    def get_plugin_files_for_module(self, mod: module.Module) -> Iterator[Tuple[str, str]]:
+        """
+            Returns a tuple (absolute_path, fq_mod_name) of all python files in this module.
+        """
+        plugin_dir: str = os.path.join(mod._path, "plugins")
+
+        if not os.path.exists(plugin_dir):
+            return iter(())
+
+        if not os.path.exists(os.path.join(plugin_dir, "__init__.py")):
+            raise Exception(
+                "The plugin directory %s should be a valid python package with a __init__.py file" % plugin_dir
+            )
+        return (
+            (file_name, self._get_fq_mod_name_for_py_file(file_name, plugin_dir, self._meta["name"]))
+            for file_name in glob.iglob(os.path.join(plugin_dir, "**", "*.py"), recursive=True)
+        )
 
 
 class Project:
