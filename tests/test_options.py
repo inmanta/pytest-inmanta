@@ -1,8 +1,26 @@
+"""
+    Copyright 2020 Inmanta
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+    Contact: code@inmanta.com
+"""
 import os
 import shutil
 import uuid
 
 import pytest_inmanta
+
 
 def test_module_in_place(testdir):
     """Make sure the run in place option works"""
@@ -20,7 +38,7 @@ def test_module_in_place(testdir):
     os.chdir("testmodule")
     path = os.getcwd()
     assert not os.path.exists(os.path.join(path, "testfile"))
-    pytest_inmanta.plugin.CURDIR = (path)
+    pytest_inmanta.plugin.CURDIR = path
 
     result = testdir.runpytest("tests/test_location.py", "--use-module-in-place")
 

@@ -17,4 +17,4 @@ def test_basic_run(project):
     project.deploy_resource("testmodule::Resource")
 
     scopes: Namespace = project.get_root_scope()
-    assert 'testmodule' in [str(x) for x in scopes.children()]
+    assert "testmodule" in [str(x) for x in scopes.children()]

@@ -6,10 +6,9 @@
 import os
 from pathlib import Path
 
-
-from inmanta.agent.handler import provider, CRUDHandler, HandlerContext
-from inmanta.resources import resource, PurgeableResource
+from inmanta.agent.handler import CRUDHandler, HandlerContext, provider
 from inmanta.plugins import plugin
+from inmanta.resources import PurgeableResource, resource
 
 
 @resource("testmodule::Resource", agent="agent", id_attribute="name")
@@ -27,7 +26,9 @@ class ResourceHandler(CRUDHandler):
     def create_resource(self, ctx: HandlerContext, resource: ResourceResource) -> None:
         ctx.set_created()
 
-    def update_resource(self, ctx: HandlerContext, changes: dict, resource: ResourceResource) -> None:
+    def update_resource(
+        self, ctx: HandlerContext, changes: dict, resource: ResourceResource
+    ) -> None:
         ctx.set_updated()
 
     def facts(self, ctx, resource):
@@ -43,7 +44,7 @@ class ResourceHandler(ResourceHandler):
     def read_resource(self, ctx: HandlerContext, resource: ResourceResource) -> None:
         resource.purged = False
         resource.value = "read"
-        ctx.warning("argument can not be serialized", argument={"a":"b"}.values())
+        ctx.warning("argument can not be serialized", argument={"a": "b"}.values())
 
 
 @plugin

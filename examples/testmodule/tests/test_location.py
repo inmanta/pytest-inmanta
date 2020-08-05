@@ -6,6 +6,7 @@
     This file is used to test --use-module-in-place
 """
 
+
 def test_location(project):
     basemodel = """
     import testmodule

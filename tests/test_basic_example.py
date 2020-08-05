@@ -15,9 +15,8 @@
 
     Contact: code@inmanta.com
 """
-import pytest
-
 # Note: These tests only function when the pytest output is not modified by plugins such as pytest-sugar!
+
 
 def test_basic_example(testdir):
     """Make sure that our plugin works."""
@@ -93,7 +92,10 @@ def test_release_mode_validation(testdir):
     testdir.copy_example("testmodule")
 
     result = testdir.runpytest("tests/test_resource_run.py", "--install_mode", "other")
-    assert "error: argument --install_mode: invalid choice: 'other' (choose from 'master', 'prerelease', 'release')" in "\n".join(result.errlines)
+    assert (
+        "error: argument --install_mode: invalid choice: 'other' (choose from 'master', 'prerelease', 'release')"
+        in "\n".join(result.errlines)
+    )
 
 
 def test_multiple_repo_paths_option(testdir):
@@ -102,7 +104,7 @@ def test_multiple_repo_paths_option(testdir):
     result = testdir.runpytest(
         "tests/test_multiple_repo_paths.py",
         "--module_repo",
-        "https://github.com/inmanta2/ https://github.com/inmanta/"
+        "https://github.com/inmanta2/ https://github.com/inmanta/",
     )
     result.assert_outcomes(passed=1)
 
@@ -115,16 +117,21 @@ def test_multiple_repo_paths_multiple_options(testdir):
         "--module_repo",
         "https://github.com/inmanta2/",
         "--module_repo",
-        "https://github.com/inmanta/"
+        "https://github.com/inmanta/",
     )
     result.assert_outcomes(passed=1)
 
+
 def test_multiple_repo_paths_env(testdir, monkeypatch):
-    monkeypatch.setenv("INMANTA_MODULE_REPO", "https://github.com/inmanta2/ https://github.com/inmanta/")
+    monkeypatch.setenv(
+        "INMANTA_MODULE_REPO",
+        "https://github.com/inmanta2/ https://github.com/inmanta/",
+    )
     testdir.copy_example("testmodule")
 
     result = testdir.runpytest("tests/test_multiple_repo_paths.py")
     result.assert_outcomes(passed=1)
+
 
 def test_import(testdir):
     """Make sure that importing functions works."""

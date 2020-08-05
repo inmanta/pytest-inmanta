@@ -7,9 +7,9 @@
 
 def test_reset(project):
     assert len(project._facts) == 0
-    project.add_fact("abcd","xxx","yyy")
+    project.add_fact("abcd", "xxx", "yyy")
 
 
 def test_reset2(project):
     assert len(project._facts) == 0
-    project.add_fact("abcd","xxx","yyy")
+    project.add_fact("abcd", "xxx", "yyy")

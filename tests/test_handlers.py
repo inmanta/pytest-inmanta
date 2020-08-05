@@ -24,6 +24,7 @@ def test_resource(testdir):
 
     result.assert_outcomes(passed=5)
 
+
 def test_dryrun(testdir):
     testdir.copy_example("testhandler")
 

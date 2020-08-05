@@ -4,6 +4,7 @@
     License: Apache 2.0
 """
 
+
 def test_dryrun(project):
     basemodel = """
     import testmodule
@@ -14,4 +15,4 @@ def test_dryrun(project):
     project.compile(basemodel)
 
     changes = project.dryrun_resource("testmodule::Resource")
-    assert changes == {"value": {'current': 'read', 'desired': 'write'}}
+    assert changes == {"value": {"current": "read", "desired": "write"}}
