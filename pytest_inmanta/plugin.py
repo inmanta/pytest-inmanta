@@ -108,8 +108,7 @@ def get_module_info():
 @pytest.fixture()
 def inmanta_plugins(project):
     importer: InmantaPluginsImporter = InmantaPluginsImporter(project)
-    loader: InmantaPluginsImportLoader = InmantaPluginsImportLoader(importer)
-    yield loader
+    yield importer.loader
 
 
 @pytest.fixture()
@@ -275,8 +274,6 @@ class InmantaPluginsImporter:
     def __init__(self, project: "Project") -> None:
         self.project: Project = project
         self.loader: InmantaPluginsImportLoader = InmantaPluginsImportLoader(self)
-        # expose module imports from self.modules.some_module
-        self.modules: InmantaPluginsImportLoader = self.loader
 
     def get_submodules(self, module_name: str) -> Optional[Dict[str, ModuleType]]:
         inmanta_project: module.Project = module.Project.get()
