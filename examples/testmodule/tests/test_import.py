@@ -50,9 +50,17 @@ def test_inmanta_plugins_fixture_dynamic(project, inmanta_plugins):
 
     def do_assertions():
         assert inmanta_plugins.testmodule.get_exception is dynamic_get_exception()
-        assert inmanta_plugins.testmodule.get_exception is project.get_plugin_function("get_exception")
-        assert inmanta_plugins.testmodule.get_exception() is project.get_plugin_function("get_exception")()
-        assert inmanta_plugins.testmodule.get_exception() is inmanta_plugins.testmodule.TestException
+        assert inmanta_plugins.testmodule.get_exception is project.get_plugin_function(
+            "get_exception"
+        )
+        assert (
+            inmanta_plugins.testmodule.get_exception()
+            is project.get_plugin_function("get_exception")()
+        )
+        assert (
+            inmanta_plugins.testmodule.get_exception()
+            is inmanta_plugins.testmodule.TestException
+        )
 
     do_assertions()
     project.compile("import testmodule")
@@ -68,5 +76,10 @@ def test_inmanta_plugins_except(project, inmanta_plugins):
     testmodule::raise_exception()
             """
         )
-    assert isinstance(exception_info.value.__cause__, inmanta_plugins.testmodule.TestException)
-    assert project.get_plugin_function("get_exception")() is inmanta_plugins.testmodule.TestException
+    assert isinstance(
+        exception_info.value.__cause__, inmanta_plugins.testmodule.TestException
+    )
+    assert (
+        project.get_plugin_function("get_exception")()
+        is inmanta_plugins.testmodule.TestException
+    )

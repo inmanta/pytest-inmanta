@@ -294,11 +294,14 @@ class InmantaPluginsImportLoader:
         Makes inmanta_plugins packages (Python source for inmanta modules) available dynamically so that tests can use them
         safely without having to refresh imports when the compiler is reset.
     """
+
     def __init__(self, importer: "InmantaPluginsImporter") -> None:
         self._importer: InmantaPluginsImporter = importer
 
     def __getattr__(self, name: str):
-        submodules: Optional[Dict[str, ModuleType]] = self._importer.get_submodules(name)
+        submodules: Optional[Dict[str, ModuleType]] = self._importer.get_submodules(
+            name
+        )
         fq_mod_name: str = f"inmanta_plugins.{name}"
         if submodules is None or fq_mod_name not in submodules:
             raise AttributeError("No inmanta module named %s" % name)
@@ -327,7 +330,9 @@ class InmantaPluginsImporter:
         return result
 
     # TODO: this method duplicates inmanta.module.Module.get_plugin_files (2020.4), see #76
-    def get_plugin_files_for_module(self, mod: module.Module) -> Iterator[Tuple[str, str]]:
+    def get_plugin_files_for_module(
+        self, mod: module.Module
+    ) -> Iterator[Tuple[str, str]]:
         """
             Returns a tuple (absolute_path, fq_mod_name) of all python files in this module.
         """
@@ -338,11 +343,19 @@ class InmantaPluginsImporter:
 
         if not os.path.exists(os.path.join(plugin_dir, "__init__.py")):
             raise Exception(
-                "The plugin directory %s should be a valid python package with a __init__.py file" % plugin_dir
+                "The plugin directory %s should be a valid python package with a __init__.py file"
+                % plugin_dir
             )
         return (
-            (file_name, mod._get_fq_mod_name_for_py_file(file_name, plugin_dir, mod._meta["name"]))
-            for file_name in glob.iglob(os.path.join(plugin_dir, "**", "*.py"), recursive=True)
+            (
+                file_name,
+                mod._get_fq_mod_name_for_py_file(
+                    file_name, plugin_dir, mod._meta["name"]
+                ),
+            )
+            for file_name in glob.iglob(
+                os.path.join(plugin_dir, "**", "*.py"), recursive=True
+            )
         )
 
 
@@ -352,6 +365,7 @@ class Project:
         modules from the provided repositories. Additional repositories can be provided by setting the INMANTA_MODULE_REPO
         environment variable. Repositories are separated with spaces.
     """
+
     def __init__(self, project_dir, load_plugins: bool = True):
         self._test_project_dir = project_dir
         self._stdout = None
@@ -364,7 +378,9 @@ class Project:
         self._blobs = {}
         self._facts = defaultdict(dict)
         self._load()
-        self._plugins: Optional[Dict[str, object]] = self._load_plugins() if load_plugins else None
+        self._plugins: Optional[
+            Dict[str, object]
+        ] = self._load_plugins() if load_plugins else None
         self._capsys = None
         self.ctx = None
         self._handlers = set()
@@ -654,10 +670,19 @@ license: Test License
 
     def _load_plugins(self) -> Dict[str, FunctionType]:
         _, module_name = get_module_info()
-        submodules: Optional[Dict[str, ModuleType]] = InmantaPluginsImporter(self).get_submodules(module_name)
-        return {} if submodules is None else {
-            k: v for submod in submodules.values() for k, v in submod.__dict__.items() if isinstance(v, FunctionType)
-        }
+        submodules: Optional[Dict[str, ModuleType]] = InmantaPluginsImporter(
+            self
+        ).get_submodules(module_name)
+        return (
+            {}
+            if submodules is None
+            else {
+                k: v
+                for submod in submodules.values()
+                for k, v in submod.__dict__.items()
+                if isinstance(v, FunctionType)
+            }
+        )
 
     def get_plugin_function(self, function_name):
         if self._plugins is None:
