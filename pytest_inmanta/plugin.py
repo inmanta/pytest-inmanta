@@ -283,11 +283,10 @@ class InmantaPluginsImporter:
                 " project fixture."
             )
         modules: Dict[str, module.Module] = inmanta_project.get_modules()
-        importlib.invalidate_caches()
-        loader.configure_module_finder(self.project.module_path)
         if module_name not in modules:
             return None
         result = {}
+        importlib.invalidate_caches()
         for _, fq_submod_name in modules[module_name].get_plugin_files():
             result[str(fq_submod_name)] = importlib.import_module(fq_submod_name)
         return result
