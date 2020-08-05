@@ -27,7 +27,7 @@ from collections import defaultdict
 from distutils import dir_util
 from pathlib import Path
 from types import FunctionType, ModuleType
-from typing import Dict, List, Optional, Union
+from typing import Dict, Iterator, List, Optional, Tuple, Union
 
 import pytest
 import yaml
@@ -341,7 +341,7 @@ class InmantaPluginsImporter:
                 "The plugin directory %s should be a valid python package with a __init__.py file" % plugin_dir
             )
         return (
-            (file_name, self._get_fq_mod_name_for_py_file(file_name, plugin_dir, self._meta["name"]))
+            (file_name, mod._get_fq_mod_name_for_py_file(file_name, plugin_dir, mod._meta["name"]))
             for file_name in glob.iglob(os.path.join(plugin_dir, "**", "*.py"), recursive=True)
         )
 
