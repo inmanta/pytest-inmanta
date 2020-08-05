@@ -30,7 +30,7 @@ def test_49_plugin_load_side_effects(project):
     project.compile("import testmodule")
     assert std.pytest_inmanta_side_effect_count == 1
 
-    import inmanta_plugins.testmodule
+    import inmanta_plugins.testmodule  # noqa: F401, F811
 
     assert std.pytest_inmanta_side_effect_count == 1
 
