@@ -244,7 +244,7 @@ install_mode: %(install_mode)s
             ),
             **kwargs,
         }
-        test_project = Project(test_project_dir, modulepath, **extended_kwargs)
+        test_project = Project(test_project_dir, **extended_kwargs)
 
         # create the unittest module
         test_project.create_module(
@@ -334,9 +334,8 @@ class Project:
         modules from the provided repositories. Additional repositories can be provided by setting the INMANTA_MODULE_REPO
         environment variable. Repositories are separated with spaces.
     """
-    def __init__(self, project_dir, module_path: List[str], load_plugins: bool = True):
+    def __init__(self, project_dir, load_plugins: bool = True):
         self._test_project_dir = project_dir
-        self.module_path = module_path
         self._stdout = None
         self._stderr = None
         self.types = None
