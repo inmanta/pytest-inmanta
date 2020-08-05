@@ -289,7 +289,6 @@ class MockAgent(object):
         self._env_id = cfg_env.get()
 
 
-<<<<<<< HEAD
 class InmantaPluginsImportLoader:
     """
         Makes inmanta_plugins packages (Python source for inmanta modules) available dynamically so that tests can use them
