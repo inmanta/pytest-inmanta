@@ -66,15 +66,33 @@ And dryrun
     assert changes == {"value": {'current': 'read', 'desired': 'write'}}
 ```
 
-Testing functions and classes defined in a module is also possible 
-by simply importing them inside a test case, after the project fixture is initialized
+Testing functions and classes defined in a module is also possible
+using the `inmanta_plugins` fixture. The fixture exposes inmanta modules as its attributes
+and imports them dynamically when accessed.
 
 ```python
-    def test_example(project):
-        from inmanta_plugins.testmodule import regular_function
-    
-        regular_function("example")
+    def test_example(inmanta_plugins):
+        inmanta_plugins.testmodule.regular_function("example")
 ```
+
+This dynamism is required because the compiler resets module imports when `project.compile`
+is called. As a result, if you store a module in a local variable, it will not survive a
+compilation. Therefore you are advised to access modules in the `inmanta_plugins` package
+in a fully qualified manner (using the fixture). The following example demonstrates this.
+
+```python
+    def test_module_inequality(project, inmanta_plugins):
+        cached_module = inmanta_plugins.testmodule
+        assert cached_module is inmanta_plugins.testmodule
+
+        project.compile("import testmodule")
+
+        assert cached_module is not inmanta_plugins.testmodule
+```
+
+While you could import from the `inmanta_plugins` package directly, the fixture makes abstraction
+of module reloading. Without the fixture you would be required to reimport after `project.compile`.
+
 ## Testing plugins
 
 Take the following plugin as an example:

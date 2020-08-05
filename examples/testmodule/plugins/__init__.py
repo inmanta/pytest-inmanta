@@ -6,9 +6,16 @@
 import os
 from pathlib import Path
 
+import inmanta_plugins.std as std
 from inmanta.agent.handler import CRUDHandler, HandlerContext, provider
-from inmanta.plugins import plugin
+from inmanta.plugins import PluginException, plugin
 from inmanta.resources import PurgeableResource, resource
+
+# perform side effect on another module in the inmanta_plugins package
+# to make sure it is only executed once (test_49_plugin_load_side_effects)
+if not hasattr(std, "pytest_inmanta_side_effect_count"):
+    std.pytest_inmanta_side_effect_count = 0
+std.pytest_inmanta_side_effect_count += 1
 
 
 @resource("testmodule::Resource", agent="agent", id_attribute="name")
@@ -54,3 +61,17 @@ def create_testfile():
 
 def regular_function():
     return "imported"
+
+
+class TestException(PluginException):
+    pass
+
+
+@plugin
+def get_exception():
+    return TestException
+
+
+@plugin
+def raise_exception():
+    raise TestException("my exception")
