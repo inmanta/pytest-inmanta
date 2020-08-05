@@ -21,9 +21,21 @@ pipeline {
     stages {
         stage('Test') {
             steps {
-                sh 'rm -rf $INMANTA_TEST_ENV; python3 -m venv $INMANTA_TEST_ENV; $INMANTA_TEST_ENV/bin/python3 -m pip install ./pytest; $INMANTA_TEST_ENV/bin/python3 -m pip install -U -c https://raw.githubusercontent.com/inmanta/inmanta/master/requirements.txt git+https://github.com/inmanta/inmanta.git'
+                sh 'rm -rf $INMANTA_TEST_ENV; python3 -m venv $INMANTA_TEST_ENV; $INMANTA_TEST_ENV/bin/python3 -m pip install ./pytest; $INMANTA_TEST_ENV/bin/python3 -m pip install -U -c https://raw.githubusercontent.com/inmanta/inmanta/master/requirements.txt git+https://github.com/inmanta/inmanta.git -r ./pytest/requirements.txt'
+
                 dir("pytest"){
                     sh "$INMANTA_TEST_ENV/bin/python3 -m pytest --junitxml=junit.xml -vvv tests --basetemp=${env.WORKSPACE}/tmp"
+                }
+            }
+        }
+        stage("code linting"){
+            steps{
+                script{
+                    dir("pytest"){
+                        sh'''
+                        $INMANTA_TEST_ENV/bin/flake8 examples pytest_inmanta tests
+                        '''
+                    }
                 }
             }
         }

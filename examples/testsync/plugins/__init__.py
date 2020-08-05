@@ -4,9 +4,10 @@
     License: Apache 2.0
 """
 
-from inmanta.agent.handler import provider, CRUDHandler, HandlerContext
-from inmanta.resources import resource, PurgeableResource
 from tornado import gen
+
+from inmanta.agent.handler import CRUDHandler, HandlerContext, provider
+from inmanta.resources import PurgeableResource, resource
 
 
 @resource("testsync::Resource", agent="agent", id_attribute="name")
@@ -16,7 +17,6 @@ class ResourceResource(PurgeableResource):
 
 @provider("testsync::Resource", name="resourceprovider")
 class ResourceHandler(CRUDHandler):
-
     def read_resource(self, ctx: HandlerContext, resource: ResourceResource) -> None:
         resource.purged = False
         resource.value = "read"
@@ -29,7 +29,9 @@ class ResourceHandler(CRUDHandler):
         yield gen.sleep(0.1)
         return 5
 
-    def update_resource(self, ctx: HandlerContext, changes: dict, resource: ResourceResource) -> None:
+    def update_resource(
+        self, ctx: HandlerContext, changes: dict, resource: ResourceResource
+    ) -> None:
         a = self.run_sync(self.test_sync)
         assert a == 5
         ctx.set_updated()
