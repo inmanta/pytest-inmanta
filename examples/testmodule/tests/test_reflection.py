@@ -3,8 +3,9 @@
     Contact: code@inmanta.com
     License: Apache 2.0
 """
-import inmanta
 import pytest
+
+import inmanta
 
 
 def test_model_inspection(project):
@@ -13,19 +14,19 @@ def test_model_inspection(project):
 
     r = testmodule::Resource(agent="a", name="r", key="k", value="write")
     r2 = testmodule::Resource(agent="a", name="r2", key="k", value="write")
-    
+
     entity Other:
         string name
     end
-    
+
     implement Other using std::none
-    
+
     Other.resource [0:] -- testmodule::Resource
     Other.optional [0:1] -- testmodule::Resource
-    
+
     a = Other(name="a")
     b = Other(name="b")
-    
+
     a.resource = r
     a.resource = r2
     """

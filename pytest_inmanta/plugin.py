@@ -15,68 +15,79 @@
 
     Contact: code@inmanta.com
 """
+import glob
+import importlib
 import json
-import tempfile
+import logging
 import os
 import shutil
 import sys
-import logging
-import imp
-import glob
-import importlib
+import tempfile
+from collections import defaultdict
 from distutils import dir_util
 from pathlib import Path
-
-
-import inmanta.loader as loader
-from inmanta import compiler, module, config, const, protocol
-from inmanta.agent.handler import HandlerContext, ResourceHandler
-from inmanta.data import LogLine
-from inmanta.protocol import json_encode
-from inmanta.agent import cache, handler
-from inmanta.agent import io as agent_io
-from inmanta.execute.proxy import DynamicProxy
-from inmanta.export import cfg_env, Exporter
-
+from types import FunctionType, ModuleType
+from typing import Dict, List, Optional, Union
 
 import pytest
-from collections import defaultdict
 import yaml
-from inmanta.resources import Resource
 from tornado import ioloop
-from types import FunctionType, ModuleType
-from typing import Dict, Union, Optional, List, Set
+
+from inmanta import compiler, config, const, module, protocol
+from inmanta.agent import cache, handler
+from inmanta.agent import io as agent_io
+from inmanta.agent.handler import HandlerContext, ResourceHandler
+from inmanta.data import LogLine
+from inmanta.execute.proxy import DynamicProxy
+from inmanta.export import Exporter, cfg_env
+from inmanta.protocol import json_encode
+from inmanta.resources import Resource
 
 from .handler import DATA
-
 
 CURDIR = os.getcwd()
 LOGGER = logging.getLogger()
 
 
 option_to_env = {
-    "inm_venv":"INMANTA_TEST_ENV",
-    "inm_module_repo":"INMANTA_MODULE_REPO",
-    "inm_install_mode":"INMANTA_INSTALL_MODE",
-    "inm_no_load_plugins":"INMANTA_TEST_NO_LOAD_PLUGINS",
+    "inm_venv": "INMANTA_TEST_ENV",
+    "inm_module_repo": "INMANTA_MODULE_REPO",
+    "inm_install_mode": "INMANTA_INSTALL_MODE",
+    "inm_no_load_plugins": "INMANTA_TEST_NO_LOAD_PLUGINS",
 }
 
 
 def pytest_addoption(parser):
-    group = parser.getgroup(
-        'inmanta', 'inmanta module testing plugin')
-    group.addoption('--venv', dest='inm_venv',
-                    help='folder in which to place the virtual env for tests (will be shared by all tests), overrides INMANTA_TEST_ENV')
-    group.addoption('--use-module-in-place', action='store_true',
-                    help="tell pytest-inmanta to run with the module in place, useful for debugging")
-    group.addoption('--module_repo', dest='inm_module_repo', action="append",
-                    help='location to download modules from, overrides INMANTA_MODULE_REPO.'
-                         'Can be specified multiple times to add multiple locations')
-    group.addoption('--install_mode', dest='inm_install_mode',
-                    help='Install mode for modules downloaded during this test',
-                    choices=module.INSTALL_OPTS)
-    group.addoption('--no_load_plugins', action='store_true', dest='inm_no_load_plugins',
-                    help='Don\'t load plugins in the Project class.')
+    group = parser.getgroup("inmanta", "inmanta module testing plugin")
+    group.addoption(
+        "--venv",
+        dest="inm_venv",
+        help="folder in which to place the virtual env for tests (will be shared by all tests), overrides INMANTA_TEST_ENV",
+    )
+    group.addoption(
+        "--use-module-in-place",
+        action="store_true",
+        help="tell pytest-inmanta to run with the module in place, useful for debugging",
+    )
+    group.addoption(
+        "--module_repo",
+        dest="inm_module_repo",
+        action="append",
+        help="location to download modules from, overrides INMANTA_MODULE_REPO."
+        "Can be specified multiple times to add multiple locations",
+    )
+    group.addoption(
+        "--install_mode",
+        dest="inm_install_mode",
+        help="Install mode for modules downloaded during this test",
+        choices=module.INSTALL_OPTS,
+    )
+    group.addoption(
+        "--no_load_plugins",
+        action="store_true",
+        dest="inm_no_load_plugins",
+        help="Don't load plugins in the Project class.",
+    )
 
 
 def get_opt_or_env_or(config, key, default):
@@ -91,12 +102,17 @@ def get_module_info():
     curdir = CURDIR
     # Make sure that we are executed in a module
     dir_path = curdir.split(os.path.sep)
-    while not os.path.exists(os.path.join(os.path.join("/", *dir_path), "module.yml")) and len(dir_path) > 0:
+    while (
+        not os.path.exists(os.path.join(os.path.join("/", *dir_path), "module.yml"))
+        and len(dir_path) > 0
+    ):
         dir_path.pop()
 
     if len(dir_path) == 0:
-        raise Exception("Module test case have to be saved in the module they are intended for. "
-                        "%s not part of module path" % curdir)
+        raise Exception(
+            "Module test case have to be saved in the module they are intended for. "
+            "%s not part of module path" % curdir
+        )
 
     module_dir = os.path.join("/", *dir_path)
     with open(os.path.join(module_dir, "module.yml")) as m:
@@ -167,7 +183,9 @@ def project_factory(request):
     test_project_dir = tempfile.mkdtemp()
     os.mkdir(os.path.join(test_project_dir, "libs"))
 
-    repo_options = get_opt_or_env_or(request.config, "inm_module_repo", "https://github.com/inmanta/")
+    repo_options = get_opt_or_env_or(
+        request.config, "inm_module_repo", "https://github.com/inmanta/"
+    )
     repos = []
     if isinstance(repo_options, list):
         for repo in repo_options:
@@ -192,33 +210,48 @@ def project_factory(request):
             LOGGER.exception(
                 "Unable to use shared env (symlink creation from %s to %s failed).",
                 env_override,
-                os.path.join(test_project_dir, ".env")
+                os.path.join(test_project_dir, ".env"),
             )
             raise
 
     with open(os.path.join(test_project_dir, "project.yml"), "w+") as fd:
-        fd.write("""name: testcase
+        fd.write(
+            """name: testcase
 description: Project for testcase
 repo: ['%(repo)s']
 modulepath: ['%(modulepath)s']
 downloadpath: libs
 install_mode: %(install_mode)s
-""" % {"repo": "', '".join(repos), "install_mode": install_mode, "modulepath": "', '".join(modulepath)})
+"""
+            % {
+                "repo": "', '".join(repos),
+                "install_mode": install_mode,
+                "modulepath": "', '".join(modulepath),
+            }
+        )
 
     # copy the current module in
     module_dir, module_name = get_module_info()
     if not in_place:
-        dir_util.copy_tree(module_dir, os.path.join(test_project_dir, "libs", module_name))
+        dir_util.copy_tree(
+            module_dir, os.path.join(test_project_dir, "libs", module_name)
+        )
 
     def create_project(**kwargs):
         extended_kwargs: Dict[str, object] = {
-            "load_plugins": not get_opt_or_env_or(request.config, "inm_no_load_plugins", False),
+            "load_plugins": not get_opt_or_env_or(
+                request.config, "inm_no_load_plugins", False
+            ),
             **kwargs,
         }
         test_project = Project(test_project_dir, modulepath, **extended_kwargs)
 
         # create the unittest module
-        test_project.create_module("unittest", initcf=get_module_data("init.cf"), initpy=get_module_data("init.py"))
+        test_project.create_module(
+            "unittest",
+            initcf=get_module_data("init.cf"),
+            initpy=get_module_data("init.py"),
+        )
 
         return test_project
 
@@ -229,7 +262,8 @@ install_mode: %(install_mode)s
     except PermissionError:
         LOGGER.warning(
             "Cannot cleanup test project %s. This can be caused because we try to remove a virtual environment, "
-            "loaded by this python process. Try to use a shared environment with --venv", test_project_dir
+            "loaded by this python process. Try to use a shared environment with --venv",
+            test_project_dir,
         )
 
     sys.path = _sys_path
@@ -248,12 +282,14 @@ class MockAgent(object):
     """
         A mock agent for unit testing
     """
+
     def __init__(self, uri):
         self.uri = uri
         self.process = MockProcess()
         self._env_id = cfg_env.get()
 
 
+<<<<<<< HEAD
 class InmantaPluginsImportLoader:
     """
         Makes inmanta_plugins packages (Python source for inmanta modules) available dynamically so that tests can use them
@@ -292,13 +328,13 @@ class InmantaPluginsImporter:
         return result
 
 
-class Project():
+class Project:
     """
         This class provides a TestCase class for creating module unit tests. It uses the current module and loads required
         modules from the provided repositories. Additional repositories can be provided by setting the INMANTA_MODULE_REPO
         environment variable. Repositories are separated with spaces.
     """
-    def __init__(self, project_dir, module_path: List[str], load_plugins = True):
+    def __init__(self, project_dir, module_path: List[str], load_plugins: bool = True):
         self._test_project_dir = project_dir
         self.module_path = module_path
         self._stdout = None
@@ -381,6 +417,7 @@ class Project():
 
             :param resource_type: The exact type used in the model (no super types)
         """
+
         def apply_filter(resource):
             for arg, value in filter_args.items():
                 if not hasattr(resource, arg):
@@ -423,7 +460,13 @@ class Project():
     def dryrun(self, resource, run_as_root=False):
         return self.deploy(resource, True, run_as_root)
 
-    def deploy_resource(self, resource_type: str, status=const.ResourceState.deployed, run_as_root=False, **filter_args: dict):
+    def deploy_resource(
+        self,
+        resource_type: str,
+        status=const.ResourceState.deployed,
+        run_as_root=False,
+        **filter_args: dict,
+    ):
         res = self.get_resource(resource_type, **filter_args)
         assert res is not None, "No resource found of given type and filter args"
 
@@ -431,22 +474,37 @@ class Project():
         if ctx.status != status:
             print("Deploy did not result in correct status")
             print("Requested changes: ", ctx._changes)
-            for l in ctx.logs:
-                print("Log: ", l._data["msg"])
-                print("Kwargs: ", ["%s: %s" % (k, v) for k, v in l._data["kwargs"].items() if k != "traceback"])
-                if "traceback" in l._data["kwargs"]:
-                    print("Traceback:\n", l._data["kwargs"]["traceback"])
+            for log in ctx.logs:
+                print("Log: ", log._data["msg"])
+                print(
+                    "Kwargs: ",
+                    [
+                        "%s: %s" % (k, v)
+                        for k, v in log._data["kwargs"].items()
+                        if k != "traceback"
+                    ],
+                )
+                if "traceback" in log._data["kwargs"]:
+                    print("Traceback:\n", log._data["kwargs"]["traceback"])
 
         assert ctx.status == status
         self.finalize_context(ctx)
         return res
 
-    def dryrun_resource(self, resource_type: str, status=const.ResourceState.dry, run_as_root=False, **filter_args: dict):
+    def dryrun_resource(
+        self,
+        resource_type: str,
+        status=const.ResourceState.dry,
+        run_as_root=False,
+        **filter_args: dict,
+    ):
         """
             Run a dryrun for a specific resource.
 
-            :param resource_type: the type of resource to run, as a fully qualified inmanta type (e.g. `unittest::Resource`), see :py:meth:`get_resource`
-            :param status: the expected result status (for dryrun the success status is :py:attr:`inmanta.const.ResourceState.dry`)
+            :param resource_type: the type of resource to run, as a fully qualified inmanta type (e.g. `unittest::Resource`),
+                see :py:meth:`get_resource`
+            :param status: the expected result status
+                (for dryrun the success status is :py:attr:`inmanta.const.ResourceState.dry`)
             :param run_as_root: run the mock agent as root
             :param filter_args: filters for selecting the resource, see :py:meth:`get_resource`
         """
@@ -480,10 +538,12 @@ class Project():
             fd.write(initpy)
 
         with open(os.path.join(module_dir, "module.yml"), "w+") as fd:
-            fd.write(f"""name: {name}
+            fd.write(
+                f"""name: {name}
 version: 0.1
 license: Test License
-            """)
+            """
+            )
 
     def _load(self) -> None:
         """
@@ -542,7 +602,9 @@ license: Test License
         conn = protocol.SyncClient("compiler")
         LOGGER.info("Triggering deploy for version %d" % self.version)
         tid = cfg_env.get()
-        agent_trigger_method = const.AgentTriggerMethod.get_agent_trigger_method(full_deploy)
+        agent_trigger_method = const.AgentTriggerMethod.get_agent_trigger_method(
+            full_deploy
+        )
         conn.release_version(tid, self.version, True, agent_trigger_method)
 
     def get_last_context(self) -> Optional[HandlerContext]:
@@ -582,17 +644,23 @@ license: Test License
 
     def get_plugin_function(self, function_name):
         if self._plugins is None:
-            raise Exception("Plugins not loaded, perhaps you should use the `project` fixture or initialize the Project with load_plugins == True")
+            raise Exception(
+                "Plugins not loaded, perhaps you should use the `project` fixture or"
+                " initialize the Project with load_plugins == True"
+            )
         if function_name not in self._plugins:
             raise Exception(f"Plugin function with name {function_name} not found")
         return self._plugins[function_name]
 
     def get_plugins(self):
         if self._plugins is None:
-            raise Exception("Plugins not loaded, perhaps you should use the `project` fixture or initialize the Project with load_plugins == True")
+            raise Exception(
+                "Plugins not loaded, perhaps you should use the `project` fixture or"
+                " initialize the Project with load_plugins == True"
+            )
         return dict(self._plugins)
 
-    def get_instances(self, fortype: str="std::Entity"):
+    def get_instances(self, fortype: str = "std::Entity"):
         if fortype not in self.types:
             raise Exception(f"No entities of type {fortype} found in the model")
 
@@ -608,13 +676,17 @@ license: Test License
         """
         return name in DATA
 
-    def unittest_resource_get(self, name: str) -> Dict[str, Union[str, bool, float, int]]:
+    def unittest_resource_get(
+        self, name: str
+    ) -> Dict[str, Union[str, bool, float, int]]:
         """
             Get the state of the unittest resource
         """
         return DATA[name]
 
-    def unittest_resource_set(self, name: str, **kwargs: Union[str, bool, float, int]) -> None:
+    def unittest_resource_set(
+        self, name: str, **kwargs: Union[str, bool, float, int]
+    ) -> None:
         """
             Change a value of the unittest resource
         """
@@ -622,14 +694,17 @@ license: Test License
 
     def check_serialization(self, resource: Resource) -> Resource:
         """ Check if the resource is serializable """
-        serialized = json.loads(json_encode(
-            resource.serialize()))
+        serialized = json.loads(json_encode(resource.serialize()))
         return Resource.deserialize(serialized)
 
     def clean(self) -> None:
         shutil.rmtree(os.path.join(self._test_project_dir, "libs", "unittest"))
         self.finalize_all_handlers()
-        self.create_module("unittest", initcf=get_module_data("init.cf"), initpy=get_module_data("init.py"))
+        self.create_module(
+            "unittest",
+            initcf=get_module_data("init.cf"),
+            initpy=get_module_data("init.py"),
+        )
 
     def finalize_handler(self, handler: ResourceHandler) -> None:
         handler.cache.close()
@@ -637,4 +712,3 @@ license: Test License
     def finalize_all_handlers(self):
         for handler_instance in self._handlers:
             self.finalize_handler(handler_instance)
-

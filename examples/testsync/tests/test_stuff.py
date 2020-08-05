@@ -4,6 +4,7 @@
     License: Apache 2.0
 """
 
+
 def test_basic_run(project):
     basemodel = """
     import testsync

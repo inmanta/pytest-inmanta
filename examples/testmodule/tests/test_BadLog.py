@@ -4,6 +4,7 @@
     License: Apache 2.0
 """
 
+
 def test_badlog_run(project):
     basemodel = """
     import testmodule
