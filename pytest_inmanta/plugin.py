@@ -30,8 +30,9 @@ from types import FunctionType, ModuleType
 from typing import Dict, Iterator, List, Optional, Tuple, Union
 
 import pytest
-
 import yaml
+from tornado import ioloop
+
 from inmanta import compiler, config, const, module, protocol
 from inmanta.agent import cache, handler
 from inmanta.agent import io as agent_io
@@ -41,7 +42,6 @@ from inmanta.execute.proxy import DynamicProxy
 from inmanta.export import Exporter, cfg_env
 from inmanta.protocol import json_encode
 from inmanta.resources import Resource
-from tornado import ioloop
 
 from .handler import DATA
 
