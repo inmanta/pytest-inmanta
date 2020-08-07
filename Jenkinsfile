@@ -16,6 +16,7 @@ pipeline {
 
     environment {
       INMANTA_TEST_ENV="${env.WORKSPACE}/env"
+      PIP_INDEX_URL='https://artifacts.internal.inmanta.com/inmanta/dev'
     }
 
     stages {
