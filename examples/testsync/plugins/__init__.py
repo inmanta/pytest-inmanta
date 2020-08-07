@@ -4,10 +4,9 @@
     License: Apache 2.0
 """
 
-from tornado import gen
-
 from inmanta.agent.handler import CRUDHandler, HandlerContext, provider
 from inmanta.resources import PurgeableResource, resource
+from tornado import gen
 
 
 @resource("testsync::Resource", agent="agent", id_attribute="name")
