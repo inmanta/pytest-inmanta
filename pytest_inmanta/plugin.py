@@ -23,6 +23,7 @@ import os
 import shutil
 import sys
 import tempfile
+import warnings
 from collections import defaultdict
 from distutils import dir_util
 from pathlib import Path
@@ -138,9 +139,11 @@ def project(project_shared, capsys):
 
 @pytest.fixture()
 def project_no_plugins(project_shared_no_plugins, capsys):
-    LOGGER.warning(
-        "The project_no_plugins fixture is deprecated in favor of the %s environment variable.",
-        option_to_env["inm_no_load_plugins"],
+    warnings.warn(
+        DeprecationWarning(
+            "The project_no_plugins fixture is deprecated in favor of the %s environment variable."
+            % option_to_env["inm_no_load_plugins"]
+        )
     )
     DATA.clear()
     project_shared_no_plugins.clean()
