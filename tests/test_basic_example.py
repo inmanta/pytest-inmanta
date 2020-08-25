@@ -15,6 +15,9 @@
 
     Contact: code@inmanta.com
 """
+import pytest
+
+
 # Note: These tests only function when the pytest output is not modified by plugins such as pytest-sugar!
 
 
@@ -141,3 +144,14 @@ def test_import(testdir):
     result = testdir.runpytest("tests/test_import.py")
 
     result.assert_outcomes(passed=5)
+
+
+def test_project_no_plugins(testdir):
+    """Make sure that using the project_no_plugins shows a warning."""
+
+    testdir.copy_example("testmodule")
+
+    with pytest.warns(DeprecationWarning):
+        result = testdir.runpytest("tests/test_project_no_plugins.py")
+
+    result.assert_outcomes(passed=1)

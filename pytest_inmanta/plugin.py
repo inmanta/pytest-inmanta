@@ -138,6 +138,10 @@ def project(project_shared, capsys):
 
 @pytest.fixture()
 def project_no_plugins(project_shared_no_plugins, capsys):
+    LOGGER.warning(
+        "The project_no_plugins fixture is deprecated in favor of the %s environment variable.",
+        option_to_env["inm_no_load_plugins"],
+    )
     DATA.clear()
     project_shared_no_plugins.clean()
     project_shared_no_plugins.init(capsys)
