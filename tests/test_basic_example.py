@@ -141,3 +141,17 @@ def test_import(testdir):
     result = testdir.runpytest("tests/test_import.py")
 
     result.assert_outcomes(passed=5)
+
+
+def test_project_no_plugins(testdir):
+    """Make sure that using the project_no_plugins shows a warning."""
+
+    testdir.copy_example("testmodule")
+
+    result = testdir.runpytest("tests/test_project_no_plugins.py")
+
+    result.assert_outcomes(passed=1)
+    assert (
+        "DeprecationWarning: The project_no_plugins fixture is deprecated"
+        " in favor of the INMANTA_TEST_NO_LOAD_PLUGINS environment variable."
+    ) in result.stdout.str()
