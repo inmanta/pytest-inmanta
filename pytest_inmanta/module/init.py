@@ -83,3 +83,17 @@ class ResourceHandler(handler.CRUDHandler):
         DATA[resource.name]["desired_value"] = resource.desired_value
 
         ctx.set_updated()
+
+
+@resources.resource("unittest::IgnoreResource", id_attribute="name", agent="agent")
+class IgnoreResource(resources.PurgeableResource):
+    fields = ("name", "desired_value")
+
+    @staticmethod
+    def get_desired_value(exporter, resource):
+        raise resources.IgnoreResourceException()
+
+
+@handler.provider("unittest::IgnoreResource", name="ignore")
+class IgnoreResourceHandler(handler.CRUDHandler):
+    pass

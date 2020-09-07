@@ -33,3 +33,17 @@ end
 index Resource(name)
 
 implement Resource using std::none
+
+
+entity IgnoreResource extends std::PurgeableResource:
+    """
+        This resource will raise an IgnoreResourceException exception on export.
+    """
+    string name
+    string desired_value
+    string agent="internal"
+end
+
+index IgnoreResource(name)
+
+implement IgnoreResource using std::none
