@@ -19,8 +19,8 @@
 
 def test_ignore_resource(project):
     """
-        Ensure that instances of the unittest::IgnoreResource resources are not exported.
-        These resources raise an IgnoreResourceException on export.
+    Ensure that instances of the unittest::IgnoreResource resources are not exported.
+    These resources raise an IgnoreResourceException on export.
     """
     project.compile(
         """
