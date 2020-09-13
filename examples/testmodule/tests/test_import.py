@@ -17,7 +17,7 @@ def test_import(project):
 
 def test_49_plugin_load_side_effects(project):
     """
-        Make sure side effects in the module are only executed once.
+    Make sure side effects in the module are only executed once.
     """
     import inmanta_plugins.std as std
 

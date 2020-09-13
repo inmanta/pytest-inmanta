@@ -154,7 +154,7 @@ def project_no_plugins(project_shared_no_plugins, capsys):
 
 def get_module_data(filename: str) -> str:
     """
-        Get the given filename from the module directory in the source tree
+    Get the given filename from the module directory in the source tree
     """
     current_path = os.path.dirname(os.path.realpath(__file__))
     with open(os.path.join(current_path, "module", filename), "r") as fd:
@@ -164,8 +164,8 @@ def get_module_data(filename: str) -> str:
 @pytest.fixture(scope="session")
 def project_shared(project_factory):
     """
-        A test fixture that creates a new inmanta project with the current module in. The returned object can be used
-        to add files to the unittest module, compile a model and access the results, stdout and stderr.
+    A test fixture that creates a new inmanta project with the current module in. The returned object can be used
+    to add files to the unittest module, compile a model and access the results, stdout and stderr.
     """
     yield project_factory()
 
@@ -174,9 +174,9 @@ def project_shared(project_factory):
 @pytest.fixture(scope="session")
 def project_shared_no_plugins(project_factory):
     """
-        A test fixture that creates a new inmanta project with the current module in. The returned object can be used
-        to add files to the unittest module, compile a model and access the results, stdout and stderr.
-        This project is initialized with load_plugins == False.
+    A test fixture that creates a new inmanta project with the current module in. The returned object can be used
+    to add files to the unittest module, compile a model and access the results, stdout and stderr.
+    This project is initialized with load_plugins == False.
     """
     yield project_factory(load_plugins=False)
 
@@ -184,7 +184,7 @@ def project_shared_no_plugins(project_factory):
 @pytest.fixture(scope="session")
 def project_factory(request):
     """
-        A factory that constructs a single Project.
+    A factory that constructs a single Project.
     """
     _sys_path = sys.path
     test_project_dir = tempfile.mkdtemp()
@@ -278,7 +278,7 @@ install_mode: %(install_mode)s
 
 class MockProcess(object):
     """
-        A mock agentprocess
+    A mock agentprocess
     """
 
     def __init__(self):
@@ -287,7 +287,7 @@ class MockProcess(object):
 
 class MockAgent(object):
     """
-        A mock agent for unit testing
+    A mock agent for unit testing
     """
 
     def __init__(self, uri):
@@ -298,8 +298,8 @@ class MockAgent(object):
 
 class InmantaPluginsImportLoader:
     """
-        Makes inmanta_plugins packages (Python source for inmanta modules) available dynamically so that tests can use them
-        safely without having to refresh imports when the compiler is reset.
+    Makes inmanta_plugins packages (Python source for inmanta modules) available dynamically so that tests can use them
+    safely without having to refresh imports when the compiler is reset.
     """
 
     def __init__(self, importer: "InmantaPluginsImporter") -> None:
@@ -341,7 +341,7 @@ class InmantaPluginsImporter:
         self, mod: module.Module
     ) -> Iterator[Tuple[str, str]]:
         """
-            Returns a tuple (absolute_path, fq_mod_name) of all python files in this module.
+        Returns a tuple (absolute_path, fq_mod_name) of all python files in this module.
         """
         plugin_dir: str = os.path.join(mod._path, "plugins")
 
@@ -368,9 +368,9 @@ class InmantaPluginsImporter:
 
 class Project:
     """
-        This class provides a TestCase class for creating module unit tests. It uses the current module and loads required
-        modules from the provided repositories. Additional repositories can be provided by setting the INMANTA_MODULE_REPO
-        environment variable. Repositories are separated with spaces.
+    This class provides a TestCase class for creating module unit tests. It uses the current module and loads required
+    modules from the provided repositories. Additional repositories can be provided by setting the INMANTA_MODULE_REPO
+    environment variable. Repositories are separated with spaces.
     """
 
     def __init__(self, project_dir, load_plugins: bool = True):
@@ -385,9 +385,9 @@ class Project:
         self._blobs = {}
         self._facts = defaultdict(dict)
         self._load()
-        self._plugins: Optional[
-            Dict[str, object]
-        ] = self._load_plugins() if load_plugins else None
+        self._plugins: Optional[Dict[str, object]] = (
+            self._load_plugins() if load_plugins else None
+        )
         self._capsys = None
         self.ctx = None
         self._handlers = set()
@@ -410,7 +410,7 @@ class Project:
 
     def add_blob(self, key, content, allow_overwrite=True):
         """
-            Add a blob identified with the hash of the content as key
+        Add a blob identified with the hash of the content as key
         """
         if key in self._blobs and not allow_overwrite:
             raise Exception("Key %s already stored in blobs" % key)
@@ -452,10 +452,10 @@ class Project:
 
     def get_resource(self, resource_type: str, **filter_args: dict):
         """
-            Get a resource of the given type and given filter on the resource attributes. If multiple resource match, the
-            first one is returned. If none match, None is returned.
+        Get a resource of the given type and given filter on the resource attributes. If multiple resource match, the
+        first one is returned. If none match, None is returned.
 
-            :param resource_type: The exact type used in the model (no super types)
+        :param resource_type: The exact type used in the model (no super types)
         """
 
         def apply_filter(resource):
@@ -482,7 +482,7 @@ class Project:
 
     def deploy(self, resource, dry_run=False, run_as_root=False):
         """
-            Deploy the given resource with a handler
+        Deploy the given resource with a handler
         """
         assert resource is not None
 
@@ -539,14 +539,14 @@ class Project:
         **filter_args: dict,
     ):
         """
-            Run a dryrun for a specific resource.
+        Run a dryrun for a specific resource.
 
-            :param resource_type: the type of resource to run, as a fully qualified inmanta type (e.g. `unittest::Resource`),
-                see :py:meth:`get_resource`
-            :param status: the expected result status
-                (for dryrun the success status is :py:attr:`inmanta.const.ResourceState.dry`)
-            :param run_as_root: run the mock agent as root
-            :param filter_args: filters for selecting the resource, see :py:meth:`get_resource`
+        :param resource_type: the type of resource to run, as a fully qualified inmanta type (e.g. `unittest::Resource`),
+            see :py:meth:`get_resource`
+        :param status: the expected result status
+            (for dryrun the success status is :py:attr:`inmanta.const.ResourceState.dry`)
+        :param run_as_root: run the mock agent as root
+        :param filter_args: filters for selecting the resource, see :py:meth:`get_resource`
         """
         res = self.get_resource(resource_type, **filter_args)
         assert res is not None, "No resource found of given type and filter args"
@@ -587,7 +587,7 @@ license: Test License
 
     def _load(self) -> None:
         """
-            Load the current module and compile an otherwise empty project
+        Load the current module and compile an otherwise empty project
         """
         _, module_name = get_module_info()
         with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
@@ -598,7 +598,7 @@ license: Test License
 
     def compile(self, main, export=False):
         """
-            Compile the configuration model in main. This method will load all required modules.
+        Compile the configuration model in main. This method will load all required modules.
         """
         # write main.cf
         with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
@@ -636,8 +636,8 @@ license: Test License
         self._stderr = captured.err
 
     def deploy_latest_version(self, full_deploy=False):
-        """ Release and push the latest version to the server (uses the current configuration, either with a fixture or
-            set by the test.
+        """Release and push the latest version to the server (uses the current configuration, either with a fixture or
+        set by the test.
         """
         conn = protocol.SyncClient("compiler")
         LOGGER.info("Triggering deploy for version %d" % self.version)
@@ -666,7 +666,7 @@ license: Test License
 
     def add_mock_file(self, subdir, name, content):
         """
-            This method can be used to register mock templates or files in the virtual "unittest" module.
+        This method can be used to register mock templates or files in the virtual "unittest" module.
         """
         dir_name = os.path.join(self._test_project_dir, "libs", "unittest", subdir)
         if not os.path.exists(dir_name):
@@ -721,7 +721,7 @@ license: Test License
 
     def unittest_resource_exists(self, name: str) -> bool:
         """
-            Check if a unittest resource with name exists or not
+        Check if a unittest resource with name exists or not
         """
         return name in DATA
 
@@ -729,7 +729,7 @@ license: Test License
         self, name: str
     ) -> Dict[str, Union[str, bool, float, int]]:
         """
-            Get the state of the unittest resource
+        Get the state of the unittest resource
         """
         return DATA[name]
 
@@ -737,7 +737,7 @@ license: Test License
         self, name: str, **kwargs: Union[str, bool, float, int]
     ) -> None:
         """
-            Change a value of the unittest resource
+        Change a value of the unittest resource
         """
         DATA[name].update(kwargs)
 
