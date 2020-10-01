@@ -7,6 +7,7 @@ Changes in this release:
 - Added `inmanta_plugins` fixture to make abstraction of required module reloading when the compiler project is reset (related to #49)
 - Added deprecation warning for `project_no_plugins` fixture in favor of `INMANTA_TEST_NO_LOAD_PLUGINS` environment variable (#66)
 - Added resource unittest::IgnoreResource.
+- Improve documentation of options (#67)
 
 # V 1.3.0
 Changes in this release:

@@ -134,11 +134,15 @@ The following options are available.
 
  * `--venv`: folder in which to place the virtual env for tests (will be shared by all tests), overrides `INMANTA_TEST_ENV`.
    This options depends on symlink support. This does not work on all windows versions. On windows 10 you need to run pytest in an
-   admin shell.
+   admin shell. Using a fixed virtual environment can speed up running the tests.
  * `--use-module-in-place`: makes inmanta add the parent directory of your module directory to it's directory path, instead of copying your
-    module to a temporary libs directory.
+    module to a temporary libs directory. It allows testing the current module against specific versions of dependent modules. 
+    Using this option can speed up the tests, because the module dependencies are not downloaded multiple times.
  * `--module_repo`: location to download modules from, overrides `INMANTA_MODULE_REPO`. The default value is the inmanta github organisation.
- * `--install_mode`: install mode to use for modules downloaded during this test, overrides `INMANTA_INSTALL_MODE`  
+ * `--install_mode`: install mode to use for modules downloaded during this test, overrides `INMANTA_INSTALL_MODE`.
+ * `--no-load-plugins`: Don't load plugins in the Project class. Overrides `INMANTA_TEST_NO_LOAD_PLUGINS`. 
+ When not using this option during the testing of plugins, it's possible that the module's `plugin/__init__.py` is loaded multiple times, 
+ which can cause issues when it has side effects, as they are executed multiple times as well.
  
  Use the generic pytest options `--log-cli-level` to show Inmanta logger to see any setup or cleanup warnings. For example,
  `--log-cli-level=INFO`
