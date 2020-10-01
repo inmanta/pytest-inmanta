@@ -140,8 +140,9 @@ The following options are available.
     Using this option can speed up the tests, because the module dependencies are not downloaded multiple times.
  * `--module_repo`: location to download modules from, overrides `INMANTA_MODULE_REPO`. The default value is the inmanta github organisation.
  * `--install_mode`: install mode to use for modules downloaded during this test, overrides `INMANTA_INSTALL_MODE`.
- * `--no-load-plugins`: Don't load plugins in the Project class. Overrides `INMANTA_TEST_NO_LOAD_PLUGINS`. 
- When not using this option during the testing of plugins, it's possible that the module's `plugin/__init__.py` is loaded multiple times, 
+ * `--no_load-plugins`: Don't load plugins in the Project class. Overrides `INMANTA_TEST_NO_LOAD_PLUGINS`. 
+ When not using this option during the testing of plugins with the `project.get_plugin_function` method, 
+ it's possible that the module's `plugin/__init__.py` is loaded multiple times, 
  which can cause issues when it has side effects, as they are executed multiple times as well.
  
  Use the generic pytest options `--log-cli-level` to show Inmanta logger to see any setup or cleanup warnings. For example,
