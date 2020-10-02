@@ -63,12 +63,19 @@ def pytest_addoption(parser):
     group.addoption(
         "--venv",
         dest="inm_venv",
-        help="folder in which to place the virtual env for tests (will be shared by all tests), overrides INMANTA_TEST_ENV",
+        help="folder in which to place the virtual env for tests (will be shared by all tests), overrides INMANTA_TEST_ENV. "
+        "This options depends on symlink support. This does not work on all windows versions. "
+        "On windows 10 you need to run pytest in an admin shell. "
+        "Using a fixed virtual environment can speed up running the tests.",
     )
     group.addoption(
         "--use-module-in-place",
         action="store_true",
-        help="tell pytest-inmanta to run with the module in place, useful for debugging",
+        help="tell pytest-inmanta to run with the module in place, useful for debugging. "
+        "Makes inmanta add the parent directory of your module directory to it's directory path, instead of copying your "
+        "module to a temporary libs directory. "
+        "It allows testing the current module against specific versions of dependent modules. "
+        "Using this option can speed up the tests, because the module dependencies are not downloaded multiple times.",
     )
     group.addoption(
         "--module_repo",
@@ -80,14 +87,18 @@ def pytest_addoption(parser):
     group.addoption(
         "--install_mode",
         dest="inm_install_mode",
-        help="Install mode for modules downloaded during this test",
+        help="Install mode for modules downloaded during this test, overrides INMANTA_INSTALL_MODE.",
         choices=module.INSTALL_OPTS,
     )
     group.addoption(
         "--no_load_plugins",
         action="store_true",
         dest="inm_no_load_plugins",
-        help="Don't load plugins in the Project class.",
+        help="Don't load plugins in the Project class. Overrides INMANTA_TEST_NO_LOAD_PLUGINS."
+        "The value of INMANTA_TEST_NO_LOAD_PLUGINS environment variable has to be a non-empty string to not load plugins."
+        "When not using this option during the testing of plugins with the `project.get_plugin_function` method, "
+        "it's possible that the module's `plugin/__init__.py` is loaded multiple times, "
+        "which can cause issues when it has side effects, as they are executed multiple times as well.",
     )
 
 
