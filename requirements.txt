@@ -1,5 +1,5 @@
 pytest==6.1.1
-inmanta==2020.4.2
+inmanta==2020.4.3
 flake8==3.8.4
 flake8-black==0.2.1
 flake8-copyright==0.2.2
