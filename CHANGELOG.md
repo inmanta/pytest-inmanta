@@ -1,3 +1,14 @@
+# V 1.4.0 (20-10-12)
+Changes in this release:
+- Added meaningful error message when --venv points to a non-existing directory (#62)
+- Ensure that cache is closed completely (#57)
+- Fix incompatibility with pytest 6.0.0
+- Fixed plugin loading compatibility with compiler's import mechanism (#46, #49)
+- Added `inmanta_plugins` fixture to make abstraction of required module reloading when the compiler project is reset (related to #49)
+- Added deprecation warning for `project_no_plugins` fixture in favor of `INMANTA_TEST_NO_LOAD_PLUGINS` environment variable (#66)
+- Added resource unittest::IgnoreResource.
+- Improve documentation of options (#67)
+
 # V 1.3.0
 Changes in this release:
 - Added INMANTA_TEST_NO_LOAD_PLUGINS environment variable as workaround for inmanta/pytest-inmanta#49

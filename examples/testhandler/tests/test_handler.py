@@ -16,8 +16,8 @@
     Contact: code@inmanta.com
 """
 import pytest
-from inmanta import const
 
+from inmanta import const
 from pytest_inmanta.handler import DATA
 
 
@@ -27,57 +27,69 @@ def test_resource(project):
     with pytest.raises(KeyError):
         project.unittest_resource_get(name="res")
 
-    project.compile("""
+    project.compile(
+        """
     import unittest
 
     unittest::Resource(name="res", desired_value="x")
-    """)
+    """
+    )
     project.deploy_resource("unittest::Resource")
 
     assert project.unittest_resource_exists(name="res")
     value = project.unittest_resource_get(name="res")
     assert value["desired_value"] == "x"
 
-    project.compile("""
+    project.compile(
+        """
     import unittest
 
     unittest::Resource(name="res", desired_value="y")
-    """)
+    """
+    )
     project.deploy_resource("unittest::Resource")
     value = project.unittest_resource_get(name="res")
     assert value["desired_value"] == "y"
 
-    project.compile("""
+    project.compile(
+        """
         import unittest
 
         unittest::Resource(name="res", desired_value="y", purged=true)
-        """)
+        """
+    )
     project.deploy_resource("unittest::Resource")
     assert not project.unittest_resource_exists(name="res")
 
 
 def test_resource_fail_skip(project):
-    project.compile("""
+    project.compile(
+        """
     import unittest
 
     unittest::Resource(name="res", desired_value="x", fail=true)
-    """)
+    """
+    )
     project.deploy_resource("unittest::Resource", status=const.ResourceState.failed)
 
-    project.compile("""
+    project.compile(
+        """
         import unittest
 
         unittest::Resource(name="res", desired_value="x", skip=true)
-        """)
+        """
+    )
     project.deploy_resource("unittest::Resource", status=const.ResourceState.skipped)
 
 
 def test_resource_fail_skip_data(project):
-    project.compile("""
+    project.compile(
+        """
     import unittest
 
     unittest::Resource(name="res", desired_value="x")
-    """)
+    """
+    )
 
     project.deploy_resource("unittest::Resource", status=const.ResourceState.deployed)
 
@@ -91,11 +103,13 @@ def test_resource_fail_skip_data(project):
 
 def test_retrieve_logs(project):
 
-    project.compile("""
+    project.compile(
+        """
     import unittest
 
     unittest::Resource(name="res", desired_value="x")
-    """)
+    """
+    )
     project.deploy_resource("unittest::Resource")
 
     assert project.unittest_resource_exists(name="res")
@@ -108,11 +122,13 @@ def test_retrieve_logs(project):
 
 
 def test_close_cache(project):
-    project.compile("""
+    project.compile(
+        """
         import unittest
 
         unittest::Resource(name="res", desired_value="x")
-        """)
+        """
+    )
 
     project.deploy_resource("unittest::Resource")
     res = project.get_resource("unittest::Resource")
@@ -120,3 +136,4 @@ def test_close_cache(project):
     project.finalize_handler(handler)
     versions = handler.cache.counterforVersion.keys()
     assert len(versions) == 0
+    assert len(handler.cache.cache) == 0

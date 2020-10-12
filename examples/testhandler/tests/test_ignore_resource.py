@@ -15,35 +15,21 @@
 
     Contact: code@inmanta.com
 """
-from inmanta import const
 
 
-def test_dryrun(project):
+def test_ignore_resource(project):
+    """
+    Ensure that instances of the unittest::IgnoreResource resources are not exported.
+    These resources raise an IgnoreResourceException on export.
+    """
     project.compile(
         """
     import unittest
 
     unittest::Resource(name="res", desired_value="x")
+    unittest::IgnoreResource(name="res_ignore", desired_value="y")
     """
     )
-    project.dryrun_resource("unittest::Resource", status=const.ResourceState.dry)
 
-
-def test_dryrun_fail_skip(project):
-    project.compile(
-        """
-    import unittest
-
-    unittest::Resource(name="res", desired_value="x", fail=true)
-    """
-    )
-    project.dryrun_resource("unittest::Resource", status=const.ResourceState.failed)
-
-    project.compile(
-        """
-        import unittest
-
-        unittest::Resource(name="res", desired_value="x", skip=true)
-        """
-    )
-    project.dryrun_resource("unittest::Resource", status=const.ResourceState.skipped)
+    assert project.get_resource("unittest::Resource") is not None
+    assert project.get_resource("unittest::IgnoreResource") is None

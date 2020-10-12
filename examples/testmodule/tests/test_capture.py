@@ -4,6 +4,7 @@
     License: Apache 2.0
 """
 
+
 def test_capture(project):
     marker = "MARKERXXX123678"
 

@@ -66,15 +66,33 @@ And dryrun
     assert changes == {"value": {'current': 'read', 'desired': 'write'}}
 ```
 
-Testing functions and classes defined in a module is also possible 
-by simply importing them inside a test case, after the project fixture is initialized
+Testing functions and classes defined in a module is also possible
+using the `inmanta_plugins` fixture. The fixture exposes inmanta modules as its attributes
+and imports them dynamically when accessed.
 
 ```python
-    def test_example(project):
-        from inmanta_plugins.testmodule import regular_function
-    
-        regular_function("example")
+    def test_example(inmanta_plugins):
+        inmanta_plugins.testmodule.regular_function("example")
 ```
+
+This dynamism is required because the compiler resets module imports when `project.compile`
+is called. As a result, if you store a module in a local variable, it will not survive a
+compilation. Therefore you are advised to access modules in the `inmanta_plugins` package
+in a fully qualified manner (using the fixture). The following example demonstrates this.
+
+```python
+    def test_module_inequality(project, inmanta_plugins):
+        cached_module = inmanta_plugins.testmodule
+        assert cached_module is inmanta_plugins.testmodule
+
+        project.compile("import testmodule")
+
+        assert cached_module is not inmanta_plugins.testmodule
+```
+
+While you could import from the `inmanta_plugins` package directly, the fixture makes abstraction
+of module reloading. Without the fixture you would be required to reimport after `project.compile`.
+
 ## Testing plugins
 
 Take the following plugin as an example:
@@ -116,11 +134,21 @@ The following options are available.
 
  * `--venv`: folder in which to place the virtual env for tests (will be shared by all tests), overrides `INMANTA_TEST_ENV`.
    This options depends on symlink support. This does not work on all windows versions. On windows 10 you need to run pytest in an
-   admin shell.
+   admin shell. Using a fixed virtual environment can speed up running the tests.
  * `--use-module-in-place`: makes inmanta add the parent directory of your module directory to it's directory path, instead of copying your
-    module to a temporary libs directory.
+    module to a temporary libs directory. It allows testing the current module against specific versions of dependent modules. 
+    Using this option can speed up the tests, because the module dependencies are not downloaded multiple times.
  * `--module_repo`: location to download modules from, overrides `INMANTA_MODULE_REPO`. The default value is the inmanta github organisation.
- * `--install_mode`: install mode to use for modules downloaded during this test, overrides `INMANTA_INSTALL_MODE`  
+ * `--install_mode`: install mode to use for modules downloaded during this test, overrides `INMANTA_INSTALL_MODE`.
+ * `--no_load-plugins`: Don't load plugins in the Project class. Overrides `INMANTA_TEST_NO_LOAD_PLUGINS`. 
+ The value of INMANTA_TEST_NO_LOAD_PLUGINS environment variable has to be a non-empty string to not load plugins.
+ When not using this option during the testing of plugins with the `project.get_plugin_function` method, 
+ it's possible that the module's `plugin/__init__.py` is loaded multiple times, 
+ which can cause issues when it has side effects, as they are executed multiple times as well.
  
  Use the generic pytest options `--log-cli-level` to show Inmanta logger to see any setup or cleanup warnings. For example,
  `--log-cli-level=INFO`
+
+## Compatibility with pytest-cov
+
+The `--use-module-in-place` option should be set when pytest-inmanta is used in combination with the `pytest-cov` pytest plugin. Without the `--use-module-in-place` option, the reported test coverage will be incorrect.
