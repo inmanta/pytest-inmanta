@@ -1,4 +1,4 @@
-# V 1.4.0 (?)
+# V 1.4.0 (20-10-12)
 Changes in this release:
 - Added meaningful error message when --venv points to a non-existing directory (#62)
 - Ensure that cache is closed completely (#57)
