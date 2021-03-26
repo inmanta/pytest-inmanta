@@ -514,9 +514,9 @@ class Project:
     def deploy_resource(
         self,
         resource_type: str,
-        status=const.ResourceState.deployed,
+        status: const.ResourceState = const.ResourceState.deployed,
         run_as_root=False,
-        change=None,
+        change: const.Change = None,
         **filter_args: dict,
     ) -> Resource:
         """
