@@ -1,3 +1,7 @@
+# v 1.5.0 (2021-03-26)
+Changes in this release:
+- Remove dependency on the inmanta package
+
 # V 1.4.0 (20-10-12)
 Changes in this release:
 - Added meaningful error message when --venv points to a non-existing directory (#62)
