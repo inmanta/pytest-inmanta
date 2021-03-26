@@ -1,4 +1,7 @@
-# v 1.5.0 (?)
+# v 1.6.0 (?)
+Changes in this release:
+
+# v 1.5.0 (2021-03-26)
 Changes in this release:
 - Remove dependency on the inmanta package
 
