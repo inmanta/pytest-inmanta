@@ -47,7 +47,7 @@ def test_resource(project):
     unittest::Resource(name="res", desired_value="y")
     """
     )
-    project.deploy_resource("unittest::Resource")
+    project.deploy_resource("unittest::Resource", change=const.Change.updated)
     value = project.unittest_resource_get(name="res")
     assert value["desired_value"] == "y"
 

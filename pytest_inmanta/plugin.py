@@ -514,10 +514,22 @@ class Project:
     def deploy_resource(
         self,
         resource_type: str,
-        status=const.ResourceState.deployed,
+        status: const.ResourceState = const.ResourceState.deployed,
         run_as_root=False,
+        change: const.Change = None,
         **filter_args: dict,
-    ):
+    ) -> Resource:
+        """
+        Deploy a resource of the given type, that matches the filter and assert the outcome
+
+        :param resource_type: the type of resource to deploy
+        :param filter_args: a set of kwargs, the resource must have all matching attributes set to the given values
+        :param run_as_root: run the handler as root or not
+        :param status: the expected status of the deployment
+        :param change: the expected change performed by the handler
+
+        :return: the resource
+        """
         res = self.get_resource(resource_type, **filter_args)
         assert res is not None, "No resource found of given type and filter args"
 
@@ -539,6 +551,8 @@ class Project:
                     print("Traceback:\n", log._data["kwargs"]["traceback"])
 
         assert ctx.status == status
+        if change is not None:
+            assert ctx._change == change
         self.finalize_context(ctx)
         return res
 
