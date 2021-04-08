@@ -93,7 +93,7 @@ def test_release_mode_validation(testdir):
 
     result = testdir.runpytest("tests/test_resource_run.py", "--install_mode", "other")
     assert (
-        "error: argument --install_mode: invalid choice: 'other' (choose from 'master', 'prerelease', 'release')"
+        "error: argument --install_mode: invalid choice: 'other' (choose from"
         in "\n".join(result.errlines)
     )
 
