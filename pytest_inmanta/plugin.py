@@ -368,7 +368,7 @@ class InmantaPluginsImporter:
             (
                 file_name,
                 mod._get_fq_mod_name_for_py_file(
-                    file_name, plugin_dir, mod._meta["name"]
+                    file_name, plugin_dir, mod.name
                 ),
             )
             for file_name in glob.iglob(
