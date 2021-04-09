@@ -1,3 +1,7 @@
+# v 1.5.1 (2021-04-09)
+Changes in this release:
+- remove usage of internal compiler api
+
 # v 1.5.0 (2021-03-26)
 Changes in this release:
 - Remove dependency on the inmanta package
