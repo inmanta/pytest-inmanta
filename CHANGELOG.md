@@ -1,4 +1,4 @@
-# v 1.5.1 (2021-04-09)
+# v 1.5.2 (2021-04-09)
 Changes in this release:
 - remove usage of internal compiler api
 
