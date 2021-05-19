@@ -1,2 +1,2 @@
-inmanta-dev-dependencies==1.36.0
+inmanta-dev-dependencies==1.37.0
 inmanta-core
