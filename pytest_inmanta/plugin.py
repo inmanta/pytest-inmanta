@@ -19,6 +19,7 @@ import glob
 import importlib
 import json
 import logging
+import math
 import os
 import shutil
 import sys
@@ -26,7 +27,6 @@ import tempfile
 import warnings
 from collections import defaultdict
 from distutils import dir_util
-from math import floor, log
 from pathlib import Path
 from textwrap import dedent
 from types import FunctionType, ModuleType
@@ -639,7 +639,7 @@ license: Test License
         # logging model with line numbers
         def enumerate_model(model: str):
             lines = model.split("\n")
-            leading_zeros = floor(log(len(lines), 10)) + 1
+            leading_zeros = math.floor(math.log(len(lines), 10)) + 1
             line_numbers_model = "\n".join(
                 [
                     f"{str(number).zfill(leading_zeros)}    {line}"
