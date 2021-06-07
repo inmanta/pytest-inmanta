@@ -621,7 +621,7 @@ license: Test License
         module.Project.set(test_project)
         test_project.load()
 
-    def compile(self, main: str, export: bool = False, no_dedent: bool = False):
+    def compile(self, main: str, export: bool = False, no_dedent: bool = False) -> None:
         """
         Compile the configuration model in main. This method will load all required modules.
 
