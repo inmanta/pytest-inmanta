@@ -625,9 +625,9 @@ license: Test License
         """
         Compile the configuration model in main. This method will load all required modules.
 
-        :attr main: The model to compile
-        :attr main: Whether the model should be exported after the compile
-        :attr no_dedent: Don't remove additional indentation in the model
+        :param main: The model to compile
+        :param export: Whether the model should be exported after the compile
+        :param no_dedent: Don't remove additional indentation in the model
         """
         # Dedent the input format
         model = dedent(main.strip("\n")) if not no_dedent else main
