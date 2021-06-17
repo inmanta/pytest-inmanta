@@ -409,7 +409,7 @@ class Project:
         self.resources: ResourceDict = {}
         self._root_scope: typing.Optional[inmanta.ast.Namespace] = None
         self._exporter: typing.Optional[Exporter] = None
-        self._blobs: typing.Dict[str, str] = {}
+        self._blobs: typing.Dict[str, bytes] = {}
         self._facts: typing.Dict[
             ResourceIdStr, typing.Dict[str, typing.Any]
         ] = defaultdict(dict)
@@ -437,10 +437,13 @@ class Project:
         self._handlers = set()
         config.Config.load_config()
 
-    def add_blob(self, key: str, content: str, allow_overwrite: bool = True) -> None:
+    def add_blob(self, key: str, content: bytes, allow_overwrite: bool = True) -> None:
         """
         Add a blob identified with the hash of the content as key
         """
+        if isinstance(content, str):
+            warnings.warn("received a string, but expect bytes", DeprecationWarning)
+            content = content.encode("utf-8")
         if key in self._blobs and not allow_overwrite:
             raise Exception("Key %s already stored in blobs" % key)
         self._blobs[key] = content
@@ -448,7 +451,7 @@ class Project:
     def stat_blob(self, key: str) -> bool:
         return key in self._blobs
 
-    def get_blob(self, key: str) -> str:
+    def get_blob(self, key: str) -> bytes:
         return self._blobs[key]
 
     def add_fact(self, resource_id: ResourceIdStr, name: str, value: object) -> None:
