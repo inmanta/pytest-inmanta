@@ -28,19 +28,22 @@ from collections import defaultdict
 from distutils import dir_util
 from pathlib import Path
 from types import FunctionType, ModuleType
-from typing import Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Union, Callable
 
 import pytest
 import yaml
+from pytest import CaptureFixture
 from tornado import ioloop
 
 from inmanta import compiler, config, const, module, protocol
 from inmanta.agent import cache, handler
 from inmanta.agent import io as agent_io
 from inmanta.agent.handler import HandlerContext, ResourceHandler
-from inmanta.data import LogLine
+from inmanta.ast import Namespace, Type
+from inmanta.data import LogLine, ResourceIdStr
+from inmanta.data.model import AttributeStateChange
 from inmanta.execute.proxy import DynamicProxy
-from inmanta.export import Exporter, cfg_env
+from inmanta.export import Exporter, ResourceDict, cfg_env
 from inmanta.protocol import json_encode
 from inmanta.resources import Resource
 
@@ -58,7 +61,7 @@ option_to_env = {
 }
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser) -> None:
     group = parser.getgroup("inmanta", "inmanta module testing plugin")
     group.addoption(
         "--venv",
@@ -102,7 +105,7 @@ def pytest_addoption(parser):
     )
 
 
-def get_opt_or_env_or(config, key, default):
+def get_opt_or_env_or(config, key: str, default: str) -> str:
     if config.getoption(key):
         return config.getoption(key)
     if option_to_env[key] in os.environ:
@@ -110,7 +113,7 @@ def get_opt_or_env_or(config, key, default):
     return default
 
 
-def get_module_info():
+def get_module_info() -> Tuple[str, str]:
     curdir = CURDIR
     # Make sure that we are executed in a module
     dir_path = curdir.split(os.path.sep)
@@ -134,13 +137,13 @@ def get_module_info():
 
 
 @pytest.fixture()
-def inmanta_plugins(project):
+def inmanta_plugins(project: "Project") -> Iterator["InmantaPluginsImportLoader"]:
     importer: InmantaPluginsImporter = InmantaPluginsImporter(project)
     yield importer.loader
 
 
 @pytest.fixture()
-def project(project_shared, capsys):
+def project(project_shared: "Project", capsys: CaptureFixture) -> Iterator["Project"]:
     DATA.clear()
     project_shared.clean()
     project_shared.init(capsys)
@@ -149,7 +152,7 @@ def project(project_shared, capsys):
 
 
 @pytest.fixture()
-def project_no_plugins(project_shared_no_plugins, capsys):
+def project_no_plugins(project_shared_no_plugins, capsys: CaptureFixture) -> Iterator["Project"]:
     warnings.warn(
         DeprecationWarning(
             "The project_no_plugins fixture is deprecated in favor of the %s environment variable."
@@ -173,7 +176,7 @@ def get_module_data(filename: str) -> str:
 
 
 @pytest.fixture(scope="session")
-def project_shared(project_factory):
+def project_shared(project_factory) -> Callable[[], "Project"]:
     """
     A test fixture that creates a new inmanta project with the current module in. The returned object can be used
     to add files to the unittest module, compile a model and access the results, stdout and stderr.
@@ -183,7 +186,7 @@ def project_shared(project_factory):
 
 # Temporary workaround for plugins loading multiple times (inmanta/pytest-inmanta#49)
 @pytest.fixture(scope="session")
-def project_shared_no_plugins(project_factory):
+def project_shared_no_plugins(project_factory: Callable[[], "Project"]) -> "Project":
     """
     A test fixture that creates a new inmanta project with the current module in. The returned object can be used
     to add files to the unittest module, compile a model and access the results, stdout and stderr.
@@ -193,7 +196,7 @@ def project_shared_no_plugins(project_factory):
 
 
 @pytest.fixture(scope="session")
-def project_factory(request):
+def project_factory(request: pytest.FixtureRequest) -> Callable[[], "Project"]:
     """
     A factory that constructs a single Project.
     """
@@ -382,34 +385,34 @@ class Project:
     environment variable. Repositories are separated with spaces.
     """
 
-    def __init__(self, project_dir, load_plugins: bool = True):
+    def __init__(self, project_dir: str, load_plugins: bool = True) -> None:
         self._test_project_dir = project_dir
-        self._stdout = None
-        self._stderr = None
-        self.types = None
-        self.version = None
-        self.resources = {}
-        self._root_scope = {}
-        self._exporter = None
-        self._blobs = {}
-        self._facts = defaultdict(dict)
+        self._stdout: Optional[str] = None
+        self._stderr: Optional[str] = None
+        self.types: Optional[Dict[str, Type]] = None
+        self.version: Optional[int] = None
+        self.resources: ResourceDict = {}
+        self._root_scope: Optional[Namespace] = None
+        self._exporter: Optional[Exporter] = None
+        self._blobs: Dict[str, str] = {}
+        self._facts: Dict[ResourceIdStr, Dict[str, Any]] = defaultdict(dict)
         self._load()
-        self._plugins: Optional[Dict[str, object]] = (
+        self._plugins: Optional[Dict[str, FunctionType]] = (
             self._load_plugins() if load_plugins else None
         )
-        self._capsys = None
-        self.ctx = None
-        self._handlers = set()
+        self._capsys: Optional[CaptureFixture] = None
+        self.ctx: Optional[HandlerContext] = None
+        self._handlers: Set[ResourceHandler] = set()
         config.Config.load_config()
 
-    def init(self, capsys):
+    def init(self, capsys: CaptureFixture) -> None:
         self._stdout = None
         self._stderr = None
         self._capsys = capsys
         self.types = None
         self.version = None
         self.resources = {}
-        self._root_scope = {}
+        self._root_scope = None
         self._exporter = None
         self._blobs = {}
         self._facts = defaultdict(dict)
@@ -417,7 +420,7 @@ class Project:
         self._handlers = set()
         config.Config.load_config()
 
-    def add_blob(self, key, content, allow_overwrite=True):
+    def add_blob(self, key: str, content: str, allow_overwrite: bool = True) -> None:
         """
         Add a blob identified with the hash of the content as key
         """
@@ -425,16 +428,16 @@ class Project:
             raise Exception("Key %s already stored in blobs" % key)
         self._blobs[key] = content
 
-    def stat_blob(self, key):
+    def stat_blob(self, key: str) -> bool:
         return key in self._blobs
 
-    def get_blob(self, key):
+    def get_blob(self, key: str) -> bytes:
         return self._blobs[key]
 
-    def add_fact(self, resource_id, name, value):
+    def add_fact(self, resource_id: ResourceIdStr, name: str, value: object) -> None:
         self._facts[resource_id][name] = value
 
-    def get_handler(self, resource, run_as_root):
+    def get_handler(self, resource: Resource, run_as_root: bool) -> ResourceHandler:
         # TODO: if user is root, do not use remoting
         c = cache.AgentCache()
         if run_as_root:
@@ -444,22 +447,24 @@ class Project:
 
         c.open_version(resource.id.version)
         try:
-            p = handler.Commander.get_provider(c, agent, resource)
+            p = handler.Commander.get_provider(c, agent, resource)  # typing: ignore
             p.set_cache(c)
-            p.get_file = lambda x: self.get_blob(x)
-            p.stat_file = lambda x: self.stat_blob(x)
-            p.upload_file = lambda x, y: self.add_blob(x, y)
-            p.run_sync = ioloop.IOLoop.current().run_sync
+            p.get_file = lambda x: self.get_blob(x)  # typing: ignore
+            p.stat_file = lambda x: self.stat_blob(x)  # typing: ignore
+            p.upload_file = lambda x, y: self.add_blob(x, y)  # typing: ignore
+            p.run_sync = ioloop.IOLoop.current().run_sync  # typing: ignore
             self._handlers.add(p)
             return p
         except Exception as e:
             raise e
 
-    def finalize_context(self, ctx: handler.HandlerContext):
+    def finalize_context(self, ctx: handler.HandlerContext) -> None:
         # ensure logs can be serialized
         json_encode({"message": ctx.logs})
 
-    def get_resource(self, resource_type: str, **filter_args: dict):
+    def get_resource(
+        self, resource_type: str, **filter_args: Dict[str, object]
+    ) -> Optional[Resource]:
         """
         Get a resource of the given type and given filter on the resource attributes. If multiple resource match, the
         first one is returned. If none match, None is returned.
@@ -467,7 +472,7 @@ class Project:
         :param resource_type: The exact type used in the model (no super types)
         """
 
-        def apply_filter(resource):
+        def apply_filter(resource: Resource) -> bool:
             for arg, value in filter_args.items():
                 if not hasattr(resource, arg):
                     return False
@@ -489,7 +494,9 @@ class Project:
 
         return None
 
-    def deploy(self, resource, dry_run=False, run_as_root=False):
+    def deploy(
+        self, resource: Resource, dry_run: bool = False, run_as_root: bool = False
+    ) -> HandlerContext:
         """
         Deploy the given resource with a handler
         """
@@ -506,16 +513,16 @@ class Project:
         self.finalize_handler(h)
         return ctx
 
-    def dryrun(self, resource, run_as_root=False):
+    def dryrun(self, resource: Resource, run_as_root: bool = False) -> HandlerContext:
         return self.deploy(resource, True, run_as_root)
 
     def deploy_resource(
         self,
         resource_type: str,
         status: const.ResourceState = const.ResourceState.deployed,
-        run_as_root=False,
+        run_as_root: bool = False,
         change: const.Change = None,
-        **filter_args: dict,
+        **filter_args: Dict[str, object],
     ) -> Resource:
         """
         Deploy a resource of the given type, that matches the filter and assert the outcome
@@ -557,10 +564,10 @@ class Project:
     def dryrun_resource(
         self,
         resource_type: str,
-        status=const.ResourceState.dry,
-        run_as_root=False,
-        **filter_args: dict,
-    ):
+        status: const.ResourceState = const.ResourceState.dry,
+        run_as_root: bool = False,
+        **filter_args: Dict[str, object],
+    ) -> Dict[str, AttributeStateChange]:
         """
         Run a dryrun for a specific resource.
 
@@ -578,7 +585,7 @@ class Project:
         assert ctx.status == status
         return ctx.changes
 
-    def io(self, run_as_root=False):
+    def io(self, run_as_root: bool = False) -> agent_io.IOBase:
         version = 1
         if run_as_root:
             ret = agent_io.get_io(None, "ssh://root@localhost", version)
@@ -586,7 +593,7 @@ class Project:
             ret = agent_io.get_io(None, "local:", version)
         return ret
 
-    def create_module(self, name, initcf="", initpy=""):
+    def create_module(self, name: str, initcf: str = "", initpy: str = "") -> None:
         module_dir = os.path.join(self._test_project_dir, "libs", name)
         os.mkdir(module_dir)
         os.mkdir(os.path.join(module_dir, "model"))
@@ -619,7 +626,7 @@ license: Test License
         module.Project.set(test_project)
         test_project.load()
 
-    def compile(self, main, export=False):
+    def compile(self, main: str, export: bool = False) -> None:
         """
         Compile the configuration model in main. This method will load all required modules.
         """
@@ -658,10 +665,12 @@ license: Test License
         self._stdout = captured.out
         self._stderr = captured.err
 
-    def deploy_latest_version(self, full_deploy=False):
+    def deploy_latest_version(self, full_deploy: bool = False) -> None:
         """Release and push the latest version to the server (uses the current configuration, either with a fixture or
         set by the test.
         """
+        if self.version is None:
+            raise Exception("Run project.compile first")
         conn = protocol.SyncClient("compiler")
         LOGGER.info("Triggering deploy for version %d" % self.version)
         tid = cfg_env.get()
@@ -678,16 +687,16 @@ license: Test License
             return self.ctx.logs
         return None
 
-    def get_stdout(self):
+    def get_stdout(self) -> Optional[str]:
         return self._stdout
 
-    def get_stderr(self):
+    def get_stderr(self) -> Optional[str]:
         return self._stderr
 
-    def get_root_scope(self):
+    def get_root_scope(self) -> Optional[Namespace]:
         return self._root_scope
 
-    def add_mock_file(self, subdir, name, content):
+    def add_mock_file(self, subdir: str, name: str, content: str) -> None:
         """
         This method can be used to register mock templates or files in the virtual "unittest" module.
         """
@@ -714,7 +723,7 @@ license: Test License
             }
         )
 
-    def get_plugin_function(self, function_name):
+    def get_plugin_function(self, function_name: str) -> FunctionType:
         if self._plugins is None:
             raise Exception(
                 "Plugins not loaded, perhaps you should use the `project` fixture or"
@@ -724,7 +733,7 @@ license: Test License
             raise Exception(f"Plugin function with name {function_name} not found")
         return self._plugins[function_name]
 
-    def get_plugins(self):
+    def get_plugins(self) -> Dict[str, FunctionType]:
         if self._plugins is None:
             raise Exception(
                 "Plugins not loaded, perhaps you should use the `project` fixture or"
@@ -732,7 +741,9 @@ license: Test License
             )
         return dict(self._plugins)
 
-    def get_instances(self, fortype: str = "std::Entity"):
+    def get_instances(self, fortype: str = "std::Entity") -> List[DynamicProxy]:
+        if self.types is None:
+            raise Exception("No compile has been done")
         if fortype not in self.types:
             raise Exception(f"No entities of type {fortype} found in the model")
 
@@ -781,6 +792,6 @@ license: Test License
     def finalize_handler(self, handler: ResourceHandler) -> None:
         handler.cache.close()
 
-    def finalize_all_handlers(self):
+    def finalize_all_handlers(self) -> None:
         for handler_instance in self._handlers:
             self.finalize_handler(handler_instance)
