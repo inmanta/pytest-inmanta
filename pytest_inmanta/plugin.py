@@ -24,13 +24,13 @@ import os
 import shutil
 import sys
 import tempfile
+import typing
 import warnings
 from collections import defaultdict
 from distutils import dir_util
 from pathlib import Path
 from textwrap import dedent
 from types import FunctionType, ModuleType
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Union
 
 import pytest
 import yaml
@@ -48,6 +48,9 @@ from inmanta.execute.proxy import DynamicProxy
 from inmanta.export import Exporter, ResourceDict, cfg_env
 from inmanta.protocol import json_encode
 from inmanta.resources import Resource
+
+if typing.TYPE_CHECKING:
+    from inmanta.agent.io.local import IOBase
 
 from .handler import DATA
 
@@ -115,7 +118,7 @@ def get_opt_or_env_or(config, key: str, default: str) -> str:
     return default
 
 
-def get_module_info() -> Tuple[str, str]:
+def get_module_info() -> typing.Tuple[str, str]:
     curdir = CURDIR
     # Make sure that we are executed in a module
     dir_path = curdir.split(os.path.sep)
@@ -139,13 +142,17 @@ def get_module_info() -> Tuple[str, str]:
 
 
 @pytest.fixture()
-def inmanta_plugins(project: "Project") -> Iterator["InmantaPluginsImportLoader"]:
+def inmanta_plugins(
+    project: "Project",
+) -> typing.Iterator["InmantaPluginsImportLoader"]:
     importer: InmantaPluginsImporter = InmantaPluginsImporter(project)
     yield importer.loader
 
 
 @pytest.fixture()
-def project(project_shared: "Project", capsys: CaptureFixture) -> Iterator["Project"]:
+def project(
+    project_shared: "Project", capsys: CaptureFixture
+) -> typing.Iterator["Project"]:
     DATA.clear()
     project_shared.clean()
     project_shared.init(capsys)
@@ -156,7 +163,7 @@ def project(project_shared: "Project", capsys: CaptureFixture) -> Iterator["Proj
 @pytest.fixture()
 def project_no_plugins(
     project_shared_no_plugins, capsys: CaptureFixture
-) -> Iterator["Project"]:
+) -> typing.Iterator["Project"]:
     warnings.warn(
         DeprecationWarning(
             "The project_no_plugins fixture is deprecated in favor of the %s environment variable."
@@ -180,7 +187,7 @@ def get_module_data(filename: str) -> str:
 
 
 @pytest.fixture(scope="session")
-def project_shared(project_factory) -> Callable[[], "Project"]:
+def project_shared(project_factory) -> typing.Iterator[typing.Callable[[], "Project"]]:
     """
     A test fixture that creates a new inmanta project with the current module in. The returned object can be used
     to add files to the unittest module, compile a model and access the results, stdout and stderr.
@@ -190,7 +197,9 @@ def project_shared(project_factory) -> Callable[[], "Project"]:
 
 # Temporary workaround for plugins loading multiple times (inmanta/pytest-inmanta#49)
 @pytest.fixture(scope="session")
-def project_shared_no_plugins(project_factory: Callable[[], "Project"]) -> "Project":
+def project_shared_no_plugins(
+    project_factory: typing.Iterator[typing.Callable[[], "Project"]]
+) -> "Project":
     """
     A test fixture that creates a new inmanta project with the current module in. The returned object can be used
     to add files to the unittest module, compile a model and access the results, stdout and stderr.
@@ -200,7 +209,7 @@ def project_shared_no_plugins(project_factory: Callable[[], "Project"]) -> "Proj
 
 
 @pytest.fixture(scope="session")
-def project_factory(request: pytest.FixtureRequest) -> Callable[[], "Project"]:
+def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Project"]:
     """
     A factory that constructs a single Project.
     """
@@ -263,7 +272,7 @@ install_mode: %(install_mode)s
         )
 
     def create_project(**kwargs):
-        extended_kwargs: Dict[str, object] = {
+        extended_kwargs: typing.Dict[str, object] = {
             "load_plugins": not get_opt_or_env_or(
                 request.config, "inm_no_load_plugins", False
             ),
@@ -324,9 +333,9 @@ class InmantaPluginsImportLoader:
         self._importer: InmantaPluginsImporter = importer
 
     def __getattr__(self, name: str):
-        submodules: Optional[Dict[str, ModuleType]] = self._importer.get_submodules(
-            name
-        )
+        submodules: typing.Optional[
+            typing.Dict[str, ModuleType]
+        ] = self._importer.get_submodules(name)
         fq_mod_name: str = f"inmanta_plugins.{name}"
         if submodules is None or fq_mod_name not in submodules:
             raise AttributeError("No inmanta module named %s" % name)
@@ -338,14 +347,16 @@ class InmantaPluginsImporter:
         self.project: Project = project
         self.loader: InmantaPluginsImportLoader = InmantaPluginsImportLoader(self)
 
-    def get_submodules(self, module_name: str) -> Optional[Dict[str, ModuleType]]:
+    def get_submodules(
+        self, module_name: str
+    ) -> typing.Optional[typing.Dict[str, ModuleType]]:
         inmanta_project: module.Project = module.Project.get()
         if not inmanta_project.loaded:
             raise Exception(
                 "Dynamically importing from inmanta_plugins requires a loaded inmanta.module.Project. Make sure to use the"
                 " project fixture."
             )
-        modules: Dict[str, module.Module] = inmanta_project.get_modules()
+        modules: typing.Dict[str, module.Module] = inmanta_project.get_modules()
         if module_name not in modules:
             return None
         result = {}
@@ -357,7 +368,7 @@ class InmantaPluginsImporter:
     # TODO: this method duplicates inmanta.module.Module.get_plugin_files (2020.4), see #76
     def get_plugin_files_for_module(
         self, mod: module.Module
-    ) -> Iterator[Tuple[str, str]]:
+    ) -> typing.Iterator[typing.Tuple[str, str]]:
         """
         Returns a tuple (absolute_path, fq_mod_name) of all python files in this module.
         """
@@ -391,22 +402,24 @@ class Project:
 
     def __init__(self, project_dir: str, load_plugins: bool = True) -> None:
         self._test_project_dir = project_dir
-        self._stdout: Optional[str] = None
-        self._stderr: Optional[str] = None
-        self.types: Optional[Dict[str, inmanta.ast.Type]] = None
-        self.version: Optional[int] = None
+        self._stdout: typing.Optional[str] = None
+        self._stderr: typing.Optional[str] = None
+        self.types: typing.Optional[typing.Dict[str, inmanta.ast.Type]] = None
+        self.version: typing.Optional[int] = None
         self.resources: ResourceDict = {}
-        self._root_scope: Optional[inmanta.ast.Namespace] = None
-        self._exporter: Optional[Exporter] = None
-        self._blobs: Dict[str, str] = {}
-        self._facts: Dict[ResourceIdStr, Dict[str, Any]] = defaultdict(dict)
+        self._root_scope: typing.Optional[inmanta.ast.Namespace] = None
+        self._exporter: typing.Optional[Exporter] = None
+        self._blobs: typing.Dict[str, str] = {}
+        self._facts: typing.Dict[
+            ResourceIdStr, typing.Dict[str, typing.Any]
+        ] = defaultdict(dict)
         self._load()
-        self._plugins: Optional[Dict[str, FunctionType]] = (
+        self._plugins: typing.Optional[typing.Dict[str, FunctionType]] = (
             self._load_plugins() if load_plugins else None
         )
-        self._capsys: Optional[CaptureFixture] = None
-        self.ctx: Optional[HandlerContext] = None
-        self._handlers: Set[ResourceHandler] = set()
+        self._capsys: typing.Optional[CaptureFixture] = None
+        self.ctx: typing.Optional[HandlerContext] = None
+        self._handlers: typing.Set[ResourceHandler] = set()
         config.Config.load_config()
 
     def init(self, capsys: CaptureFixture) -> None:
@@ -467,8 +480,8 @@ class Project:
         json_encode({"message": ctx.logs})
 
     def get_resource(
-        self, resource_type: str, **filter_args: Dict[str, object]
-    ) -> Optional[Resource]:
+        self, resource_type: str, **filter_args: typing.Dict[str, object]
+    ) -> typing.Optional[Resource]:
         """
         Get a resource of the given type and given filter on the resource attributes. If multiple resource match, the
         first one is returned. If none match, None is returned.
@@ -526,7 +539,7 @@ class Project:
         status: const.ResourceState = const.ResourceState.deployed,
         run_as_root: bool = False,
         change: const.Change = None,
-        **filter_args: Dict[str, object],
+        **filter_args: typing.Dict[str, object],
     ) -> Resource:
         """
         Deploy a resource of the given type, that matches the filter and assert the outcome
@@ -570,8 +583,8 @@ class Project:
         resource_type: str,
         status: const.ResourceState = const.ResourceState.dry,
         run_as_root: bool = False,
-        **filter_args: Dict[str, object],
-    ) -> Dict[str, AttributeStateChange]:
+        **filter_args: typing.Dict[str, object],
+    ) -> typing.Dict[str, AttributeStateChange]:
         """
         Run a dryrun for a specific resource.
 
@@ -589,7 +602,7 @@ class Project:
         assert ctx.status == status
         return ctx.changes
 
-    def io(self, run_as_root: bool = False) -> agent_io.IOBase:
+    def io(self, run_as_root: bool = False) -> "IOBase":
         version = 1
         if run_as_root:
             ret = agent_io.get_io(None, "ssh://root@localhost", version)
@@ -704,21 +717,21 @@ license: Test License
         )
         conn.release_version(tid, self.version, True, agent_trigger_method)
 
-    def get_last_context(self) -> Optional[HandlerContext]:
+    def get_last_context(self) -> typing.Optional[HandlerContext]:
         return self.ctx
 
-    def get_last_logs(self) -> Optional[List[LogLine]]:
+    def get_last_logs(self) -> typing.Optional[typing.List[LogLine]]:
         if self.ctx:
             return self.ctx.logs
         return None
 
-    def get_stdout(self) -> Optional[str]:
+    def get_stdout(self) -> typing.Optional[str]:
         return self._stdout
 
-    def get_stderr(self) -> Optional[str]:
+    def get_stderr(self) -> typing.Optional[str]:
         return self._stderr
 
-    def get_root_scope(self) -> Optional[inmanta.ast.Namespace]:
+    def get_root_scope(self) -> typing.Optional[inmanta.ast.Namespace]:
         return self._root_scope
 
     def add_mock_file(self, subdir: str, name: str, content: str) -> None:
@@ -732,11 +745,11 @@ license: Test License
         with open(os.path.join(dir_name, name), "w+") as fd:
             fd.write(content)
 
-    def _load_plugins(self) -> Dict[str, FunctionType]:
+    def _load_plugins(self) -> typing.Dict[str, FunctionType]:
         _, module_name = get_module_info()
-        submodules: Optional[Dict[str, ModuleType]] = InmantaPluginsImporter(
-            self
-        ).get_submodules(module_name)
+        submodules: typing.Optional[
+            typing.Dict[str, ModuleType]
+        ] = InmantaPluginsImporter(self).get_submodules(module_name)
         return (
             {}
             if submodules is None
@@ -758,7 +771,7 @@ license: Test License
             raise Exception(f"Plugin function with name {function_name} not found")
         return self._plugins[function_name]
 
-    def get_plugins(self) -> Dict[str, FunctionType]:
+    def get_plugins(self) -> typing.Dict[str, FunctionType]:
         if self._plugins is None:
             raise Exception(
                 "Plugins not loaded, perhaps you should use the `project` fixture or"
@@ -766,7 +779,7 @@ license: Test License
             )
         return dict(self._plugins)
 
-    def get_instances(self, fortype: str = "std::Entity") -> List[DynamicProxy]:
+    def get_instances(self, fortype: str = "std::Entity") -> typing.List[DynamicProxy]:
         if self.types is None:
             raise Exception("No compile has been done")
         if fortype not in self.types:
@@ -786,14 +799,14 @@ license: Test License
 
     def unittest_resource_get(
         self, name: str
-    ) -> Dict[str, Union[str, bool, float, int]]:
+    ) -> typing.Dict[str, typing.Union[str, bool, float, int]]:
         """
         Get the state of the unittest resource
         """
         return DATA[name]
 
     def unittest_resource_set(
-        self, name: str, **kwargs: Union[str, bool, float, int]
+        self, name: str, **kwargs: typing.Union[str, bool, float, int]
     ) -> None:
         """
         Change a value of the unittest resource
