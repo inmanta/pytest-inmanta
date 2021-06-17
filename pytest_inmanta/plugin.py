@@ -19,6 +19,7 @@ import glob
 import importlib
 import json
 import logging
+import math
 import os
 import shutil
 import sys
@@ -27,6 +28,7 @@ import warnings
 from collections import defaultdict
 from distutils import dir_util
 from pathlib import Path
+from textwrap import dedent
 from types import FunctionType, ModuleType
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Union, Callable
 
@@ -626,13 +628,34 @@ license: Test License
         module.Project.set(test_project)
         test_project.load()
 
-    def compile(self, main: str, export: bool = False) -> None:
+    def compile(self, main: str, export: bool = False, no_dedent: bool = True) -> None:
         """
         Compile the configuration model in main. This method will load all required modules.
+
+        :param main: The model to compile
+        :param export: Whether the model should be exported after the compile
+        :param no_dedent: Don't remove additional indentation in the model
         """
+        # Dedent the input format
+        model = dedent(main.strip("\n")) if not no_dedent else main
+
         # write main.cf
         with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
-            fd.write(main)
+            fd.write(model)
+
+        # logging model with line numbers
+        def enumerate_model(model: str):
+            lines = model.split("\n")
+            leading_zeros = math.floor(math.log(len(lines), 10)) + 1
+            line_numbers_model = "\n".join(
+                [
+                    f"{str(number).zfill(leading_zeros)}    {line}"
+                    for number, line in enumerate(lines, start=1)
+                ]
+            )
+            return line_numbers_model
+
+        LOGGER.debug(f"Compiling model:\n{enumerate_model(model)}")
 
         # compile the model
         test_project = module.Project(self._test_project_dir)
