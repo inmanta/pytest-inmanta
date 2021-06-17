@@ -187,7 +187,7 @@ def get_module_data(filename: str) -> str:
 
 
 @pytest.fixture(scope="session")
-def project_shared(project_factory: typing.Callable[[Dict[str, Any]], "Project"]) -> "Project":
+def project_shared(project_factory: typing.Callable[[typing.Dict[str, typing.Any]], "Project"]) -> "Project":
     """
     A test fixture that creates a new inmanta project with the current module in. The returned object can be used
     to add files to the unittest module, compile a model and access the results, stdout and stderr.
@@ -198,7 +198,7 @@ def project_shared(project_factory: typing.Callable[[Dict[str, Any]], "Project"]
 # Temporary workaround for plugins loading multiple times (inmanta/pytest-inmanta#49)
 @pytest.fixture(scope="session")
 def project_shared_no_plugins(
-    project_factory: typing.Callable[[Dict[str, Any]], "Project"]
+    project_factory: typing.Callable[[typing.Dict[str, typing.Any]], "Project"]
 ) -> "Project":
     """
     A test fixture that creates a new inmanta project with the current module in. The returned object can be used
