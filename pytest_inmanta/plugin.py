@@ -30,18 +30,18 @@ from distutils import dir_util
 from pathlib import Path
 from textwrap import dedent
 from types import FunctionType, ModuleType
-from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Union, Callable
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Union
 
 import pytest
 import yaml
 from pytest import CaptureFixture
 from tornado import ioloop
 
+import inmanta.ast
 from inmanta import compiler, config, const, module, protocol
 from inmanta.agent import cache, handler
 from inmanta.agent import io as agent_io
 from inmanta.agent.handler import HandlerContext, ResourceHandler
-from inmanta.ast import Namespace, Type
 from inmanta.data import LogLine, ResourceIdStr
 from inmanta.data.model import AttributeStateChange
 from inmanta.execute.proxy import DynamicProxy
@@ -154,7 +154,9 @@ def project(project_shared: "Project", capsys: CaptureFixture) -> Iterator["Proj
 
 
 @pytest.fixture()
-def project_no_plugins(project_shared_no_plugins, capsys: CaptureFixture) -> Iterator["Project"]:
+def project_no_plugins(
+    project_shared_no_plugins, capsys: CaptureFixture
+) -> Iterator["Project"]:
     warnings.warn(
         DeprecationWarning(
             "The project_no_plugins fixture is deprecated in favor of the %s environment variable."
@@ -391,10 +393,10 @@ class Project:
         self._test_project_dir = project_dir
         self._stdout: Optional[str] = None
         self._stderr: Optional[str] = None
-        self.types: Optional[Dict[str, Type]] = None
+        self.types: Optional[Dict[str, inmanta.ast.Type]] = None
         self.version: Optional[int] = None
         self.resources: ResourceDict = {}
-        self._root_scope: Optional[Namespace] = None
+        self._root_scope: Optional[inmanta.ast.Namespace] = None
         self._exporter: Optional[Exporter] = None
         self._blobs: Dict[str, str] = {}
         self._facts: Dict[ResourceIdStr, Dict[str, Any]] = defaultdict(dict)
@@ -433,7 +435,7 @@ class Project:
     def stat_blob(self, key: str) -> bool:
         return key in self._blobs
 
-    def get_blob(self, key: str) -> bytes:
+    def get_blob(self, key: str) -> str:
         return self._blobs[key]
 
     def add_fact(self, resource_id: ResourceIdStr, name: str, value: object) -> None:
@@ -716,7 +718,7 @@ license: Test License
     def get_stderr(self) -> Optional[str]:
         return self._stderr
 
-    def get_root_scope(self) -> Optional[Namespace]:
+    def get_root_scope(self) -> Optional[inmanta.ast.Namespace]:
         return self._root_scope
 
     def add_mock_file(self, subdir: str, name: str, content: str) -> None:
