@@ -1,4 +1,3 @@
-
 # v 1.6.0 (?)
 Changes in this release:
 - Added the ability to assert the expected 'change' of a deploy
