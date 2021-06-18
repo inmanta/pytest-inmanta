@@ -1,6 +1,8 @@
-# v 1.5.2 (2021-04-09)
+# v 1.6.0 (2021-06-18)
 Changes in this release:
-- remove usage of internal compiler api
+- Added the ability to assert the expected 'change' of a deploy
+- Compiled models are logged (debug level), with line numbers (#199)
+- Export mypy types
 
 # v 1.5.0 (2021-03-26)
 Changes in this release:
@@ -74,4 +76,4 @@ Changes in this release:
 # V 0.6.0
 Changes in this release:
 - added log serialization to deploy, to better mimic agent behavior
-- added dryrun 
+- added dryrun
