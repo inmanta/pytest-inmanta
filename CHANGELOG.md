@@ -1,3 +1,6 @@
+# v 1.7.0 (?)
+Changes in this release:
+
 # v 1.6.0 (2021-06-18)
 Changes in this release:
 - Added the ability to assert the expected 'change' of a deploy
