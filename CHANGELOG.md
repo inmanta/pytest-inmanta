@@ -3,7 +3,7 @@ Changes in this release:
 
 # v 1.6.1 (2021-06-29)
 Changes in this release:
-- Fixed an invalid import from inmanta-core (inmanta-core#3074)
+- Fixed an invalid import from inmanta-core (inmanta/inmanta-core#3074)
 
 # v 1.6.0 (2021-06-18)
 Changes in this release:
