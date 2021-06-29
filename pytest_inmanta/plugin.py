@@ -43,8 +43,7 @@ from inmanta.agent import cache, handler
 from inmanta.agent import io as agent_io
 from inmanta.agent.handler import HandlerContext, ResourceHandler
 from inmanta.data import LogLine
-from inmanta.data.model import ResourceIdStr
-from inmanta.data.model import AttributeStateChange
+from inmanta.data.model import AttributeStateChange, ResourceIdStr
 from inmanta.execute.proxy import DynamicProxy
 from inmanta.export import Exporter, ResourceDict, cfg_env
 from inmanta.protocol import json_encode
