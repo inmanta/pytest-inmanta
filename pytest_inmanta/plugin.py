@@ -437,6 +437,7 @@ class Project:
         self._facts = defaultdict(dict)
         self.ctx = None
         self._handlers = set()
+        self._load()
         config.Config.load_config()
 
     def add_blob(self, key: str, content: bytes, allow_overwrite: bool = True) -> None:
