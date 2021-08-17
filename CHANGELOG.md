@@ -1,3 +1,7 @@
+# v 1.6.2 (2021-08-17)
+Changes in this release:
+- Fixed issue with project fixture related to cleanup assumptions causing failures for `inmanta-core>=5.1.2.dev`
+
 # v 1.6.1 (2021-06-29)
 Changes in this release:
 - Fixed an invalid import from inmanta-core (inmanta/inmanta-core#3074)
