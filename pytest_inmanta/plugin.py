@@ -415,10 +415,9 @@ class Project:
         self._facts: typing.Dict[
             ResourceIdStr, typing.Dict[str, typing.Any]
         ] = defaultdict(dict)
+        self._should_load_plugins: bool = load_plugins
+        self._plugins: typing.Optional[typing.Dict[str, FunctionType]] = None
         self._load()
-        self._plugins: typing.Optional[typing.Dict[str, FunctionType]] = (
-            self._load_plugins() if load_plugins else None
-        )
         self._capsys: typing.Optional[CaptureFixture] = None
         self.ctx: typing.Optional[HandlerContext] = None
         self._handlers: typing.Set[ResourceHandler] = set()
@@ -437,6 +436,7 @@ class Project:
         self._facts = defaultdict(dict)
         self.ctx = None
         self._handlers = set()
+        self._load()
         config.Config.load_config()
 
     def add_blob(self, key: str, content: bytes, allow_overwrite: bool = True) -> None:
@@ -647,6 +647,9 @@ license: Test License
         test_project = module.Project(self._test_project_dir)
         module.Project.set(test_project)
         test_project.load()
+        # refresh plugins
+        if self._should_load_plugins is not None:
+            self._plugins = self._load_plugins()
 
     def compile(self, main: str, export: bool = False, no_dedent: bool = True) -> None:
         """
@@ -682,7 +685,7 @@ license: Test License
         module.Project.set(test_project)
         test_project.load()
         # refresh plugins
-        if self._plugins is not None:
+        if self._should_load_plugins is not None:
             self._plugins = self._load_plugins()
 
         # flush io capture buffer
