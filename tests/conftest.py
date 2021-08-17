@@ -44,6 +44,6 @@ def deactive_venv():
     sys.prefix = old_prefix
     sys.path = old_path
     pkg_resources.working_set = pkg_resources.WorkingSet._build_master()
-    # stay compatible with older versions of core
+    # stay compatible with older versions of core: don't call the function if it doesn't exist
     if hasattr(PluginModuleFinder, "reset"):
         PluginModuleFinder.reset()
