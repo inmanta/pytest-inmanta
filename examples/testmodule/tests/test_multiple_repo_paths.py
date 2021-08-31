@@ -5,14 +5,17 @@
 """
 from os import path
 
-from inmanta import module
+from inmanta import module, ModuleRepo
 
 
 def test_multiple_paths(project):
     project_inmanta = module.Project(project._test_project_dir)
-    module_repo_urls = [
-        repo.baseurl for repo in project_inmanta.module_source_v1.remote_repo.children
-    ]
+    children: List[ModuleRepo] = (
+        project_inmanta.module_source_v1.remote_repo.children
+        if hasattr(project_inmanta, "module_source_v1")
+        else project_inmanta.externalResolver.children
+    )
+    module_repo_urls = [repo.baseurl for repo in children]
     assert "https://github.com/inmanta2/" in module_repo_urls
     assert "https://github.com/inmanta/" in module_repo_urls
     with open(path.join(project._test_project_dir, "project.yml"), "r") as project_file:
