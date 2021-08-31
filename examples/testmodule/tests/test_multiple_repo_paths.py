@@ -5,12 +5,12 @@
 """
 from os import path
 
-from inmanta import module, ModuleRepo
+from inmanta import module
 
 
 def test_multiple_paths(project):
     project_inmanta = module.Project(project._test_project_dir)
-    children: List[ModuleRepo] = (
+    children: List[module.ModuleRepo] = (
         project_inmanta.module_source_v1.remote_repo.children
         if hasattr(project_inmanta, "module_source_v1")
         else project_inmanta.externalResolver.children
