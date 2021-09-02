@@ -26,6 +26,7 @@
           steps {
             deleteDir()
             dir(env.REPO_NAME) {
+              checkout scm
               script {
                 sh '''
                   rm -rf ${WORKSPACE}/env
