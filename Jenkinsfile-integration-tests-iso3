@@ -50,16 +50,6 @@
             }
           }
         }
-
-        stage("code linting") {
-          steps{
-            dir(env.REPO_NAME) {
-              sh'''
-                ${WORKSPACE}/env/bin/flake8 examples pytest_inmanta tests
-              '''
-            }
-          }
-        }
     }
 
     post {
