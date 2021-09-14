@@ -646,6 +646,9 @@ license: Test License
             fd.write(f"import {module_name}")
         test_project = module.Project(self._test_project_dir)
         module.Project.set(test_project)
+        if hasattr(test_project, "install_modules"):
+            # more recent versions of core require explicit modules installation
+            test_project.install_modules()
         test_project.load()
         # refresh plugins
         if self._should_load_plugins is not None:
