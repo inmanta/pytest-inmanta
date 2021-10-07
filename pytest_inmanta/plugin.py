@@ -404,7 +404,12 @@ class Project:
     environment variable. Repositories are separated with spaces.
     """
 
-    def __init__(self, project_dir: str, env_path: str, load_plugins: typing.Optional[bool] = True) -> None:
+    def __init__(
+        self,
+        project_dir: str,
+        env_path: str,
+        load_plugins: typing.Optional[bool] = True,
+    ) -> None:
         """
         :param project_dir: Directory containing the Inmanta project.
         :param env_path: The path to the venv to be used by the compiler.
