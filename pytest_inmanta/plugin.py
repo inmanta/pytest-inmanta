@@ -460,7 +460,7 @@ class Project:
         signature: inspect.Signature = inspect.Signature.from_callable(
             module.Project.__init__
         )
-        return "env_path" in signature.parameters.keys()
+        return "venv_path" not in signature.parameters.keys()
 
     def _create_project_and_load(self, model: str) -> module.Project:
         """
@@ -479,7 +479,7 @@ class Project:
         )
         test_project = module.Project(self._test_project_dir, **extra_kwargs)
         module.Project.set(test_project)
-        if self._is_running_against_iso3():
+        if not self._is_running_against_iso3():
             # more recent versions of core require explicit modules installation
             test_project.install_modules()
         test_project.load()
