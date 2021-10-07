@@ -453,15 +453,6 @@ class Project:
         self._load()
         config.Config.load_config()
 
-    def _is_running_against_iso3(self) -> bool:
-        """
-        :return: Return True iff pytest-inmanta is running against the ISO3 version of inmanta-core.
-        """
-        signature: inspect.Signature = inspect.Signature.from_callable(
-            module.Project.__init__
-        )
-        return "venv_path" not in signature.parameters.keys()
-
     def _create_project_and_load(self, model: str) -> module.Project:
         """
         This method doesn the following:
@@ -474,8 +465,14 @@ class Project:
         with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
             fd.write(model)
 
+        signature: inspect.Signature = inspect.Signature.from_callable(
+            module.Project.__init__
+        )
+        # The venv_path parameter only exists on ISO5+
         extra_kwargs = (
-            {"venv_path": self._env_path} if not self._is_running_against_iso3() else {}
+            {"venv_path": self._env_path}
+            if "venv_path" not in signature.parameters.keys()
+            else {}
         )
         test_project = module.Project(self._test_project_dir, **extra_kwargs)
         module.Project.set(test_project)
