@@ -404,7 +404,12 @@ class Project:
     environment variable. Repositories are separated with spaces.
     """
 
-    def __init__(self, project_dir: str, env_path: str, load_plugins: bool = True) -> None:
+    def __init__(self, project_dir: str, env_path: str, load_plugins: typing.Optional[bool] = True) -> None:
+        """
+        :param project_dir: Directory containing the Inmanta project.
+        :param env_path: The path to the venv to be used by the compiler.
+        :param load_plugins: Load plugins iff this value is not None.
+        """
         self._test_project_dir = project_dir
         self._env_path = env_path
         self._stdout: typing.Optional[str] = None
@@ -418,7 +423,7 @@ class Project:
         self._facts: typing.Dict[
             ResourceIdStr, typing.Dict[str, typing.Any]
         ] = defaultdict(dict)
-        self._should_load_plugins: bool = load_plugins
+        self._should_load_plugins: typing.Optional[bool] = load_plugins
         self._plugins: typing.Optional[typing.Dict[str, FunctionType]] = None
         self._load()
         self._capsys: typing.Optional[CaptureFixture] = None
