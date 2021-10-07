@@ -1,4 +1,6 @@
 # v 1.7.0 (?)
+Changes in this release:
+- Ensure that projects are compiled using a separate venv.
 
 # v 1.6.2 (2021-08-17)
 Changes in this release:
