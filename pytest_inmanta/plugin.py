@@ -17,6 +17,7 @@
 """
 import glob
 import importlib
+import inspect
 import json
 import logging
 import math
@@ -452,6 +453,37 @@ class Project:
         self._load()
         config.Config.load_config()
 
+    def _create_project_and_load(self, model: str) -> module.Project:
+        """
+        This method doesn the following:
+        * Add the given model file to the Inmanta project
+        * Install the module dependencies
+        * Load the project
+
+        :return: The newly created module.Project instance.
+        """
+        with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
+            fd.write(model)
+
+        signature: inspect.Signature = inspect.Signature.from_callable(
+            module.Project.__init__
+        )
+        # The venv_path parameter only exists on ISO5+
+        extra_kwargs = (
+            {"venv_path": self._env_path}
+            if "venv_path" in signature.parameters.keys()
+            else {}
+        )
+        test_project = module.Project(self._test_project_dir, **extra_kwargs)
+        module.Project.set(test_project)
+        if hasattr(test_project, "install_modules"):
+            # more recent versions of core require explicit modules installation (ISO5+)
+            test_project.install_modules()
+        test_project.load()
+        # refresh plugins
+        if self._should_load_plugins is not None:
+            self._plugins = self._load_plugins()
+
     def add_blob(self, key: str, content: bytes, allow_overwrite: bool = True) -> None:
         """
         Add a blob identified with the hash of the content as key
@@ -655,17 +687,7 @@ license: Test License
         Load the current module and compile an otherwise empty project
         """
         _, module_name = get_module_info()
-        with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
-            fd.write(f"import {module_name}")
-        test_project = module.Project(self._test_project_dir, venv_path=self._env_path)
-        module.Project.set(test_project)
-        if hasattr(test_project, "install_modules"):
-            # more recent versions of core require explicit modules installation
-            test_project.install_modules()
-        test_project.load()
-        # refresh plugins
-        if self._should_load_plugins is not None:
-            self._plugins = self._load_plugins()
+        self._create_project_and_load(model=f"import {module_name}")
 
     def compile(self, main: str, export: bool = False, no_dedent: bool = True) -> None:
         """
@@ -675,13 +697,6 @@ license: Test License
         :param export: Whether the model should be exported after the compile
         :param no_dedent: Don't remove additional indentation in the model
         """
-        # Dedent the input format
-        model = dedent(main.strip("\n")) if not no_dedent else main
-
-        # write main.cf
-        with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
-            fd.write(model)
-
         # logging model with line numbers
         def enumerate_model(model: str):
             lines = model.split("\n")
@@ -694,18 +709,10 @@ license: Test License
             )
             return line_numbers_model
 
+        # Dedent the input format
+        model = dedent(main.strip("\n")) if not no_dedent else main
         LOGGER.debug(f"Compiling model:\n{enumerate_model(model)}")
-
-        # compile the model
-        test_project = module.Project(self._test_project_dir, venv_path=self._env_path)
-        module.Project.set(test_project)
-        if hasattr(test_project, "install_modules"):
-            # more recent versions of core require explicit modules installation
-            test_project.install_modules()
-        test_project.load()
-        # refresh plugins
-        if self._should_load_plugins is not None:
-            self._plugins = self._load_plugins()
+        self._create_project_and_load(model)
 
         # flush io capture buffer
         self._capsys.readouterr()
