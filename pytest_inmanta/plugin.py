@@ -471,7 +471,7 @@ class Project:
         # The venv_path parameter only exists on ISO5+
         extra_kwargs = (
             {"venv_path": self._env_path}
-            if "venv_path" not in signature.parameters.keys()
+            if "venv_path" in signature.parameters.keys()
             else {}
         )
         test_project = module.Project(self._test_project_dir, **extra_kwargs)
