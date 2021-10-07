@@ -17,6 +17,7 @@
 """
 import glob
 import importlib
+import inspect
 import json
 import logging
 import math
@@ -274,14 +275,24 @@ install_mode: %(install_mode)s
             module_dir, os.path.join(test_project_dir, "libs", module_name)
         )
 
+    def _running_against_iso3() -> bool:
+        """
+        :return: Return True iff pytest-inmanta is running against the ISO3 version of inmanta-core.
+        """
+        signature: inspect.Signature = inspect.Signature.from_callable(
+            module.Project.__init__
+        )
+        return "env_path" in signature.parameters.keys()
+
     def create_project(**kwargs):
         extended_kwargs: typing.Dict[str, object] = {
             "load_plugins": not get_opt_or_env_or(
                 request.config, "inm_no_load_plugins", False
             ),
-            "env_path": env_dir,
             **kwargs,
         }
+        if not _running_against_iso3():
+            extended_kwargs["env_path"] = env_dir
         test_project = Project(test_project_dir, **extended_kwargs)
 
         # create the unittest module
