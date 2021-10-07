@@ -1,5 +1,5 @@
 """
-    Copyright 2019 Inmanta
+    Copyright 2021 Inmanta
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -237,11 +237,12 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
         modulepath.append(str(Path(os.getcwd()).parent))
 
     env_override = get_opt_or_env_or(request.config, "inm_venv", None)
+    env_dir = os.path.join(test_project_dir, ".env")
     if env_override and not os.path.isdir(env_override):
         raise Exception(f"Specified venv {env_override} does not exist")
     if env_override is not None:
         try:
-            os.symlink(env_override, os.path.join(test_project_dir, ".env"))
+            os.symlink(env_override, env_dir)
         except OSError:
             LOGGER.exception(
                 "Unable to use shared env (symlink creation from %s to %s failed).",
@@ -278,6 +279,7 @@ install_mode: %(install_mode)s
             "load_plugins": not get_opt_or_env_or(
                 request.config, "inm_no_load_plugins", False
             ),
+            "env_path": env_dir,
             **kwargs,
         }
         test_project = Project(test_project_dir, **extended_kwargs)
@@ -402,8 +404,19 @@ class Project:
     environment variable. Repositories are separated with spaces.
     """
 
-    def __init__(self, project_dir: str, load_plugins: bool = True) -> None:
+    def __init__(
+        self,
+        project_dir: str,
+        env_path: str,
+        load_plugins: typing.Optional[bool] = True,
+    ) -> None:
+        """
+        :param project_dir: Directory containing the Inmanta project.
+        :param env_path: The path to the venv to be used by the compiler.
+        :param load_plugins: Load plugins iff this value is not None.
+        """
         self._test_project_dir = project_dir
+        self._env_path = env_path
         self._stdout: typing.Optional[str] = None
         self._stderr: typing.Optional[str] = None
         self.types: typing.Optional[typing.Dict[str, inmanta.ast.Type]] = None
@@ -415,7 +428,7 @@ class Project:
         self._facts: typing.Dict[
             ResourceIdStr, typing.Dict[str, typing.Any]
         ] = defaultdict(dict)
-        self._should_load_plugins: bool = load_plugins
+        self._should_load_plugins: typing.Optional[bool] = load_plugins
         self._plugins: typing.Optional[typing.Dict[str, FunctionType]] = None
         self._load()
         self._capsys: typing.Optional[CaptureFixture] = None
@@ -644,7 +657,7 @@ license: Test License
         _, module_name = get_module_info()
         with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
             fd.write(f"import {module_name}")
-        test_project = module.Project(self._test_project_dir)
+        test_project = module.Project(self._test_project_dir, venv_path=self._env_path)
         module.Project.set(test_project)
         if hasattr(test_project, "install_modules"):
             # more recent versions of core require explicit modules installation
@@ -684,7 +697,7 @@ license: Test License
         LOGGER.debug(f"Compiling model:\n{enumerate_model(model)}")
 
         # compile the model
-        test_project = module.Project(self._test_project_dir)
+        test_project = module.Project(self._test_project_dir, venv_path=self._env_path)
         module.Project.set(test_project)
         if hasattr(test_project, "install_modules"):
             # more recent versions of core require explicit modules installation
