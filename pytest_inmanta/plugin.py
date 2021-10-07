@@ -479,8 +479,8 @@ class Project:
         )
         test_project = module.Project(self._test_project_dir, **extra_kwargs)
         module.Project.set(test_project)
-        if not self._is_running_against_iso3():
-            # more recent versions of core require explicit modules installation
+        if hasattr(test_project, "install_modules"):
+            # more recent versions of core require explicit modules installation (ISO5+)
             test_project.install_modules()
         test_project.load()
         # refresh plugins
