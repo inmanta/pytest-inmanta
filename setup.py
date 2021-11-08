@@ -12,7 +12,7 @@ with io.open(os.path.join(cwd, "README.md"), encoding="utf-8") as fd:
 
 setup(
     name="pytest-inmanta",
-    version="1.7.0",
+    version="1.7.1",
     description=(
         "A py.test plugin providing fixtures to simplify inmanta modules testing."
     ),
