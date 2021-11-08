@@ -310,7 +310,7 @@ def ensure_current_module_install(v1_modules_dir: str, in_place: bool = False) -
                 mod.path, os.path.join(v1_modules_dir, mod.name)
             )
     else:
-        installed: typing.Optional[module.ModuleV2] = module.ModuleV2Source(urls=[]).get_installed_module(mod.name)
+        installed: typing.Optional[module.ModuleV2] = module.ModuleV2Source(urls=[]).get_installed_module(None, mod.name)
         if installed is None:
             raise Exception(
                 "The module being tested is not installed in the current Python environment. Please install it with"
@@ -498,6 +498,7 @@ class Project:
         # refresh plugins
         if self._should_load_plugins is not None:
             self._plugins = self._load_plugins()
+        return test_project
 
     def add_blob(self, key: str, content: bytes, allow_overwrite: bool = True) -> None:
         """
@@ -529,12 +530,12 @@ class Project:
 
         c.open_version(resource.id.version)
         try:
-            p = handler.Commander.get_provider(c, agent, resource)  # typing: ignore
+            p = handler.Commander.get_provider(c, agent, resource)  # type: ignore
             p.set_cache(c)
-            p.get_file = lambda x: self.get_blob(x)  # typing: ignore
-            p.stat_file = lambda x: self.stat_blob(x)  # typing: ignore
-            p.upload_file = lambda x, y: self.add_blob(x, y)  # typing: ignore
-            p.run_sync = ioloop.IOLoop.current().run_sync  # typing: ignore
+            p.get_file = lambda x: self.get_blob(x)  # type: ignore
+            p.stat_file = lambda x: self.stat_blob(x)  # type: ignore
+            p.upload_file = lambda x, y: self.add_blob(x, y)  # type: ignore
+            p.run_sync = ioloop.IOLoop.current().run_sync  # type: ignore
             self._handlers.add(p)
             return p
         except Exception as e:
