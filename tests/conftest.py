@@ -17,11 +17,13 @@
 """
 import os
 import sys
+from typing import Optional
 
 import pkg_resources
 import pytest
 
 import pytest_inmanta.plugin
+from inmanta import env
 from inmanta.loader import PluginModuleFinder
 
 pytest_plugins = ["pytester"]
@@ -37,13 +39,26 @@ def deactive_venv():
     old_os_path = os.environ.get("PATH", "")
     old_prefix = sys.prefix
     old_path = sys.path
+    old_pythonpath = os.environ.get("PYTHONPATH", None)
+    old_os_venv: Optional[str] = os.environ.get("VIRTUAL_ENV", None)
+    old_working_set = pkg_resources.working_set
 
     yield
 
     os.environ["PATH"] = old_os_path
     sys.prefix = old_prefix
     sys.path = old_path
-    pkg_resources.working_set = pkg_resources.WorkingSet._build_master()
+    pkg_resources.working_set = old_working_set
+    # Restore PYTHONPATH
+    if "PYTHONPATH" in os.environ:
+        if old_pythonpath is not None:
+            os.environ["PYTHONPATH"] = old_pythonpath
+        else:
+            del os.environ["PYTHONPATH"]
+    if old_os_venv is not None:
+        os.environ["VIRTUAL_ENV"] = old_os_venv
     # stay compatible with older versions of core: don't call the function if it doesn't exist
+    if hasattr(env, "mock_process_env"):
+        env.mock_process_env(python_path=sys.executable)
     if hasattr(PluginModuleFinder, "reset"):
         PluginModuleFinder.reset()
