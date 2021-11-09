@@ -34,7 +34,6 @@ from textwrap import dedent
 from types import FunctionType, ModuleType
 
 import pytest
-import yaml
 from pytest import CaptureFixture
 from tornado import ioloop
 
