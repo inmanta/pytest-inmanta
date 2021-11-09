@@ -18,6 +18,7 @@
 # Note: These tests only function when the pytest output is not modified by plugins such as pytest-sugar!
 
 import importlib
+import logging
 import os
 import pytest
 import subprocess
@@ -85,16 +86,24 @@ def unload_modules_for_path(path: str) -> None:
     importlib.invalidate_caches()
 
 
-def test_basic_example(testdir, testmodulev2_venv_active):
+def test_basic_example(testdir, caplog, testmodulev2_venv_active):
     """
     Make sure that our plugin works for v2 modules.
     """
     testdir.copy_example("testmodulev2")
 
-    result = testdir.runpytest_inprocess("tests/test_basics.py")
-
-    # TODO: check warning for non-editable install
-    result.assert_outcomes(passed=1)
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        result = testdir.runpytest_inprocess("tests/test_basics.py")
+        result.assert_outcomes(passed=1)
+        # The testmodulev2_venv_active fixture does not install the module in editable mode. For pytest-inmanta tests this is
+        # fine but for module testing this is likely a mistake. Verify that the plugin raises an appropriate warning.
+        assert (
+            "The module being tested is not installed in editable mode."
+            " As a result the tests will not pick up any changes to the local source files."
+            " To install it in editable mode, run `inmanta module install -e .`."
+            in caplog.messages
+        )
 
 
 def test_basic_example_no_install(testdir):
@@ -105,5 +114,10 @@ def test_basic_example_no_install(testdir):
 
     result = testdir.runpytest_inprocess("tests/test_basics.py::test_compile", "-s")
 
-    # TODO: check message
     result.assert_outcomes(errors=1)
+    result.stdout.re_match_lines(
+        [
+            r".*Exception: The module being tested is not installed in the current Python environment\."
+            r" Please install it with `inmanta module install -e \.` before running the tests\..*"
+        ]
+    )
