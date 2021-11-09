@@ -17,9 +17,14 @@
 """
 # Note: These tests only function when the pytest output is not modified by plugins such as pytest-sugar!
 
+import importlib
+import os
 import pytest
 import subprocess
+import sys
 import tempfile
+from types import ModuleType
+from typing import Optional, Sequence
 
 from inmanta import env
 
@@ -28,7 +33,9 @@ from inmanta import env
 
 @pytest.fixture(scope="session")
 def testmodulev2_venv(pytestconfig) -> env.VirtualEnv:
-    # TODO: docstring
+    """
+    Yields a Python environment with testmodulev2 installed in it.
+    """
     with tempfile.TemporaryDirectory() as venv_dir:
         # set up environment
         venv: env.VirtualEnv = env.VirtualEnv(env_path=venv_dir)
@@ -48,20 +55,55 @@ def testmodulev2_venv(pytestconfig) -> env.VirtualEnv:
 
 
 @pytest.fixture(scope="function")
-def v2_env(deactive_venv, testmodulev2_venv) -> None:
-    # TODO: docstring
-    testmodulev2_venv.use_virtual_env()
-    env.mock_process_env(python_path=testmodulev2_venv.python_path)
-    yield
+def testmodulev2_venv_active(deactive_venv, testmodulev2_venv) -> env.VirtualEnv:
+    """
+    Activates a Python environment with testmodulev2 installed in it for the currently running process.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Create a unique function-scoped venv dir to prevent caching issues with inmanta_plugins' submodule_search_locations
+        unique_env_dir: str = os.path.join(tmpdir, ".env")
+        os.symlink(testmodulev2_venv.env_path, unique_env_dir)
+        print(unique_env_dir)
+        unique_env: env.VirtualEnv = env.VirtualEnv(env_path=unique_env_dir)
+        unique_env.use_virtual_env()
+        yield unique_env
+        unload_modules_for_path(unique_env.site_packages_dir)
 
 
-def test_basic_example(testdir, v2_env):
+def unload_modules_for_path(path: str) -> None:
+    """
+    Unload any modules that are loaded from a given path.
+    """
+
+    def module_in_prefix(module: ModuleType, prefix: str) -> bool:
+        file: Optional[str] = getattr(module, "__file__", None)
+        return file.startswith(prefix) if file is not None else False
+
+    loaded_modules: Sequence[str] = [mod_name for mod_name, mod in sys.modules.items() if module_in_prefix(mod, path)]
+    for mod_name in loaded_modules:
+        del sys.modules[mod_name]
+    importlib.invalidate_caches()
+
+
+def test_basic_example(testdir, testmodulev2_venv_active):
     """
     Make sure that our plugin works for v2 modules.
     """
     testdir.copy_example("testmodulev2")
 
-    # TODO: also verify exception when v2_env is not used (module not installed)
-    result = testdir.runpytest("tests/test_basics.py")
+    result = testdir.runpytest_inprocess("tests/test_basics.py")
 
+    # TODO: check warning for non-editable install
     result.assert_outcomes(passed=1)
+
+
+def test_basic_example_no_install(testdir):
+    """
+    Make sure that the plugin reports an informative error if the module under test is not installed.
+    """
+    testdir.copy_example("testmodulev2")
+
+    result = testdir.runpytest_inprocess("tests/test_basics.py::test_compile", "-s")
+
+    # TODO: check message
+    result.assert_outcomes(errors=1)
