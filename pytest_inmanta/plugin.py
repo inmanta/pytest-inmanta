@@ -263,7 +263,7 @@ install_mode: %(install_mode)s
 
     ensure_current_module_install(os.path.join(test_project_dir, "libs"), in_place)
 
-    def create_project(**kwargs):
+    def create_project(**kwargs: object):
         extended_kwargs: typing.Dict[str, object] = {
             "load_plugins": not get_opt_or_env_or(
                 request.config, "inm_no_load_plugins", False
@@ -545,7 +545,7 @@ class Project:
         json_encode({"message": ctx.logs})
 
     def get_resource(
-        self, resource_type: str, **filter_args: typing.Dict[str, object]
+        self, resource_type: str, **filter_args: object
     ) -> typing.Optional[Resource]:
         """
         Get a resource of the given type and given filter on the resource attributes. If multiple resource match, the
@@ -604,7 +604,7 @@ class Project:
         status: const.ResourceState = const.ResourceState.deployed,
         run_as_root: bool = False,
         change: const.Change = None,
-        **filter_args: typing.Dict[str, object],
+        **filter_args: object,
     ) -> Resource:
         """
         Deploy a resource of the given type, that matches the filter and assert the outcome
@@ -648,7 +648,7 @@ class Project:
         resource_type: str,
         status: const.ResourceState = const.ResourceState.dry,
         run_as_root: bool = False,
-        **filter_args: typing.Dict[str, object],
+        **filter_args: object,
     ) -> typing.Dict[str, AttributeStateChange]:
         """
         Run a dryrun for a specific resource.

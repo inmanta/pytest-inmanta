@@ -1,7 +1,8 @@
 # v 1.7.0 (?)
 Changes in this release:
-- Ensure that projects are compiled using a separate venv.
 - Added support for testing v2 modules.
+- Ensure that projects are compiled using a separate venv.
+- Fixed typing issue for `filter_args` in different method of the Project class.
 
 # v 1.6.2 (2021-08-17)
 Changes in this release:
