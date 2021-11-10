@@ -56,6 +56,8 @@ def deactive_venv():
         del os.environ["PYTHONPATH"]
     if old_os_venv is not None:
         os.environ["VIRTUAL_ENV"] = old_os_venv
+    elif "VIRTUAL_ENV" in os.environ:
+        del os.environ["VIRTUAL_ENV"]
     # stay compatible with older versions of core: don't call the function if it doesn't exist
     if hasattr(env, "mock_process_env"):
         env.mock_process_env(python_path=sys.executable)
