@@ -20,16 +20,35 @@
 import importlib
 import logging
 import os
+import pkg_resources
 import pytest
 import subprocess
 import sys
 import tempfile
+from packaging import version
+from pkg_resources import DistributionNotFound
 from types import ModuleType
 from typing import Optional, Sequence
 
+# be careful not to import any core>=6 objects directly
 from inmanta import env
 
-# TODO: disable all tests in this file for core < modv2 (modulesv2 fixture?)
+
+CORE_VERSION: Optional[version.Version]
+"""
+Version of the inmanta-core package. None if it is not installed.
+"""
+
+try:
+    CORE_VERSION = version.Version(pkg_resources.get_distribution("inmanta-core").version)
+except DistributionNotFound:
+    CORE_VERSION = None
+
+
+pytestmark = pytest.mark.skipif(
+    CORE_VERSION is None or CORE_VERSION < version.Version("6.dev"),
+    reason="Skipping modules v2 tests for inmanta-core<6 (pre modules v2).",
+)
 
 
 @pytest.fixture(scope="session")
