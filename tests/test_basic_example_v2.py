@@ -20,19 +20,19 @@
 import importlib
 import logging
 import os
-import pkg_resources
-import pytest
 import subprocess
 import sys
 import tempfile
-from packaging import version
-from pkg_resources import DistributionNotFound
 from types import ModuleType
 from typing import Optional, Sequence
 
+import pkg_resources
+import pytest
+from pkg_resources import DistributionNotFound
+
 # be careful not to import any core>=6 objects directly
 from inmanta import env
-
+from packaging import version
 
 CORE_VERSION: Optional[version.Version]
 """
@@ -40,7 +40,9 @@ Version of the inmanta-core package. None if it is not installed.
 """
 
 try:
-    CORE_VERSION = version.Version(pkg_resources.get_distribution("inmanta-core").version)
+    CORE_VERSION = version.Version(
+        pkg_resources.get_distribution("inmanta-core").version
+    )
 except DistributionNotFound:
     CORE_VERSION = None
 
@@ -99,7 +101,9 @@ def unload_modules_for_path(path: str) -> None:
         file: Optional[str] = getattr(module, "__file__", None)
         return file.startswith(prefix) if file is not None else False
 
-    loaded_modules: Sequence[str] = [mod_name for mod_name, mod in sys.modules.items() if module_in_prefix(mod, path)]
+    loaded_modules: Sequence[str] = [
+        mod_name for mod_name, mod in sys.modules.items() if module_in_prefix(mod, path)
+    ]
     for mod_name in loaded_modules:
         del sys.modules[mod_name]
     importlib.invalidate_caches()

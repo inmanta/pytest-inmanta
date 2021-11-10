@@ -305,11 +305,11 @@ def ensure_current_module_install(v1_modules_dir: str, in_place: bool = False) -
     mod: module.Module = get_module()
     if isinstance(mod, module.ModuleV1):
         if not in_place:
-            dir_util.copy_tree(
-                mod.path, os.path.join(v1_modules_dir, mod.name)
-            )
+            dir_util.copy_tree(mod.path, os.path.join(v1_modules_dir, mod.name))
     else:
-        installed: typing.Optional[module.ModuleV2] = module.ModuleV2Source(urls=[]).get_installed_module(None, mod.name)
+        installed: typing.Optional[module.ModuleV2] = module.ModuleV2Source(
+            urls=[]
+        ).get_installed_module(None, mod.name)
         if installed is None:
             raise Exception(
                 "The module being tested is not installed in the current Python environment. Please install it with"
