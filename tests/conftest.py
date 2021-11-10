@@ -54,6 +54,7 @@ def deactive_venv():
         os.environ["PYTHONPATH"] = old_pythonpath
     elif "PYTHONPATH" in os.environ:
         del os.environ["PYTHONPATH"]
+    # Restore VIRTUAL_ENV
     if old_os_venv is not None:
         os.environ["VIRTUAL_ENV"] = old_os_venv
     elif "VIRTUAL_ENV" in os.environ:
