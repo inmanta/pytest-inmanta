@@ -8,6 +8,11 @@ A pytest plugin to test inmanta modules
 pip install pytest-inmanta
 ```
 
+If you want to use `pytest-inmanta` to test a v2 module, make sure to install the module:
+```bash
+inmanta module install -e .
+```
+
 ## Usage
 
 This plugin provides a test fixture that can compile, export and deploy code without running an actual inmanta server.
