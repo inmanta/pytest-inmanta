@@ -47,10 +47,11 @@ except DistributionNotFound:
     CORE_VERSION = None
 
 
-pytestmark = pytest.mark.skipif(
-    CORE_VERSION is None or CORE_VERSION < version.Version("6.dev"),
-    reason="Skipping modules v2 tests for inmanta-core<6 (pre modules v2).",
-)
+if CORE_VERSION is None or CORE_VERSION < version.Version("6.dev"):
+    pytest.skip(
+        "Skipping modules v2 tests for inmanta-core<6 (pre modules v2).",
+        allow_module_level=True,
+    )
 
 
 @pytest.fixture(scope="session")
