@@ -50,11 +50,10 @@ def deactive_venv():
     sys.path = old_path
     pkg_resources.working_set = old_working_set
     # Restore PYTHONPATH
-    if "PYTHONPATH" in os.environ:
-        if old_pythonpath is not None:
-            os.environ["PYTHONPATH"] = old_pythonpath
-        else:
-            del os.environ["PYTHONPATH"]
+    if old_pythonpath is not None:
+        os.environ["PYTHONPATH"] = old_pythonpath
+    elif "PYTHONPATH" in os.environ:
+        del os.environ["PYTHONPATH"]
     if old_os_venv is not None:
         os.environ["VIRTUAL_ENV"] = old_os_venv
     # stay compatible with older versions of core: don't call the function if it doesn't exist
