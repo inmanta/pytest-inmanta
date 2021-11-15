@@ -64,7 +64,7 @@ def testmodulev2_venv(pytestconfig) -> env.VirtualEnv:
         venv: env.VirtualEnv = env.VirtualEnv(env_path=venv_dir)
         venv.init_env()
         # workaround for pypa/build#405: unset PYTHONPATH because it's not required in this case and it triggers a bug in build
-        with open(os.path.join(venv.site_packages_dir, "sitecustomize.py"), "a") as fd:
+        with open(os.path.join(venv.site_packages_dir, "usercustomize.py"), "a") as fd:
             fd.write(
                 """
 import os
