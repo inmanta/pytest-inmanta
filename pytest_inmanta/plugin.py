@@ -118,21 +118,33 @@ def get_opt_or_env_or(config, key: str, default: str) -> str:
     return default
 
 
-def get_module() -> module.Module:
-    def find_module(path: str) -> typing.Optional[module.Module]:
-        mod: typing.Optional[module.Module] = module.Module.from_path(path)
+def get_module() -> typing.Tuple[module.Module, str]:
+    """
+    Returns the module instance for the module being tested, as well as the path to its root.
+    For v2 modules, the returned path is the same as the module's path attribute.
+    """
+    def find_module(path: str) -> typing.Tuple[typing.Optional[module.Module], str]:
+        mod: typing.Optional[module.Module]
+        if hasattr(module.Module, "from_path"):
+            mod = module.Module.from_path(path)
+        else:
+            # older versions of inmanta-core
+            try:
+                mod = module.Module(project=None, path=path)
+            except module.InvalidModuleException:
+                mod = None
         if mod is not None:
-            return mod
+            return mod, path
         parent: str = os.path.dirname(path)
         return find_module(parent) if parent != path else None
 
-    mod: typing.Optional[module.Module] = find_module(CURDIR)
+    mod, path = find_module(CURDIR)
     if mod is None:
         raise Exception(
             "Module test case have to be saved in the module they are intended for. "
             "%s not part of module path" % CURDIR
         )
-    return mod
+    return mod, path
 
 
 @pytest.fixture()
@@ -302,10 +314,12 @@ def ensure_current_module_install(v1_modules_dir: str, in_place: bool = False) -
     has been installed.
     """
     # copy the current module in
-    mod: module.Module = get_module()
-    if isinstance(mod, module.ModuleV1):
+    mod: module.Module
+    path: str
+    mod, path = get_module()
+    if not hasattr(module, "ModuleV1") or isinstance(mod, module.ModuleV1):
         if not in_place:
-            dir_util.copy_tree(mod.path, os.path.join(v1_modules_dir, mod.name))
+            dir_util.copy_tree(path, os.path.join(v1_modules_dir, mod.name))
     else:
         installed: typing.Optional[module.ModuleV2] = module.ModuleV2Source(
             urls=[]
@@ -701,7 +715,8 @@ license: Test License
         """
         Load the current module and compile an otherwise empty project
         """
-        mod: module.Module = get_module()
+        mod: module.Module
+        mod, _ = get_module()
         self._create_project_and_load(model=f"import {mod.name}")
 
     def compile(self, main: str, export: bool = False, no_dedent: bool = True) -> None:
@@ -795,7 +810,8 @@ license: Test License
             fd.write(content)
 
     def _load_plugins(self) -> typing.Dict[str, FunctionType]:
-        mod: module.Module = get_module()
+        mod: module.Module
+        mod, _ = get_module()
         submodules: typing.Optional[
             typing.Dict[str, ModuleType]
         ] = InmantaPluginsImporter(self).get_submodules(mod.name)
