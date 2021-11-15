@@ -34,7 +34,6 @@ from textwrap import dedent
 from types import FunctionType, ModuleType
 
 import pytest
-import yaml
 from pytest import CaptureFixture
 from tornado import ioloop
 
@@ -119,27 +118,34 @@ def get_opt_or_env_or(config, key: str, default: str) -> str:
     return default
 
 
-def get_module_info() -> typing.Tuple[str, str]:
-    curdir = CURDIR
-    # Make sure that we are executed in a module
-    dir_path = curdir.split(os.path.sep)
-    while (
-        not os.path.exists(os.path.join(os.path.join("/", *dir_path), "module.yml"))
-        and len(dir_path) > 0
-    ):
-        dir_path.pop()
+def get_module() -> typing.Tuple[module.Module, str]:
+    """
+    Returns the module instance for the module being tested, as well as the path to its root.
+    For v2 modules, the returned path is the same as the module's path attribute.
+    """
 
-    if len(dir_path) == 0:
+    def find_module(path: str) -> typing.Tuple[typing.Optional[module.Module], str]:
+        mod: typing.Optional[module.Module]
+        if hasattr(module.Module, "from_path"):
+            mod = module.Module.from_path(path)
+        else:
+            # older versions of inmanta-core
+            try:
+                mod = module.Module(project=None, path=path)
+            except module.InvalidModuleException:
+                mod = None
+        if mod is not None:
+            return mod, path
+        parent: str = os.path.dirname(path)
+        return find_module(parent) if parent != path else None
+
+    mod, path = find_module(CURDIR)
+    if mod is None:
         raise Exception(
             "Module test case have to be saved in the module they are intended for. "
-            "%s not part of module path" % curdir
+            "%s not part of module path" % CURDIR
         )
-
-    module_dir = os.path.join("/", *dir_path)
-    with open(os.path.join(module_dir, "module.yml")) as m:
-        module_name = yaml.safe_load(m)["name"]
-
-    return module_dir, module_name
+    return mod, path
 
 
 @pytest.fixture()
@@ -268,12 +274,7 @@ install_mode: %(install_mode)s
             }
         )
 
-    # copy the current module in
-    module_dir, module_name = get_module_info()
-    if not in_place:
-        dir_util.copy_tree(
-            module_dir, os.path.join(test_project_dir, "libs", module_name)
-        )
+    ensure_current_module_install(os.path.join(test_project_dir, "libs"), in_place)
 
     def create_project(**kwargs: object):
         extended_kwargs: typing.Dict[str, object] = {
@@ -306,6 +307,34 @@ install_mode: %(install_mode)s
         )
 
     sys.path = _sys_path
+
+
+def ensure_current_module_install(v1_modules_dir: str, in_place: bool = False) -> None:
+    """
+    Ensures that the current module is installed: if it is a v1 module, adds it to the modules path, otherwise verifies that it
+    has been installed.
+    """
+    # copy the current module in
+    mod: module.Module
+    path: str
+    mod, path = get_module()
+    if not hasattr(module, "ModuleV2") or isinstance(mod, module.ModuleV1):
+        if not in_place:
+            dir_util.copy_tree(path, os.path.join(v1_modules_dir, mod.name))
+    else:
+        installed: typing.Optional[module.ModuleV2] = module.ModuleV2Source(
+            urls=[]
+        ).get_installed_module(None, mod.name)
+        if installed is None:
+            raise Exception(
+                "The module being tested is not installed in the current Python environment. Please install it with"
+                " `inmanta module install -e .` before running the tests."
+            )
+        if not installed.is_editable():
+            LOGGER.warning(
+                "The module being tested is not installed in editable mode. As a result the tests will not pick up any changes"
+                " to the local source files. To install it in editable mode, run `inmanta module install -e .`."
+            )
 
 
 class MockProcess(object):
@@ -483,6 +512,7 @@ class Project:
         # refresh plugins
         if self._should_load_plugins is not None:
             self._plugins = self._load_plugins()
+        return test_project
 
     def add_blob(self, key: str, content: bytes, allow_overwrite: bool = True) -> None:
         """
@@ -514,12 +544,12 @@ class Project:
 
         c.open_version(resource.id.version)
         try:
-            p = handler.Commander.get_provider(c, agent, resource)  # typing: ignore
+            p = handler.Commander.get_provider(c, agent, resource)  # type: ignore
             p.set_cache(c)
-            p.get_file = lambda x: self.get_blob(x)  # typing: ignore
-            p.stat_file = lambda x: self.stat_blob(x)  # typing: ignore
-            p.upload_file = lambda x, y: self.add_blob(x, y)  # typing: ignore
-            p.run_sync = ioloop.IOLoop.current().run_sync  # typing: ignore
+            p.get_file = lambda x: self.get_blob(x)  # type: ignore
+            p.stat_file = lambda x: self.stat_blob(x)  # type: ignore
+            p.upload_file = lambda x, y: self.add_blob(x, y)  # type: ignore
+            p.run_sync = ioloop.IOLoop.current().run_sync  # type: ignore
             self._handlers.add(p)
             return p
         except Exception as e:
@@ -686,8 +716,9 @@ license: Test License
         """
         Load the current module and compile an otherwise empty project
         """
-        _, module_name = get_module_info()
-        self._create_project_and_load(model=f"import {module_name}")
+        mod: module.Module
+        mod, _ = get_module()
+        self._create_project_and_load(model=f"import {mod.name}")
 
     def compile(self, main: str, export: bool = False, no_dedent: bool = True) -> None:
         """
@@ -780,10 +811,11 @@ license: Test License
             fd.write(content)
 
     def _load_plugins(self) -> typing.Dict[str, FunctionType]:
-        _, module_name = get_module_info()
+        mod: module.Module
+        mod, _ = get_module()
         submodules: typing.Optional[
             typing.Dict[str, ModuleType]
-        ] = InmantaPluginsImporter(self).get_submodules(module_name)
+        ] = InmantaPluginsImporter(self).get_submodules(mod.name)
         return (
             {}
             if submodules is None
