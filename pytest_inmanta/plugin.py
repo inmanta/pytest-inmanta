@@ -317,7 +317,7 @@ def ensure_current_module_install(v1_modules_dir: str, in_place: bool = False) -
     mod: module.Module
     path: str
     mod, path = get_module()
-    if not hasattr(module, "ModuleV1") or isinstance(mod, module.ModuleV1):
+    if not hasattr(module, "ModuleV2") or isinstance(mod, module.ModuleV1):
         if not in_place:
             dir_util.copy_tree(path, os.path.join(v1_modules_dir, mod.name))
     else:
