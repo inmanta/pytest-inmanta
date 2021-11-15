@@ -23,8 +23,9 @@ import os
 import subprocess
 import sys
 import tempfile
+from importlib.abc import Loader
 from types import ModuleType
-from typing import Optional, Sequence
+from typing import Iterator, Optional, Sequence, Tuple
 
 import pkg_resources
 import pytest
@@ -55,7 +56,7 @@ if CORE_VERSION is None or CORE_VERSION < version.Version("6.dev"):
 
 
 @pytest.fixture(scope="session")
-def testmodulev2_venv(pytestconfig) -> env.VirtualEnv:
+def testmodulev2_venv(pytestconfig) -> Iterator[env.VirtualEnv]:
     """
     Yields a Python environment with testmodulev2 installed in it.
     """
@@ -63,16 +64,7 @@ def testmodulev2_venv(pytestconfig) -> env.VirtualEnv:
         # set up environment
         venv: env.VirtualEnv = env.VirtualEnv(env_path=venv_dir)
         venv.init_env()
-        # workaround for pypa/build#405: unset PYTHONPATH because it's not required in this case and it triggers a bug in build
-        with open(os.path.join(venv.site_packages_dir, "usercustomize.py"), "a") as fd:
-            fd.write(
-                """
-import os
-
-if "PYTHONPATH" in os.environ:
-    del os.environ["PYTHONPATH"]
-                """.strip()
-            )
+        venv_unset_python_path(venv)
         # install test module into environment
         subprocess.check_call(
             [
@@ -82,13 +74,38 @@ if "PYTHONPATH" in os.environ:
                 "module",
                 "install",
                 str(pytestconfig.rootpath / "examples" / "testmodulev2"),
-            ],
+            ]
         )
         yield venv
 
 
+def venv_unset_python_path(venv: env.VirtualEnv) -> None:
+    """
+    Workaround for pypa/build#405: unset PYTHONPATH because it's not required in this case and it triggers a bug in build
+    """
+    sitecustomize_existing: Optional[Tuple[Optional[str], Loader]] = env.ActiveEnv.get_module_file("sitecustomize")
+    # inherit from existing sitecustomize.py
+    sitecustomize_inherit: str
+    if sitecustomize_existing is not None and sitecustomize_existing[0] is not None:
+        with open(sitecustomize_existing[0], "r") as fd:
+            sitecustomize_inherit = fd.read()
+    else:
+        sitecustomize_inherit = ""
+    with open(os.path.join(venv.site_packages_dir, "sitecustomize.py"), "a") as fd:
+        fd.write(
+            f"""
+{sitecustomize_inherit}
+
+import os
+
+if "PYTHONPATH" in os.environ:
+    del os.environ["PYTHONPATH"]
+            """.strip()
+        )
+
+
 @pytest.fixture(scope="function")
-def testmodulev2_venv_active(deactive_venv, testmodulev2_venv) -> env.VirtualEnv:
+def testmodulev2_venv_active(deactive_venv, testmodulev2_venv) -> Iterator[env.VirtualEnv]:
     """
     Activates a Python environment with testmodulev2 installed in it for the currently running process.
     """
