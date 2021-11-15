@@ -83,7 +83,9 @@ def venv_unset_python_path(venv: env.VirtualEnv) -> None:
     """
     Workaround for pypa/build#405: unset PYTHONPATH because it's not required in this case and it triggers a bug in build
     """
-    sitecustomize_existing: Optional[Tuple[Optional[str], Loader]] = env.ActiveEnv.get_module_file("sitecustomize")
+    sitecustomize_existing: Optional[
+        Tuple[Optional[str], Loader]
+    ] = env.ActiveEnv.get_module_file("sitecustomize")
     # inherit from existing sitecustomize.py
     sitecustomize_inherit: str
     if sitecustomize_existing is not None and sitecustomize_existing[0] is not None:
@@ -105,7 +107,9 @@ if "PYTHONPATH" in os.environ:
 
 
 @pytest.fixture(scope="function")
-def testmodulev2_venv_active(deactive_venv, testmodulev2_venv) -> Iterator[env.VirtualEnv]:
+def testmodulev2_venv_active(
+    deactive_venv, testmodulev2_venv
+) -> Iterator[env.VirtualEnv]:
     """
     Activates a Python environment with testmodulev2 installed in it for the currently running process.
     """
