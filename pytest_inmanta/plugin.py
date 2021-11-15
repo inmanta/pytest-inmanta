@@ -123,6 +123,7 @@ def get_module() -> typing.Tuple[module.Module, str]:
     Returns the module instance for the module being tested, as well as the path to its root.
     For v2 modules, the returned path is the same as the module's path attribute.
     """
+
     def find_module(path: str) -> typing.Tuple[typing.Optional[module.Module], str]:
         mod: typing.Optional[module.Module]
         if hasattr(module.Module, "from_path"):

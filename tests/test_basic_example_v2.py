@@ -83,8 +83,6 @@ if "PYTHONPATH" in os.environ:
                 "install",
                 str(pytestconfig.rootpath / "examples" / "testmodulev2"),
             ],
-            # workaround for pypa/build#405: unset PYTHONPATH because it's not required in this case and it triggers a bug
-            env={key: value for key, value in os.environ.items() if key != "PYTHONPATH"},
         )
         yield venv
 
