@@ -123,7 +123,7 @@ def get_module() -> typing.Tuple[module.Module, str]:
     For v2 modules, the returned path is the same as the module's path attribute.
     """
 
-    def find_module(path: str) -> typing.Tuple[typing.Optional[module.Module], str]:
+    def find_module(path: str) -> typing.Optional[typing.Tuple[module.Module, str]]:
         mod: typing.Optional[module.Module]
         if hasattr(module.Module, "from_path"):
             mod = module.Module.from_path(path)
@@ -138,13 +138,13 @@ def get_module() -> typing.Tuple[module.Module, str]:
         parent: str = os.path.dirname(path)
         return find_module(parent) if parent != path else None
 
-    mod, path = find_module(CURDIR)
-    if mod is None:
+    mod_info: typing.Optional[typing.Tuple[module.Module, str]] = find_module(CURDIR)
+    if mod_info is None:
         raise Exception(
             "Module test case have to be saved in the module they are intended for. "
             "%s not part of module path" % CURDIR
         )
-    return mod, path
+    return mod_info
 
 
 @pytest.fixture()
