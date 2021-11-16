@@ -454,29 +454,41 @@ class Project:
         self._load()
         config.Config.load_config()
 
-    def _create_project_and_load(self, model: str) -> module.Project:
+    def _create_project_and_load(self, model: str, *, init: bool = False) -> module.Project:
         """
         This method doesn the following:
         * Add the given model file to the Inmanta project
         * Install the module dependencies
         * Load the project
 
+        :param init: True iff the project should start from a clean slate. Ignored for older (<6) versions of core.
         :return: The newly created module.Project instance.
         """
         with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
             fd.write(model)
 
-        signature: inspect.Signature = inspect.Signature.from_callable(
+        signature_init: inspect.Signature = inspect.Signature.from_callable(
             module.Project.__init__
         )
         # The venv_path parameter only exists on ISO5+
-        extra_kwargs = (
+        extra_kwargs_init = (
             {"venv_path": self._env_path}
-            if "venv_path" in signature.parameters.keys()
+            if "venv_path" in signature_init.parameters.keys()
             else {}
         )
-        test_project = module.Project(self._test_project_dir, **extra_kwargs)
-        module.Project.set(test_project)
+        test_project = module.Project(self._test_project_dir, **extra_kwargs_init)
+        signature_set: inspect.Signature = inspect.Signature.from_callable(
+            module.Project.set
+        )
+        # For supported versions of core, don't clean up loaded modules between invocations to keep top-level imports valid
+        # TODO: does not suffice. If previous compile included more modules than this one, there are plugins registered that do
+        #   not have an associated namespace
+        extra_kwargs_set = (
+            {"clean": init}
+            if "clean" in signature_set.parameters.keys()
+            else {}
+        )
+        module.Project.set(test_project, **extra_kwargs_set)
         if hasattr(test_project, "install_modules"):
             # more recent versions of core require explicit modules installation (ISO5+)
             test_project.install_modules()
@@ -690,7 +702,7 @@ license: Test License
         """
         mod: module.Module
         mod, _ = get_module()
-        self._create_project_and_load(model=f"import {mod.name}")
+        self._create_project_and_load(model=f"import {mod.name}", init=True)
 
     def compile(self, main: str, export: bool = False, no_dedent: bool = True) -> None:
         """
