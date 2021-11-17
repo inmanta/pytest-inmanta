@@ -15,9 +15,9 @@
 
     Contact: code@inmanta.com
 """
+import os
 
 
-# TODO: generalize to any module created with create_module?
 def test_unittest_reload(project, inmanta_plugins) -> None:
     """
     Verify that the unittest module's Python files get reloaded correctly for each compile.
@@ -28,3 +28,16 @@ def test_unittest_reload(project, inmanta_plugins) -> None:
     project.add_mock_file("plugins", "submod.py", "X = 42")
     project.compile("import unittest")
     assert inmanta_plugins.unittest.submod.X == 42
+
+
+def test_create_module_reload(project, inmanta_plugins) -> None:
+    """
+    Verify that changes to dynamic modules (created with project.create_module) get reloaded correctly for each compile.
+    """
+    project.create_module("mycustommodule", "", "X = 0")
+    project.compile("import mycustommodule")
+    assert inmanta_plugins.mycustommodule.X == 0
+    with open(os.path.join(project._test_project_dir, "libs", "mycustommodule", "plugins", "__init__.py"), "w") as fd:
+        fd.write("X = 42")
+    project.compile("import mycustommodule")
+    assert inmanta_plugins.mycustommodule.X == 42
