@@ -400,11 +400,10 @@ class InmantaPluginsImporter:
         return result
 
 
-# TODO: better name: this does not only manage side effects but also the load operation
-class ProjectSideEffectsManager:
+class ProjectLoader:
     """
-    Singleton providing methods for managing project loading side effects. Since these operations have global side
-    effects, managing them calls for a centralized manager rather than managing them on the Project instance level.
+    Singleton providing methods for managing project loading and associated side effects. Since these operations have global
+    side effects, managing them calls for a centralized manager rather than managing them on the Project instance level.
 
     This class manages the setting and loading of a project, as well as the following side effects:
         - Python modules: under normal operation, an inmanta module's Python modules are loaded when the project is loaded.
@@ -423,9 +422,8 @@ class ProjectSideEffectsManager:
     _registered_plugins: typing.Dict[str, typing.Type[plugins.Plugin]] = {}
     _dynamic_modules: typing.Set[str] = set()
 
-    # TODO: rename to plain `load`? Decide after renaming class
     @classmethod
-    def load_project(cls, project: module.Project) -> None:
+    def load(cls, project: module.Project) -> None:
         """
         Sets and loads the given project.
         """
@@ -547,10 +545,6 @@ class Project:
         ] = defaultdict(dict)
         self._should_load_plugins: typing.Optional[bool] = load_plugins
         self._plugins: typing.Optional[typing.Dict[str, FunctionType]] = None
-        # keep track of all registered plugins across compiles to dynamically reregister them when appropriate
-        # TODO: does it suffice to store this as an instance var? project_shared and project_shared_no_plugins create separate
-        #   instances => add test! Perhaps a singleton is required to manage project side effects
-        self._registered_plugins: typing.Dict[str, typing.Type[plugins.Plugin]] = {}
         self._load()
         self._capsys: typing.Optional[CaptureFixture] = None
         self.ctx: typing.Optional[HandlerContext] = None
@@ -597,7 +591,7 @@ class Project:
         )
         test_project = module.Project(self._test_project_dir, **extra_kwargs_init)
 
-        ProjectSideEffectsManager.load_project(test_project)
+        ProjectLoader.load(test_project)
 
         # refresh plugins
         if self._should_load_plugins is not None:
@@ -802,7 +796,7 @@ license: Test License
             """
             )
 
-        ProjectSideEffectsManager.register_dynamic_module(name)
+        ProjectLoader.register_dynamic_module(name)
 
     def _load(self) -> None:
         """
@@ -902,7 +896,7 @@ license: Test License
         with open(os.path.join(dir_name, name), "w+") as fd:
             fd.write(content)
 
-        ProjectSideEffectsManager.register_dynamic_module("unittest")
+        ProjectLoader.register_dynamic_module("unittest")
 
     def _load_plugins(self) -> typing.Dict[str, FunctionType]:
         mod: module.Module
@@ -986,7 +980,7 @@ license: Test License
             initcf=get_module_data("init.cf"),
             initpy=get_module_data("init.py"),
         )
-        ProjectSideEffectsManager.clear_dynamic_modules()
+        ProjectLoader.clear_dynamic_modules()
 
     def finalize_handler(self, handler: ResourceHandler) -> None:
         handler.cache.close()
