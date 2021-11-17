@@ -473,7 +473,10 @@ class ProjectLoader:
             "(" + "|".join(re.escape(mod) for mod in project.modules.keys()) + ")::"
         )
         for fq_plugin_name, plugin in cls._registered_plugins.items():
-            if fq_plugin_name not in currently_registered_plugins and loaded_mod_ns_pattern.match(fq_plugin_name):
+            if (
+                fq_plugin_name not in currently_registered_plugins
+                and loaded_mod_ns_pattern.match(fq_plugin_name)
+            ):
                 plugins.PluginMeta.add_function(plugin)
 
     @classmethod

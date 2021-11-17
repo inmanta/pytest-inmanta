@@ -9,16 +9,16 @@ from inmanta_plugins import std, testmodulev2
 
 
 def test_dynamic_import(project):
-    from inmanta_plugins import testmodulev2 as testmodulev2_dynamic
     from inmanta_plugins import std as std_dynamic
+    from inmanta_plugins import testmodulev2 as testmodulev2_dynamic
 
     assert testmodulev2_dynamic is testmodulev2
     assert std_dynamic is std
 
     project.compile("import testmodulev2")
 
-    from inmanta_plugins import testmodulev2 as testmodulev2_dynamic
     from inmanta_plugins import std as std_dynamic
+    from inmanta_plugins import testmodulev2 as testmodulev2_dynamic
 
     assert testmodulev2_dynamic is testmodulev2
     assert std_dynamic is std

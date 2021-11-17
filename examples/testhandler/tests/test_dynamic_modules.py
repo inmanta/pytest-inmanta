@@ -37,7 +37,16 @@ def test_create_module_reload(project, inmanta_plugins) -> None:
     project.create_module("mycustommodule", "", "X = 0")
     project.compile("import mycustommodule")
     assert inmanta_plugins.mycustommodule.X == 0
-    with open(os.path.join(project._test_project_dir, "libs", "mycustommodule", "plugins", "__init__.py"), "w") as fd:
+    with open(
+        os.path.join(
+            project._test_project_dir,
+            "libs",
+            "mycustommodule",
+            "plugins",
+            "__init__.py",
+        ),
+        "w",
+    ) as fd:
         fd.write("X = 42")
     project.compile("import mycustommodule")
     assert inmanta_plugins.mycustommodule.X == 42
