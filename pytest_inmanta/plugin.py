@@ -21,6 +21,7 @@ import json
 import logging
 import math
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -37,7 +38,7 @@ from pytest import CaptureFixture
 from tornado import ioloop
 
 import inmanta.ast
-from inmanta import compiler, config, const, module, protocol
+from inmanta import compiler, config, const, module, plugins, protocol
 from inmanta.agent import cache, handler
 from inmanta.agent import io as agent_io
 from inmanta.agent.handler import HandlerContext, ResourceHandler
@@ -432,6 +433,8 @@ class Project:
         ] = defaultdict(dict)
         self._should_load_plugins: typing.Optional[bool] = load_plugins
         self._plugins: typing.Optional[typing.Dict[str, FunctionType]] = None
+        # keep track of all registered plugins across compiles to dynamically reregister them when appropriate
+        self._registered_plugins: typing.Dict[str, typing.Type[plugins.Plugin]] = {}
         self._load()
         self._capsys: typing.Optional[CaptureFixture] = None
         self.ctx: typing.Optional[HandlerContext] = None
@@ -454,7 +457,7 @@ class Project:
         self._load()
         config.Config.load_config()
 
-    def _create_project_and_load(self, model: str, *, init: bool = False) -> module.Project:
+    def _create_project_and_load(self, model: str) -> module.Project:
         """
         This method doesn the following:
         * Add the given model file to the Inmanta project
@@ -464,6 +467,9 @@ class Project:
         :param init: True iff the project should start from a clean slate. Ignored for older (<6) versions of core.
         :return: The newly created module.Project instance.
         """
+        # update collection of all registered plugins before executing side effects
+        self._registered_plugins.update(plugins.PluginMeta.get_functions())
+
         with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
             fd.write(model)
 
@@ -481,18 +487,28 @@ class Project:
             module.Project.set
         )
         # For supported versions of core, don't clean up loaded modules between invocations to keep top-level imports valid
-        # TODO: does not suffice. If previous compile included more modules than this one, there are plugins registered that do
-        #   not have an associated namespace
         extra_kwargs_set = (
-            {"clean": init}
-            if "clean" in signature_set.parameters.keys()
-            else {}
+            {"clean": False} if "clean" in signature_set.parameters.keys() else {}
         )
         module.Project.set(test_project, **extra_kwargs_set)
+
+        # The compiler expects plugins to be registered only for modules that are currently loaded
+        #   => deregister plugins, load the project, then complete the set from the previously registered ones
+        #   Completing the set is required because we didn't allow the project to do a cleanup, meaning it is not guaranteed to
+        #   register previously registered plugins (and indeed in practice it does not).
+        plugins.PluginMeta.clear()
         if hasattr(test_project, "install_modules"):
             # more recent versions of core require explicit modules installation (ISO5+)
             test_project.install_modules()
         test_project.load()
+        currently_registered_plugins: typing.Mapping[str, typing.Type[plugins.Plugin]] = plugins.PluginMeta.get_functions()
+        loaded_mod_ns_pattern: typing.Pattern[str] = re.compile(
+            "(" + "|".join(re.escape(mod) for mod in test_project.modules.keys()) + ")::"
+        )
+        for fq_plugin_name, plugin in self._registered_plugins.items():
+            if fq_plugin_name not in currently_registered_plugins and loaded_mod_ns_pattern.match(fq_plugin_name):
+                plugins.PluginMeta.add_function(plugin)
+
         # refresh plugins
         if self._should_load_plugins is not None:
             self._plugins = self._load_plugins()
@@ -702,7 +718,7 @@ license: Test License
         """
         mod: module.Module
         mod, _ = get_module()
-        self._create_project_and_load(model=f"import {mod.name}", init=True)
+        self._create_project_and_load(model=f"import {mod.name}")
 
     def compile(self, main: str, export: bool = False, no_dedent: bool = True) -> None:
         """
