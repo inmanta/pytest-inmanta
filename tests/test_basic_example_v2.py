@@ -167,7 +167,7 @@ def test_basic_example_no_install(testdir):
     """
     testdir.copy_example("testmodulev2")
 
-    result = testdir.runpytest_inprocess("tests/test_basics.py::test_compile", "-s")
+    result = testdir.runpytest_inprocess("tests/test_basics.py::test_compile")
 
     result.assert_outcomes(errors=1)
     result.stdout.re_match_lines(
@@ -176,3 +176,14 @@ def test_basic_example_no_install(testdir):
             r" Please install it with `inmanta module install -e \.` before running the tests\..*"
         ]
     )
+
+
+def test_import(testdir, testmodulev2_venv_active):
+    """
+    Make sure that our plugin works for v2 modules.
+    """
+    testdir.copy_example("testmodulev2")
+
+    result = testdir.runpytest_inprocess("tests/test_import.py")
+
+    result.assert_outcomes(passed=3)

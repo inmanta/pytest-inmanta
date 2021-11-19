@@ -15,13 +15,13 @@
 
     Contact: code@inmanta.com
 """
-import glob
 import importlib
 import inspect
 import json
 import logging
 import math
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -38,7 +38,7 @@ from pytest import CaptureFixture
 from tornado import ioloop
 
 import inmanta.ast
-from inmanta import compiler, config, const, module, protocol
+from inmanta import compiler, config, const, module, plugins, protocol
 from inmanta.agent import cache, handler
 from inmanta.agent import io as agent_io
 from inmanta.agent.handler import HandlerContext, ResourceHandler
@@ -124,7 +124,7 @@ def get_module() -> typing.Tuple[module.Module, str]:
     For v2 modules, the returned path is the same as the module's path attribute.
     """
 
-    def find_module(path: str) -> typing.Tuple[typing.Optional[module.Module], str]:
+    def find_module(path: str) -> typing.Optional[typing.Tuple[module.Module, str]]:
         mod: typing.Optional[module.Module]
         if hasattr(module.Module, "from_path"):
             mod = module.Module.from_path(path)
@@ -139,13 +139,13 @@ def get_module() -> typing.Tuple[module.Module, str]:
         parent: str = os.path.dirname(path)
         return find_module(parent) if parent != path else None
 
-    mod, path = find_module(CURDIR)
-    if mod is None:
+    mod_info: typing.Optional[typing.Tuple[module.Module, str]] = find_module(CURDIR)
+    if mod_info is None:
         raise Exception(
             "Module test case have to be saved in the module they are intended for. "
             "%s not part of module path" % CURDIR
         )
-    return mod, path
+    return mod_info
 
 
 @pytest.fixture()
@@ -395,36 +395,124 @@ class InmantaPluginsImporter:
             return None
         result = {}
         importlib.invalidate_caches()
-        for _, fq_submod_name in self.get_plugin_files_for_module(modules[module_name]):
-            result[str(fq_submod_name)] = importlib.import_module(fq_submod_name)
+        for _, fq_submod_name in modules[module_name].get_plugin_files():
+            result[str(fq_submod_name)] = importlib.import_module(str(fq_submod_name))
         return result
 
-    # TODO: this method duplicates inmanta.module.Module.get_plugin_files (2020.4), see #76
-    def get_plugin_files_for_module(
-        self, mod: module.Module
-    ) -> typing.Iterator[typing.Tuple[str, str]]:
-        """
-        Returns a tuple (absolute_path, fq_mod_name) of all python files in this module.
-        """
-        plugin_dir: str = os.path.join(mod._path, "plugins")
 
-        if not os.path.exists(plugin_dir):
-            return iter(())
+class ProjectLoader:
+    """
+    Singleton providing methods for managing project loading and associated side effects. Since these operations have global
+    side effects, managing them calls for a centralized manager rather than managing them on the Project instance level.
 
-        if not os.path.exists(os.path.join(plugin_dir, "__init__.py")):
-            raise Exception(
-                "The plugin directory %s should be a valid python package with a __init__.py file"
-                % plugin_dir
-            )
-        return (
-            (
-                file_name,
-                mod._get_fq_mod_name_for_py_file(file_name, plugin_dir, mod.name),
-            )
-            for file_name in glob.iglob(
-                os.path.join(plugin_dir, "**", "*.py"), recursive=True
-            )
+    This class manages the setting and loading of a project, as well as the following side effects:
+        - Python modules: under normal operation, an inmanta module's Python modules are loaded when the project is loaded.
+            However, to support top-level Python imports in test cases, pytest-inmanta instructs the project to not clean
+            up loaded Python modules when setting a new project as this would force a reload, changing object identities.
+            One exception is when working with dynamic modules whose content might change between project loads (for example
+            the unittest module and any module created with Project.create_module). Therefore any dynamic modules are always
+            forcefully cleaned up, forcing a reload when next imported.
+        - plugins: under normal operation, loading a project registers all modules' plugins as a side effect of loading each
+            module's Python modules. However, pytest-inmanta does not reload said Python modules (see above). To make sure only
+            loaded modules' plugins are registered (and thus accessible from the model), each loaded project starts with a clean
+            (empty) set of registered plugins. Loading the project registers any plugins for newly loaded modules while this
+            class is responsible for completing the set with appropriate previously registered plugins.
+    """
+
+    _registered_plugins: typing.Dict[str, typing.Type[plugins.Plugin]] = {}
+    _dynamic_modules: typing.Set[str] = set()
+
+    @classmethod
+    def load(cls, project: module.Project) -> None:
+        """
+        Sets and loads the given project.
+        """
+        # unload dynamic modules before fetching currently registered plugins: they should not be included
+        cls._unload_dynamic_modules()
+        # add currently registered plugins to tracked plugins before loading the project
+        cls._refresh_registered_plugins()
+
+        # For supported versions of core, don't clean up loaded modules between invocations to keep top-level imports valid
+        signature_set: inspect.Signature = inspect.Signature.from_callable(
+            module.Project.set
         )
+        extra_kwargs_set = (
+            {"clean": False} if "clean" in signature_set.parameters.keys() else {}
+        )
+        module.Project.set(project, **extra_kwargs_set)
+
+        # deregister plugins
+        plugins.PluginMeta.clear()
+
+        # load the project
+        if hasattr(project, "install_modules"):
+            # more recent versions of core require explicit modules installation (ISO5+)
+            project.install_modules()
+        project.load()
+
+        # complete the set of registered plugins from the previously registered ones
+        cls._register_plugins(project)
+
+    @classmethod
+    def _refresh_registered_plugins(cls) -> None:
+        """
+        Refresh the tracked registered plugins. Should be called at least once between project loads.
+        """
+        cls._registered_plugins.update(plugins.PluginMeta.get_functions())
+
+    @classmethod
+    def _register_plugins(cls, project: module.Project) -> None:
+        """
+        Registers all plugin functions for a given project. For each of the project's loaded modules, reregisters any plugins
+        that are not currently registered from the set of tracked plugins.
+        """
+        currently_registered_plugins: typing.Mapping[
+            str, typing.Type[plugins.Plugin]
+        ] = plugins.PluginMeta.get_functions()
+        loaded_mod_ns_pattern: typing.Pattern[str] = re.compile(
+            "(" + "|".join(re.escape(mod) for mod in project.modules.keys()) + ")::"
+        )
+        for fq_plugin_name, plugin in cls._registered_plugins.items():
+            if (
+                fq_plugin_name not in currently_registered_plugins
+                and loaded_mod_ns_pattern.match(fq_plugin_name)
+            ):
+                plugins.PluginMeta.add_function(plugin)
+
+    @classmethod
+    def register_dynamic_module(cls, module_name: str) -> None:
+        """
+        Register a module as dynamic by name. Dynamic modules are forcefully reloaded on each project load.
+        """
+        cls._dynamic_modules.add(module_name)
+
+    @classmethod
+    def _unload_dynamic_modules(cls) -> None:
+        """
+        Unload all registered dynamic modules to force a reload on the next compile. Should be called at least once between
+        project loads because it assumes that either a dynamic module is loaded by the currently active project or it was
+        not loaded at all.
+        """
+        if not hasattr(module.Module, "unload"):
+            # older versions of core (<6) don't support (and don't require) explicit module unloading
+            return
+        project: module.Project
+        try:
+            project = module.Project.get()
+        except module.ProjectNotFoundException:
+            # no project has been loaded yet, no need to unload any modules
+            return
+        for mod in cls._dynamic_modules:
+            if mod in project.modules:
+                project.modules[mod].unload()
+
+    @classmethod
+    def clear_dynamic_modules(cls) -> None:
+        """
+        Clear the set of registered dynamic modules, unloading them first.
+        """
+        cls._unload_dynamic_modules()
+        cls._dynamic_modules = set()
 
 
 class Project:
@@ -489,26 +577,25 @@ class Project:
         * Install the module dependencies
         * Load the project
 
+        :param init: True iff the project should start from a clean slate. Ignored for older (<6) versions of core.
         :return: The newly created module.Project instance.
         """
         with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
             fd.write(model)
 
-        signature: inspect.Signature = inspect.Signature.from_callable(
+        signature_init: inspect.Signature = inspect.Signature.from_callable(
             module.Project.__init__
         )
         # The venv_path parameter only exists on ISO5+
-        extra_kwargs = (
+        extra_kwargs_init = (
             {"venv_path": self._env_path}
-            if "venv_path" in signature.parameters.keys()
+            if "venv_path" in signature_init.parameters.keys()
             else {}
         )
-        test_project = module.Project(self._test_project_dir, **extra_kwargs)
-        module.Project.set(test_project)
-        if hasattr(test_project, "install_modules"):
-            # more recent versions of core require explicit modules installation (ISO5+)
-            test_project.install_modules()
-        test_project.load()
+        test_project = module.Project(self._test_project_dir, **extra_kwargs_init)
+
+        ProjectLoader.load(test_project)
+
         # refresh plugins
         if self._should_load_plugins is not None:
             self._plugins = self._load_plugins()
@@ -712,6 +799,8 @@ license: Test License
             """
             )
 
+        ProjectLoader.register_dynamic_module(name)
+
     def _load(self) -> None:
         """
         Load the current module and compile an otherwise empty project
@@ -810,6 +899,8 @@ license: Test License
         with open(os.path.join(dir_name, name), "w+") as fd:
             fd.write(content)
 
+        ProjectLoader.register_dynamic_module("unittest")
+
     def _load_plugins(self) -> typing.Dict[str, FunctionType]:
         mod: module.Module
         mod, _ = get_module()
@@ -892,6 +983,7 @@ license: Test License
             initcf=get_module_data("init.cf"),
             initpy=get_module_data("init.py"),
         )
+        ProjectLoader.clear_dynamic_modules()
 
     def finalize_handler(self, handler: ResourceHandler) -> None:
         handler.cache.close()

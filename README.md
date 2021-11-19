@@ -71,9 +71,10 @@ And dryrun
     assert changes == {"value": {'current': 'read', 'desired': 'write'}}
 ```
 
-Testing functions and classes defined in a module is also possible
+Testing functions and classes defined in a v1 module is also possible
 using the `inmanta_plugins` fixture. The fixture exposes inmanta modules as its attributes
-and imports them dynamically when accessed.
+and imports them dynamically when accessed. For v2 modules, the recommended approach is to
+just use top-level imports instead of using the fixture.
 
 ```python
     def test_example(inmanta_plugins):
