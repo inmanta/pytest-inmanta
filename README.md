@@ -134,6 +134,26 @@ A test case, to test this plugin looks like this:
   function named `plugin_name`. As such, this line tests whether `host` is returned when the plugin function
   `hostname` is called with the parameter `fqdn`.
 
+## Advanced usage
+
+Because pytest-inmanta keeps `inmanta_plugins` submodule objects alive to support top-level imports, any stateful modules
+(modules that keep state on global Python variables in the module's namespace) must define cleanup logic to reset state between
+compiles. Pytest-inmanta expects such cleanup functions to be synchronous functions that live in the top-level scope (defined
+on the module object, not in a class) of a `inmanta_plugins` submodule (of any depth). Their name should start with
+"inmanta\_reset\_state" and they should not take any parameters. For example:
+
+```python
+    # <module-name>/plugins/state.py
+
+    MY_STATE = set()
+
+    def inmanta_reset_state() -> None:
+        global MY_STATE
+        MY_STATE = set()
+```
+
+Multiple cleanup functions may be defined, in which case no guaranteed call order is defined.
+
 ## Options
 
 The following options are available.

@@ -412,6 +412,9 @@ class ProjectLoader:
             One exception is when working with dynamic modules whose content might change between project loads (for example
             the unittest module and any module created with Project.create_module). Therefore any dynamic modules are always
             forcefully cleaned up, forcing a reload when next imported.
+        - Python module state: since Python module objects are kept alive (see above), any state kept on those objects is
+            carried over accross compiles. To start each compile from a fresh state, any stateful modules must define one or
+            more cleanup functions. This class is responsible for calling these functions when appropriate.
         - plugins: under normal operation, loading a project registers all modules' plugins as a side effect of loading each
             module's Python modules. However, pytest-inmanta does not reload said Python modules (see above). To make sure only
             loaded modules' plugins are registered (and thus accessible from the model), each loaded project starts with a clean
@@ -431,6 +434,8 @@ class ProjectLoader:
         cls._unload_dynamic_modules()
         # add currently registered plugins to tracked plugins before loading the project
         cls._refresh_registered_plugins()
+        # reset modules' state
+        cls._reset_module_state()
 
         # For supported versions of core, don't clean up loaded modules between invocations to keep top-level imports valid
         signature_set: inspect.Signature = inspect.Signature.from_callable(
@@ -513,6 +518,17 @@ class ProjectLoader:
         """
         cls._unload_dynamic_modules()
         cls._dynamic_modules = set()
+
+    @classmethod
+    def _reset_module_state(cls) -> None:
+        """
+        Resets any state kept on Python module objects associated with Inmanta modules by calling predefined cleanup functions.
+        """
+        for mod_name, mod in sys.modules.items():
+            if mod_name.startswith("inmanta_plugins."):
+                for func_name, func in mod.__dict__.items():
+                    if func_name.startswith("inmanta_reset_state") and callable(func):
+                        func()
 
 
 class Project:
