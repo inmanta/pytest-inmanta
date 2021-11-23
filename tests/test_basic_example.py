@@ -157,7 +157,7 @@ def test_project_no_plugins(testdir):
     ) in result.stdout.str()
 
 
-def test_import(testdir):
+def test_state(testdir):
     """Make sure that importing functions works."""
 
     testdir.copy_example("testmodule")
