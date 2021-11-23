@@ -75,3 +75,11 @@ def get_exception():
 @plugin
 def raise_exception():
     raise TestException("my exception")
+
+
+MODULE_CACHE = set()
+
+
+def inmanta_reset_state() -> None:
+    global MODULE_CACHE
+    MODULE_CACHE = set()
