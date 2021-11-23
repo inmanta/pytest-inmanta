@@ -1,8 +1,14 @@
-# v 1.7.0 (?)
+# v 2.0.0 (?)
 Changes in this release:
 - Added support for testing v2 modules.
+- Extended to be compatible with `inmanta-core>=6`
+- Added support for custom `inmanta_reset_state` method to clean up stateful modules between compiles
 - Ensure that projects are compiled using a separate venv.
 - Fixed typing issue for `filter_args` in different method of the Project class.
+
+## Breaking changes
+- pytest-inmanta now keeps `inmanta_plugins` submodules alive accross compiles. As a result, stateful modules must implement
+    custom state cleanup logic as described in the README.
 
 # v 1.6.2 (2021-08-17)
 Changes in this release:
