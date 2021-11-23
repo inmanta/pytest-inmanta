@@ -7,7 +7,7 @@ Changes in this release:
 - Fixed typing issue for `filter_args` in different method of the Project class.
 
 ## Breaking changes
-- pytest-inmanta now keeps `inmanta_plugins` submodules alive accross compiles. As a result, stateful modules must implement
+- pytest-inmanta now keeps `inmanta_plugins` submodules alive across compiles. As a result, stateful modules must implement
     custom state cleanup logic as described in the README.
 
 # v 1.6.2 (2021-08-17)
