@@ -31,6 +31,7 @@ import warnings
 import yaml
 from collections import defaultdict
 from distutils import dir_util
+from itertools import chain
 from pathlib import Path
 from textwrap import dedent
 from types import FunctionType, ModuleType
@@ -219,7 +220,6 @@ def project_shared_no_plugins(
     yield project_factory(load_plugins=False)
 
 
-# TODO: docs
 def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[object]:
     """
     Returns the list of repos for the project as a serializable object. For recent versions of core, includes repo types.
@@ -257,7 +257,12 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
     repo_options = get_opt_or_env_or(
         request.config, "inm_module_repo", "https://github.com/inmanta/"
     )
-    repos: typing.Sequence[object] = get_project_repos(repo_options if isinstance(repo_options, list) else [repo_options])
+    repos: typing.Sequence[object] = get_project_repos(
+        chain.from_iterable(
+            repo.split(" ")
+            for repo in (repo_options if isinstance(repo_options, list) else [repo_options])
+        )
+    )
 
     install_mode = get_opt_or_env_or(request.config, "inm_install_mode", "release")
 
