@@ -280,7 +280,7 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
         raise Exception(f"Specified venv {env_override} does not exist")
     if env_override is not None:
         try:
-            os.symlink(env_override, env_dir)
+            os.symlink(os.path.abspath(env_override), env_dir)
         except OSError:
             LOGGER.exception(
                 "Unable to use shared env (symlink creation from %s to %s failed).",
