@@ -17,38 +17,21 @@
 """
 # Note: These tests only function when the pytest output is not modified by plugins such as pytest-sugar!
 
-import importlib
 import logging
 import os
 import subprocess
-import sys
 import tempfile
 from importlib.abc import Loader
-from types import ModuleType
-from typing import Iterator, Optional, Sequence, Tuple
+from typing import Iterator, Optional, Tuple
 
-import pkg_resources
 import pytest
-from pkg_resources import DistributionNotFound
 
+import core
+import utils
 # be careful not to import any core>=6 objects directly
 from inmanta import env
-from packaging import version
 
-CORE_VERSION: Optional[version.Version]
-"""
-Version of the inmanta-core package. None if it is not installed.
-"""
-
-try:
-    CORE_VERSION = version.Version(
-        pkg_resources.get_distribution("inmanta-core").version
-    )
-except DistributionNotFound:
-    CORE_VERSION = None
-
-
-if CORE_VERSION is None or CORE_VERSION < version.Version("6.dev"):
+if not core.SUPPORTS_MODULES_V2:
     pytest.skip(
         "Skipping modules v2 tests for inmanta-core<6 (pre modules v2).",
         allow_module_level=True,
@@ -117,28 +100,10 @@ def testmodulev2_venv_active(
         # Create a unique function-scoped venv dir to prevent caching issues with inmanta_plugins' submodule_search_locations
         unique_env_dir: str = os.path.join(tmpdir, ".env")
         os.symlink(testmodulev2_venv.env_path, unique_env_dir)
-        print(unique_env_dir)
         unique_env: env.VirtualEnv = env.VirtualEnv(env_path=unique_env_dir)
         unique_env.use_virtual_env()
         yield unique_env
-        unload_modules_for_path(unique_env.site_packages_dir)
-
-
-def unload_modules_for_path(path: str) -> None:
-    """
-    Unload any modules that are loaded from a given path.
-    """
-
-    def module_in_prefix(module: ModuleType, prefix: str) -> bool:
-        file: Optional[str] = getattr(module, "__file__", None)
-        return file.startswith(prefix) if file is not None else False
-
-    loaded_modules: Sequence[str] = [
-        mod_name for mod_name, mod in sys.modules.items() if module_in_prefix(mod, path)
-    ]
-    for mod_name in loaded_modules:
-        del sys.modules[mod_name]
-    importlib.invalidate_caches()
+        utils.unload_modules_for_path(unique_env.site_packages_dir)
 
 
 def test_basic_example(testdir, caplog, testmodulev2_venv_active):

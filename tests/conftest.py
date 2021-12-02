@@ -15,16 +15,23 @@
 
     Contact: code@inmanta.com
 """
+import glob
 import os
+import subprocess
 import sys
-from typing import Optional
+import tempfile
+from pathlib import Path
+from typing import Iterator, Optional
 
 import pkg_resources
 import pytest
 
+import core
 import pytest_inmanta.plugin
+# be careful not to import any core>=6 objects directly
 from inmanta import env, loader, plugins
 from inmanta.loader import PluginModuleFinder
+from libpip2pi.commands import dir2pi
 
 pytest_plugins = ["pytester"]
 
@@ -66,3 +73,44 @@ def deactive_venv():
         PluginModuleFinder.reset()
     plugins.PluginMeta.clear()
     loader.unload_inmanta_plugins()
+
+
+@pytest.fixture
+def examples_working_dir(pytestconfig) -> Iterator[None]:
+    examples_dir: Path = pytestconfig.rootpath / "examples"
+    current_dir: str = os.getcwd()
+    os.chdir(examples_dir)
+    yield
+    os.chdir(current_dir)
+
+
+@pytest.fixture(scope="session")
+def examples_v2_package_index(pytestconfig) -> Iterator[str]:
+    """
+    Creates a local pip index for all v2 modules in the examples dir. The modules are built and published to the index.
+
+    :return: The path to the index
+    """
+    if not core.SUPPORTS_MODULES_V2:
+        pytest.skip(
+            "Skipping modules v2 related tests for inmanta-core<6 (pre modules v2).",
+        )
+
+    examples_dir: Path = pytestconfig.rootpath / "examples"
+
+    with tempfile.TemporaryDirectory() as artifact_dir:
+        for module_dir in glob.iglob(str(examples_dir / "inmanta-module-*")):
+            subprocess.check_call(
+                [
+                    sys.executable,
+                    "-m",
+                    "inmanta.app",
+                    "module",
+                    "build",
+                    "--output-dir",
+                    artifact_dir,
+                ],
+                cwd=str(module_dir),
+            )
+        dir2pi(argv=["dir2pi", artifact_dir])
+        yield os.path.join(artifact_dir, "simple")

@@ -1,0 +1,8 @@
+author: Inmanta
+author_email: code@inmanta.com
+description: Root module to test transitive v2 dependency installation
+license: ASL 2.0
+copyright: 2021 Inmanta
+name: test_dependencies_head
+version: 0.0.1
+compiler_version: 2019.3

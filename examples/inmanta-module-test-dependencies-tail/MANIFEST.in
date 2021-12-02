@@ -1,0 +1,4 @@
+include inmanta_plugins/test_dependencies_tail/setup.cfg
+recursive-include inmanta_plugins/test_dependencies_tail/model *.cf
+graft inmanta_plugins/test_dependencies_tail/files
+graft inmanta_plugins/test_dependencies_tail/templates
