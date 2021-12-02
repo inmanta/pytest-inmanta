@@ -18,8 +18,8 @@
 
 import importlib
 import sys
-from typing import Optional, Sequence
 from types import ModuleType
+from typing import Optional, Sequence
 
 
 def unload_modules_for_path(path: str) -> None:

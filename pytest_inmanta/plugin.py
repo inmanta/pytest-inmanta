@@ -21,14 +21,12 @@ import json
 import logging
 import math
 import os
-import pydantic
 import re
 import shutil
 import sys
 import tempfile
 import typing
 import warnings
-import yaml
 from collections import defaultdict
 from distutils import dir_util
 from itertools import chain
@@ -36,7 +34,9 @@ from pathlib import Path
 from textwrap import dedent
 from types import FunctionType, ModuleType
 
+import pydantic
 import pytest
+import yaml
 from pytest import CaptureFixture
 from tornado import ioloop
 
@@ -228,6 +228,7 @@ def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[obj
         for backwards compatibility. Explicitly passing type is only supported for inmanta versions that accept type in the
         project metadata.
     """
+
     def parse_repo(repo_str: str) -> object:
         parts: typing.Sequence[str] = repo_str.split(":", maxsplit=1)
         if not hasattr(module, "ModuleRepoType"):
@@ -260,7 +261,9 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
     repos: typing.Sequence[object] = get_project_repos(
         chain.from_iterable(
             repo.split(" ")
-            for repo in (repo_options if isinstance(repo_options, list) else [repo_options])
+            for repo in (
+                repo_options if isinstance(repo_options, list) else [repo_options]
+            )
         )
     )
 

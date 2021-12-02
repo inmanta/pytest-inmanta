@@ -24,7 +24,6 @@ from pkg_resources import DistributionNotFound
 # be careful not to import any core>=6 objects directly
 from packaging import version
 
-
 CORE_VERSION: Optional[version.Version]
 """
 Version of the inmanta-core package. None if it is not installed.
@@ -38,4 +37,6 @@ except DistributionNotFound:
     CORE_VERSION = None
 
 
-SUPPORTS_MODULES_V2: bool = CORE_VERSION is not None and CORE_VERSION >= version.Version("6.dev")
+SUPPORTS_MODULES_V2: bool = (
+    CORE_VERSION is not None and CORE_VERSION >= version.Version("6.dev")
+)

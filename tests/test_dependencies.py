@@ -27,7 +27,9 @@ from inmanta import env
 
 def test_transitive_v2_dependencies(examples_v2_package_index, pytestconfig, testdir):
     # set working directory to allow in-place with all example modules
-    pytest_inmanta.plugin.CURDIR = str(pytestconfig.rootpath / "examples" / "test_dependencies_head")
+    pytest_inmanta.plugin.CURDIR = str(
+        pytestconfig.rootpath / "examples" / "test_dependencies_head"
+    )
 
     testdir.copy_example("test_dependencies_head")
 
@@ -46,7 +48,8 @@ def test_transitive_v2_dependencies(examples_v2_package_index, pytestconfig, tes
                 f"package:{examples_v2_package_index}",
                 # include configured pip index for inmanta-module-std
                 "--module_repo",
-                "package:" + os.environ.get("PIP_INDEX_URL", "package:https://pypi.org/simple"),
+                "package:"
+                + os.environ.get("PIP_INDEX_URL", "package:https://pypi.org/simple"),
             )
             result.assert_outcomes(passed=1)
         finally:

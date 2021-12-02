@@ -26,9 +26,9 @@ from typing import Iterator, Optional, Tuple
 
 import pytest
 
+# be careful not to import any core>=6 objects directly
 import core
 import utils
-# be careful not to import any core>=6 objects directly
 from inmanta import env
 
 if not core.SUPPORTS_MODULES_V2:

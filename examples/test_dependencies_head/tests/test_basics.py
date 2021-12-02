@@ -22,5 +22,6 @@ def test_import_transitive(project):
     Verify that transitive dependencies on v2 modules are installed.
     """
     import inmanta_plugins.test_dependencies_tail  # noqa: F401
+
     project.compile("import test_dependencies_head")
-    import inmanta_plugins.test_dependencies_tail  # noqa: F401
+    import inmanta_plugins.test_dependencies_tail  # noqa: F401, F811

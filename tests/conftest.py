@@ -26,9 +26,9 @@ from typing import Iterator, Optional
 import pkg_resources
 import pytest
 
+# be careful not to import any core>=6 objects directly
 import core
 import pytest_inmanta.plugin
-# be careful not to import any core>=6 objects directly
 from inmanta import env, loader, plugins
 from inmanta.loader import PluginModuleFinder
 from libpip2pi.commands import dir2pi
