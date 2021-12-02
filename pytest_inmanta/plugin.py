@@ -29,11 +29,14 @@ import typing
 import warnings
 from collections import defaultdict
 from distutils import dir_util
+from itertools import chain
 from pathlib import Path
 from textwrap import dedent
 from types import FunctionType, ModuleType
 
+import pydantic
 import pytest
+import yaml
 from pytest import CaptureFixture
 from tornado import ioloop
 
@@ -217,6 +220,32 @@ def project_shared_no_plugins(
     yield project_factory(load_plugins=False)
 
 
+def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[object]:
+    """
+    Returns the list of repos for the project as a serializable object. For recent versions of core, includes repo types.
+
+    :param repo_options: The desired repos as plain strings in the form "[<type>:]<url>". If type is omitted, defaults to git
+        for backwards compatibility. Explicitly passing type is only supported for inmanta versions that accept type in the
+        project metadata.
+    """
+
+    def parse_repo(repo_str: str) -> object:
+        parts: typing.Sequence[str] = repo_str.split(":", maxsplit=1)
+        if not hasattr(module, "ModuleRepoType"):
+            # compatibility mode
+            return repo_str
+        else:
+            repo_info: module.ModuleRepoInfo
+            try:
+                repo_info = module.ModuleRepoInfo(url=parts[1], type=parts[0])
+            # there might be only one part or part might be just "https"
+            except (IndexError, pydantic.ValidationError):
+                repo_info = module.ModuleRepoInfo(url=repo_str)
+            return json.loads(repo_info.json())
+
+    return [parse_repo(repo) for repo in repo_options]
+
+
 @pytest.fixture(scope="session")
 def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Project"]:
     """
@@ -229,19 +258,21 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
     repo_options = get_opt_or_env_or(
         request.config, "inm_module_repo", "https://github.com/inmanta/"
     )
-    repos = []
-    if isinstance(repo_options, list):
-        for repo in repo_options:
-            repos += repo.split(" ")
-    else:
-        repos = repo_options.split(" ")
+    repos: typing.Sequence[object] = get_project_repos(
+        chain.from_iterable(
+            repo.split(" ")
+            for repo in (
+                repo_options if isinstance(repo_options, list) else [repo_options]
+            )
+        )
+    )
 
     install_mode = get_opt_or_env_or(request.config, "inm_install_mode", "release")
 
     modulepath = ["libs"]
     in_place = request.config.getoption("--use-module-in-place")
     if in_place:
-        modulepath.append(str(Path(os.getcwd()).parent))
+        modulepath.append(str(Path(CURDIR).parent))
 
     env_override = get_opt_or_env_or(request.config, "inm_venv", None)
     env_dir = os.path.join(test_project_dir, ".env")
@@ -259,20 +290,15 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
             raise
 
     with open(os.path.join(test_project_dir, "project.yml"), "w+") as fd:
-        fd.write(
-            """name: testcase
-description: Project for testcase
-repo: ['%(repo)s']
-modulepath: ['%(modulepath)s']
-downloadpath: libs
-install_mode: %(install_mode)s
-"""
-            % {
-                "repo": "', '".join(repos),
-                "install_mode": install_mode,
-                "modulepath": "', '".join(modulepath),
-            }
-        )
+        metadata: typing.Mapping[str, object] = {
+            "name": "testcase",
+            "description": "Project for testcase",
+            "repo": repos,
+            "modulepath": modulepath,
+            "downloadpath": "libs",
+            "install_mode": install_mode,
+        }
+        yaml.dump(metadata, fd)
 
     ensure_current_module_install(os.path.join(test_project_dir, "libs"), in_place)
 

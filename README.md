@@ -165,6 +165,9 @@ The following options are available.
     module to a temporary libs directory. It allows testing the current module against specific versions of dependent modules. 
     Using this option can speed up the tests, because the module dependencies are not downloaded multiple times.
  * `--module_repo`: location to download modules from, overrides `INMANTA_MODULE_REPO`. The default value is the inmanta github organisation.
+    For versions of inmanta-core that support v2 modules, the repo accepts the format "[<type>:]<url>" with "type" the repository type as
+    defined in the project config documentation. If type is omitted, git is assumed.
+    Multiple repos can be passed by space-separating them or by passing the parameter multiple times.
  * `--install_mode`: install mode to use for modules downloaded during this test, overrides `INMANTA_INSTALL_MODE`.
  * `--no_load-plugins`: Don't load plugins in the Project class. Overrides `INMANTA_TEST_NO_LOAD_PLUGINS`. 
  The value of INMANTA_TEST_NO_LOAD_PLUGINS environment variable has to be a non-empty string to not load plugins.
