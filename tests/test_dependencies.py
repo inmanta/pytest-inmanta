@@ -46,7 +46,7 @@ def test_transitive_v2_dependencies(examples_v2_package_index, pytestconfig, tes
                 f"package:{examples_v2_package_index}",
                 # include configured pip index for inmanta-module-std
                 "--module_repo",
-                "package:" + os.environ.get("PIP_INDEX_URL", "package:https://pypi.org/"),
+                "package:" + os.environ.get("PIP_INDEX_URL", "package:https://pypi.org/simple"),
             )
             result.assert_outcomes(passed=1)
         finally:
