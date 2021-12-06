@@ -1,4 +1,4 @@
-inmanta-dev-dependencies==1.68.0
+inmanta-dev-dependencies==1.69.0
 inmanta-core
 pydantic==1.8.2
 pyyaml==6.0
