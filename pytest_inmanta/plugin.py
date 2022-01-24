@@ -1,5 +1,5 @@
 """
-    Copyright 2019 Inmanta
+    Copyright 2021 Inmanta
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -15,12 +15,13 @@
 
     Contact: code@inmanta.com
 """
-import glob
 import importlib
+import inspect
 import json
 import logging
 import math
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -28,17 +29,19 @@ import typing
 import warnings
 from collections import defaultdict
 from distutils import dir_util
+from itertools import chain
 from pathlib import Path
 from textwrap import dedent
 from types import FunctionType, ModuleType
 
+import pydantic
 import pytest
 import yaml
 from pytest import CaptureFixture
 from tornado import ioloop
 
 import inmanta.ast
-from inmanta import compiler, config, const, module, protocol
+from inmanta import compiler, config, const, module, plugins, protocol
 from inmanta.agent import cache, handler
 from inmanta.agent import io as agent_io
 from inmanta.agent.handler import HandlerContext, ResourceHandler
@@ -118,27 +121,34 @@ def get_opt_or_env_or(config, key: str, default: str) -> str:
     return default
 
 
-def get_module_info() -> typing.Tuple[str, str]:
-    curdir = CURDIR
-    # Make sure that we are executed in a module
-    dir_path = curdir.split(os.path.sep)
-    while (
-        not os.path.exists(os.path.join(os.path.join("/", *dir_path), "module.yml"))
-        and len(dir_path) > 0
-    ):
-        dir_path.pop()
+def get_module() -> typing.Tuple[module.Module, str]:
+    """
+    Returns the module instance for the module being tested, as well as the path to its root.
+    For v2 modules, the returned path is the same as the module's path attribute.
+    """
 
-    if len(dir_path) == 0:
+    def find_module(path: str) -> typing.Optional[typing.Tuple[module.Module, str]]:
+        mod: typing.Optional[module.Module]
+        if hasattr(module.Module, "from_path"):
+            mod = module.Module.from_path(path)
+        else:
+            # older versions of inmanta-core
+            try:
+                mod = module.Module(project=None, path=path)
+            except module.InvalidModuleException:
+                mod = None
+        if mod is not None:
+            return mod, path
+        parent: str = os.path.dirname(path)
+        return find_module(parent) if parent != path else None
+
+    mod_info: typing.Optional[typing.Tuple[module.Module, str]] = find_module(CURDIR)
+    if mod_info is None:
         raise Exception(
             "Module test case have to be saved in the module they are intended for. "
-            "%s not part of module path" % curdir
+            "%s not part of module path" % CURDIR
         )
-
-    module_dir = os.path.join("/", *dir_path)
-    with open(os.path.join(module_dir, "module.yml")) as m:
-        module_name = yaml.safe_load(m)["name"]
-
-    return module_dir, module_name
+    return mod_info
 
 
 @pytest.fixture()
@@ -210,6 +220,32 @@ def project_shared_no_plugins(
     yield project_factory(load_plugins=False)
 
 
+def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[object]:
+    """
+    Returns the list of repos for the project as a serializable object. For recent versions of core, includes repo types.
+
+    :param repo_options: The desired repos as plain strings in the form "[<type>:]<url>". If type is omitted, defaults to git
+        for backwards compatibility. Explicitly passing type is only supported for inmanta versions that accept type in the
+        project metadata.
+    """
+
+    def parse_repo(repo_str: str) -> object:
+        parts: typing.Sequence[str] = repo_str.split(":", maxsplit=1)
+        if not hasattr(module, "ModuleRepoType"):
+            # compatibility mode
+            return repo_str
+        else:
+            repo_info: module.ModuleRepoInfo
+            try:
+                repo_info = module.ModuleRepoInfo(url=parts[1], type=parts[0])
+            # there might be only one part or part might be just "https"
+            except (IndexError, pydantic.ValidationError):
+                repo_info = module.ModuleRepoInfo(url=repo_str)
+            return json.loads(repo_info.json())
+
+    return [parse_repo(repo) for repo in repo_options]
+
+
 @pytest.fixture(scope="session")
 def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Project"]:
     """
@@ -222,26 +258,29 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
     repo_options = get_opt_or_env_or(
         request.config, "inm_module_repo", "https://github.com/inmanta/"
     )
-    repos = []
-    if isinstance(repo_options, list):
-        for repo in repo_options:
-            repos += repo.split(" ")
-    else:
-        repos = repo_options.split(" ")
+    repos: typing.Sequence[object] = get_project_repos(
+        chain.from_iterable(
+            repo.split(" ")
+            for repo in (
+                repo_options if isinstance(repo_options, list) else [repo_options]
+            )
+        )
+    )
 
     install_mode = get_opt_or_env_or(request.config, "inm_install_mode", "release")
 
     modulepath = ["libs"]
     in_place = request.config.getoption("--use-module-in-place")
     if in_place:
-        modulepath.append(str(Path(os.getcwd()).parent))
+        modulepath.append(str(Path(CURDIR).parent))
 
     env_override = get_opt_or_env_or(request.config, "inm_venv", None)
+    env_dir = os.path.join(test_project_dir, ".env")
     if env_override and not os.path.isdir(env_override):
         raise Exception(f"Specified venv {env_override} does not exist")
     if env_override is not None:
         try:
-            os.symlink(env_override, os.path.join(test_project_dir, ".env"))
+            os.symlink(os.path.abspath(env_override), env_dir)
         except OSError:
             LOGGER.exception(
                 "Unable to use shared env (symlink creation from %s to %s failed).",
@@ -251,33 +290,24 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
             raise
 
     with open(os.path.join(test_project_dir, "project.yml"), "w+") as fd:
-        fd.write(
-            """name: testcase
-description: Project for testcase
-repo: ['%(repo)s']
-modulepath: ['%(modulepath)s']
-downloadpath: libs
-install_mode: %(install_mode)s
-"""
-            % {
-                "repo": "', '".join(repos),
-                "install_mode": install_mode,
-                "modulepath": "', '".join(modulepath),
-            }
-        )
+        metadata: typing.Mapping[str, object] = {
+            "name": "testcase",
+            "description": "Project for testcase",
+            "repo": repos,
+            "modulepath": modulepath,
+            "downloadpath": "libs",
+            "install_mode": install_mode,
+        }
+        yaml.dump(metadata, fd)
 
-    # copy the current module in
-    module_dir, module_name = get_module_info()
-    if not in_place:
-        dir_util.copy_tree(
-            module_dir, os.path.join(test_project_dir, "libs", module_name)
-        )
+    ensure_current_module_install(os.path.join(test_project_dir, "libs"), in_place)
 
-    def create_project(**kwargs):
+    def create_project(**kwargs: object):
         extended_kwargs: typing.Dict[str, object] = {
             "load_plugins": not get_opt_or_env_or(
                 request.config, "inm_no_load_plugins", False
             ),
+            "env_path": env_dir,
             **kwargs,
         }
         test_project = Project(test_project_dir, **extended_kwargs)
@@ -303,6 +333,34 @@ install_mode: %(install_mode)s
         )
 
     sys.path = _sys_path
+
+
+def ensure_current_module_install(v1_modules_dir: str, in_place: bool = False) -> None:
+    """
+    Ensures that the current module is installed: if it is a v1 module, adds it to the modules path, otherwise verifies that it
+    has been installed.
+    """
+    # copy the current module in
+    mod: module.Module
+    path: str
+    mod, path = get_module()
+    if not hasattr(module, "ModuleV2") or isinstance(mod, module.ModuleV1):
+        if not in_place:
+            dir_util.copy_tree(path, os.path.join(v1_modules_dir, mod.name))
+    else:
+        installed: typing.Optional[module.ModuleV2] = module.ModuleV2Source(
+            urls=[]
+        ).get_installed_module(None, mod.name)
+        if installed is None:
+            raise Exception(
+                "The module being tested is not installed in the current Python environment. Please install it with"
+                " `inmanta module install -e .` before running the tests."
+            )
+        if not installed.is_editable():
+            LOGGER.warning(
+                "The module being tested is not installed in editable mode. As a result the tests will not pick up any changes"
+                " to the local source files. To install it in editable mode, run `inmanta module install -e .`."
+            )
 
 
 class MockProcess(object):
@@ -363,36 +421,140 @@ class InmantaPluginsImporter:
             return None
         result = {}
         importlib.invalidate_caches()
-        for _, fq_submod_name in self.get_plugin_files_for_module(modules[module_name]):
-            result[str(fq_submod_name)] = importlib.import_module(fq_submod_name)
+        for _, fq_submod_name in modules[module_name].get_plugin_files():
+            result[str(fq_submod_name)] = importlib.import_module(str(fq_submod_name))
         return result
 
-    # TODO: this method duplicates inmanta.module.Module.get_plugin_files (2020.4), see #76
-    def get_plugin_files_for_module(
-        self, mod: module.Module
-    ) -> typing.Iterator[typing.Tuple[str, str]]:
-        """
-        Returns a tuple (absolute_path, fq_mod_name) of all python files in this module.
-        """
-        plugin_dir: str = os.path.join(mod._path, "plugins")
 
-        if not os.path.exists(plugin_dir):
-            return iter(())
+class ProjectLoader:
+    """
+    Singleton providing methods for managing project loading and associated side effects. Since these operations have global
+    side effects, managing them calls for a centralized manager rather than managing them on the Project instance level.
 
-        if not os.path.exists(os.path.join(plugin_dir, "__init__.py")):
-            raise Exception(
-                "The plugin directory %s should be a valid python package with a __init__.py file"
-                % plugin_dir
-            )
-        return (
-            (
-                file_name,
-                mod._get_fq_mod_name_for_py_file(file_name, plugin_dir, mod.name),
-            )
-            for file_name in glob.iglob(
-                os.path.join(plugin_dir, "**", "*.py"), recursive=True
-            )
+    This class manages the setting and loading of a project, as well as the following side effects:
+        - Python modules: under normal operation, an inmanta module's Python modules are loaded when the project is loaded.
+            However, to support top-level Python imports in test cases, pytest-inmanta instructs the project to not clean
+            up loaded Python modules when setting a new project as this would force a reload, changing object identities.
+            One exception is when working with dynamic modules whose content might change between project loads (for example
+            the unittest module and any module created with Project.create_module). Therefore any dynamic modules are always
+            forcefully cleaned up, forcing a reload when next imported.
+        - Python module state: since Python module objects are kept alive (see above), any state kept on those objects is
+            carried over accross compiles. To start each compile from a fresh state, any stateful modules must define one or
+            more cleanup functions. This class is responsible for calling these functions when appropriate.
+        - plugins: under normal operation, loading a project registers all modules' plugins as a side effect of loading each
+            module's Python modules. However, pytest-inmanta does not reload said Python modules (see above). To make sure only
+            loaded modules' plugins are registered (and thus accessible from the model), each loaded project starts with a clean
+            (empty) set of registered plugins. Loading the project registers any plugins for newly loaded modules while this
+            class is responsible for completing the set with appropriate previously registered plugins.
+    """
+
+    _registered_plugins: typing.Dict[str, typing.Type[plugins.Plugin]] = {}
+    _dynamic_modules: typing.Set[str] = set()
+
+    @classmethod
+    def load(cls, project: module.Project) -> None:
+        """
+        Sets and loads the given project.
+        """
+        # unload dynamic modules before fetching currently registered plugins: they should not be included
+        cls._unload_dynamic_modules()
+        # add currently registered plugins to tracked plugins before loading the project
+        cls._refresh_registered_plugins()
+        # reset modules' state
+        cls._reset_module_state()
+
+        # For supported versions of core, don't clean up loaded modules between invocations to keep top-level imports valid
+        signature_set: inspect.Signature = inspect.Signature.from_callable(
+            module.Project.set
         )
+        extra_kwargs_set = (
+            {"clean": False} if "clean" in signature_set.parameters.keys() else {}
+        )
+        module.Project.set(project, **extra_kwargs_set)
+
+        # deregister plugins
+        plugins.PluginMeta.clear()
+
+        # load the project
+        if hasattr(project, "install_modules"):
+            # more recent versions of core require explicit modules installation (ISO5+)
+            project.install_modules()
+        project.load()
+
+        # complete the set of registered plugins from the previously registered ones
+        cls._register_plugins(project)
+
+    @classmethod
+    def _refresh_registered_plugins(cls) -> None:
+        """
+        Refresh the tracked registered plugins. Should be called at least once between project loads.
+        """
+        cls._registered_plugins.update(plugins.PluginMeta.get_functions())
+
+    @classmethod
+    def _register_plugins(cls, project: module.Project) -> None:
+        """
+        Registers all plugin functions for a given project. For each of the project's loaded modules, reregisters any plugins
+        that are not currently registered from the set of tracked plugins.
+        """
+        currently_registered_plugins: typing.Mapping[
+            str, typing.Type[plugins.Plugin]
+        ] = plugins.PluginMeta.get_functions()
+        loaded_mod_ns_pattern: typing.Pattern[str] = re.compile(
+            "(" + "|".join(re.escape(mod) for mod in project.modules.keys()) + ")::"
+        )
+        for fq_plugin_name, plugin in cls._registered_plugins.items():
+            if (
+                fq_plugin_name not in currently_registered_plugins
+                and loaded_mod_ns_pattern.match(fq_plugin_name)
+            ):
+                plugins.PluginMeta.add_function(plugin)
+
+    @classmethod
+    def register_dynamic_module(cls, module_name: str) -> None:
+        """
+        Register a module as dynamic by name. Dynamic modules are forcefully reloaded on each project load.
+        """
+        cls._dynamic_modules.add(module_name)
+
+    @classmethod
+    def _unload_dynamic_modules(cls) -> None:
+        """
+        Unload all registered dynamic modules to force a reload on the next compile. Should be called at least once between
+        project loads because it assumes that either a dynamic module is loaded by the currently active project or it was
+        not loaded at all.
+        """
+        if not hasattr(module.Module, "unload"):
+            # older versions of core (<6) don't support (and don't require) explicit module unloading
+            return
+        project: module.Project
+        try:
+            project = module.Project.get()
+        except module.ProjectNotFoundException:
+            # no project has been loaded yet, no need to unload any modules
+            return
+        for mod in cls._dynamic_modules:
+            if mod in project.modules:
+                project.modules[mod].unload()
+
+    @classmethod
+    def clear_dynamic_modules(cls) -> None:
+        """
+        Clear the set of registered dynamic modules, unloading them first.
+        """
+        cls._unload_dynamic_modules()
+        cls._dynamic_modules = set()
+
+    @classmethod
+    def _reset_module_state(cls) -> None:
+        """
+        Resets any state kept on Python module objects associated with Inmanta modules by calling predefined cleanup functions.
+        """
+        for mod_name, mod in sys.modules.items():
+            if mod_name.startswith("inmanta_plugins."):
+                for func_name, func in mod.__dict__.items():
+                    if func_name.startswith("inmanta_reset_state") and callable(func):
+                        func()
 
 
 class Project:
@@ -402,8 +564,19 @@ class Project:
     environment variable. Repositories are separated with spaces.
     """
 
-    def __init__(self, project_dir: str, load_plugins: bool = True) -> None:
+    def __init__(
+        self,
+        project_dir: str,
+        env_path: str,
+        load_plugins: typing.Optional[bool] = True,
+    ) -> None:
+        """
+        :param project_dir: Directory containing the Inmanta project.
+        :param env_path: The path to the venv to be used by the compiler.
+        :param load_plugins: Load plugins iff this value is not None.
+        """
         self._test_project_dir = project_dir
+        self._env_path = env_path
         self._stdout: typing.Optional[str] = None
         self._stderr: typing.Optional[str] = None
         self.types: typing.Optional[typing.Dict[str, inmanta.ast.Type]] = None
@@ -415,7 +588,7 @@ class Project:
         self._facts: typing.Dict[
             ResourceIdStr, typing.Dict[str, typing.Any]
         ] = defaultdict(dict)
-        self._should_load_plugins: bool = load_plugins
+        self._should_load_plugins: typing.Optional[bool] = load_plugins
         self._plugins: typing.Optional[typing.Dict[str, FunctionType]] = None
         self._load()
         self._capsys: typing.Optional[CaptureFixture] = None
@@ -438,6 +611,37 @@ class Project:
         self._handlers = set()
         self._load()
         config.Config.load_config()
+
+    def _create_project_and_load(self, model: str) -> module.Project:
+        """
+        This method doesn the following:
+        * Add the given model file to the Inmanta project
+        * Install the module dependencies
+        * Load the project
+
+        :param init: True iff the project should start from a clean slate. Ignored for older (<6) versions of core.
+        :return: The newly created module.Project instance.
+        """
+        with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
+            fd.write(model)
+
+        signature_init: inspect.Signature = inspect.Signature.from_callable(
+            module.Project.__init__
+        )
+        # The venv_path parameter only exists on ISO5+
+        extra_kwargs_init = (
+            {"venv_path": self._env_path}
+            if "venv_path" in signature_init.parameters.keys()
+            else {}
+        )
+        test_project = module.Project(self._test_project_dir, **extra_kwargs_init)
+
+        ProjectLoader.load(test_project)
+
+        # refresh plugins
+        if self._should_load_plugins is not None:
+            self._plugins = self._load_plugins()
+        return test_project
 
     def add_blob(self, key: str, content: bytes, allow_overwrite: bool = True) -> None:
         """
@@ -469,12 +673,12 @@ class Project:
 
         c.open_version(resource.id.version)
         try:
-            p = handler.Commander.get_provider(c, agent, resource)  # typing: ignore
+            p = handler.Commander.get_provider(c, agent, resource)  # type: ignore
             p.set_cache(c)
-            p.get_file = lambda x: self.get_blob(x)  # typing: ignore
-            p.stat_file = lambda x: self.stat_blob(x)  # typing: ignore
-            p.upload_file = lambda x, y: self.add_blob(x, y)  # typing: ignore
-            p.run_sync = ioloop.IOLoop.current().run_sync  # typing: ignore
+            p.get_file = lambda x: self.get_blob(x)  # type: ignore
+            p.stat_file = lambda x: self.stat_blob(x)  # type: ignore
+            p.upload_file = lambda x, y: self.add_blob(x, y)  # type: ignore
+            p.run_sync = ioloop.IOLoop.current().run_sync  # type: ignore
             self._handlers.add(p)
             return p
         except Exception as e:
@@ -485,7 +689,7 @@ class Project:
         json_encode({"message": ctx.logs})
 
     def get_resource(
-        self, resource_type: str, **filter_args: typing.Dict[str, object]
+        self, resource_type: str, **filter_args: object
     ) -> typing.Optional[Resource]:
         """
         Get a resource of the given type and given filter on the resource attributes. If multiple resource match, the
@@ -544,7 +748,7 @@ class Project:
         status: const.ResourceState = const.ResourceState.deployed,
         run_as_root: bool = False,
         change: const.Change = None,
-        **filter_args: typing.Dict[str, object],
+        **filter_args: object,
     ) -> Resource:
         """
         Deploy a resource of the given type, that matches the filter and assert the outcome
@@ -588,7 +792,7 @@ class Project:
         resource_type: str,
         status: const.ResourceState = const.ResourceState.dry,
         run_as_root: bool = False,
-        **filter_args: typing.Dict[str, object],
+        **filter_args: object,
     ) -> typing.Dict[str, AttributeStateChange]:
         """
         Run a dryrun for a specific resource.
@@ -637,19 +841,15 @@ license: Test License
             """
             )
 
+        ProjectLoader.register_dynamic_module(name)
+
     def _load(self) -> None:
         """
         Load the current module and compile an otherwise empty project
         """
-        _, module_name = get_module_info()
-        with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
-            fd.write(f"import {module_name}")
-        test_project = module.Project(self._test_project_dir)
-        module.Project.set(test_project)
-        test_project.load()
-        # refresh plugins
-        if self._should_load_plugins is not None:
-            self._plugins = self._load_plugins()
+        mod: module.Module
+        mod, _ = get_module()
+        self._create_project_and_load(model=f"import {mod.name}")
 
     def compile(self, main: str, export: bool = False, no_dedent: bool = True) -> None:
         """
@@ -659,13 +859,6 @@ license: Test License
         :param export: Whether the model should be exported after the compile
         :param no_dedent: Don't remove additional indentation in the model
         """
-        # Dedent the input format
-        model = dedent(main.strip("\n")) if not no_dedent else main
-
-        # write main.cf
-        with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
-            fd.write(model)
-
         # logging model with line numbers
         def enumerate_model(model: str):
             lines = model.split("\n")
@@ -678,15 +871,10 @@ license: Test License
             )
             return line_numbers_model
 
+        # Dedent the input format
+        model = dedent(main.strip("\n")) if not no_dedent else main
         LOGGER.debug(f"Compiling model:\n{enumerate_model(model)}")
-
-        # compile the model
-        test_project = module.Project(self._test_project_dir)
-        module.Project.set(test_project)
-        test_project.load()
-        # refresh plugins
-        if self._should_load_plugins is not None:
-            self._plugins = self._load_plugins()
+        self._create_project_and_load(model)
 
         # flush io capture buffer
         self._capsys.readouterr()
@@ -753,11 +941,14 @@ license: Test License
         with open(os.path.join(dir_name, name), "w+") as fd:
             fd.write(content)
 
+        ProjectLoader.register_dynamic_module("unittest")
+
     def _load_plugins(self) -> typing.Dict[str, FunctionType]:
-        _, module_name = get_module_info()
+        mod: module.Module
+        mod, _ = get_module()
         submodules: typing.Optional[
             typing.Dict[str, ModuleType]
-        ] = InmantaPluginsImporter(self).get_submodules(module_name)
+        ] = InmantaPluginsImporter(self).get_submodules(mod.name)
         return (
             {}
             if submodules is None
@@ -834,6 +1025,7 @@ license: Test License
             initcf=get_module_data("init.cf"),
             initpy=get_module_data("init.py"),
         )
+        ProjectLoader.clear_dynamic_modules()
 
     def finalize_handler(self, handler: ResourceHandler) -> None:
         handler.cache.close()

@@ -8,6 +8,11 @@ A pytest plugin to test inmanta modules
 pip install pytest-inmanta
 ```
 
+If you want to use `pytest-inmanta` to test a v2 module, make sure to install the module:
+```bash
+inmanta module install -e .
+```
+
 ## Usage
 
 This plugin provides a test fixture that can compile, export and deploy code without running an actual inmanta server.
@@ -66,9 +71,10 @@ And dryrun
     assert changes == {"value": {'current': 'read', 'desired': 'write'}}
 ```
 
-Testing functions and classes defined in a module is also possible
+Testing functions and classes defined in a v1 module is also possible
 using the `inmanta_plugins` fixture. The fixture exposes inmanta modules as its attributes
-and imports them dynamically when accessed.
+and imports them dynamically when accessed. For v2 modules, the recommended approach is to
+just use top-level imports instead of using the fixture.
 
 ```python
     def test_example(inmanta_plugins):
@@ -128,6 +134,26 @@ A test case, to test this plugin looks like this:
   function named `plugin_name`. As such, this line tests whether `host` is returned when the plugin function
   `hostname` is called with the parameter `fqdn`.
 
+## Advanced usage
+
+Because pytest-inmanta keeps `inmanta_plugins` submodule objects alive to support top-level imports, any stateful modules
+(modules that keep state on global Python variables in the module's namespace) must define cleanup logic to reset state between
+compiles. Pytest-inmanta expects such cleanup functions to be synchronous functions that live in the top-level scope (defined
+on the module object, not in a class) of a `inmanta_plugins` submodule (of any depth). Their name should start with
+"inmanta\_reset\_state" and they should not take any parameters. For example:
+
+```python
+    # <module-name>/plugins/state.py
+
+    MY_STATE = set()
+
+    def inmanta_reset_state() -> None:
+        global MY_STATE
+        MY_STATE = set()
+```
+
+Multiple cleanup functions may be defined, in which case no guaranteed call order is defined.
+
 ## Options
 
 The following options are available.
@@ -139,6 +165,9 @@ The following options are available.
     module to a temporary libs directory. It allows testing the current module against specific versions of dependent modules. 
     Using this option can speed up the tests, because the module dependencies are not downloaded multiple times.
  * `--module_repo`: location to download modules from, overrides `INMANTA_MODULE_REPO`. The default value is the inmanta github organisation.
+    For versions of inmanta-core that support v2 modules, the repo accepts the format "[<type>:]<url>" with "type" the repository type as
+    defined in the project config documentation. If type is omitted, git is assumed.
+    Multiple repos can be passed by space-separating them or by passing the parameter multiple times.
  * `--install_mode`: install mode to use for modules downloaded during this test, overrides `INMANTA_INSTALL_MODE`.
  * `--no_load-plugins`: Don't load plugins in the Project class. Overrides `INMANTA_TEST_NO_LOAD_PLUGINS`. 
  The value of INMANTA_TEST_NO_LOAD_PLUGINS environment variable has to be a non-empty string to not load plugins.
