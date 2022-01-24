@@ -1,4 +1,4 @@
-# v 2.0.0 (?)
+# v 2.0.0 (2022-01-24)
 Changes in this release:
 - Added support for testing v2 modules.
 - Extended to be compatible with `inmanta-core>=6`
