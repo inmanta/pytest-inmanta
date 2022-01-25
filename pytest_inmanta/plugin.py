@@ -1026,6 +1026,7 @@ license: Test License
             initpy=get_module_data("init.py"),
         )
         ProjectLoader.clear_dynamic_modules()
+        os.chdir(CURDIR)
 
     def finalize_handler(self, handler: ResourceHandler) -> None:
         handler.cache.close()
