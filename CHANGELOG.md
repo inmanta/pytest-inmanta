@@ -1,3 +1,7 @@
+# v 2.0.1 (2020-01-26)
+Changes in this release:
+- Fix bug where the `project` fixture doesn't reset the current working directory in the cleanup stage.
+
 # v 2.0.0 (2022-01-24)
 Changes in this release:
 - Added support for testing v2 modules.
