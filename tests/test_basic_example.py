@@ -165,3 +165,13 @@ def test_state(testdir):
     result = testdir.runpytest("tests/test_state.py")
 
     result.assert_outcomes(passed=2)
+
+
+def test_cwd(testdir):
+    """Ensure that the project fixture resets the cwd after each test case."""
+
+    testdir.copy_example("testmodule")
+
+    result = testdir.runpytest("tests/test_cwd.py")
+
+    result.assert_outcomes(passed=2)
