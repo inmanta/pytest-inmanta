@@ -1013,7 +1013,7 @@ license: Test License
         DATA[name].update(kwargs)
 
     def check_serialization(self, resource: Resource) -> Resource:
-        """ Check if the resource is serializable """
+        """Check if the resource is serializable"""
         serialized = json.loads(json_encode(resource.serialize()))
         return Resource.deserialize(serialized)
 
