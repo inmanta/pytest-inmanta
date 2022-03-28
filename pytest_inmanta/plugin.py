@@ -34,7 +34,7 @@ from itertools import chain
 from pathlib import Path
 from textwrap import dedent
 from types import FunctionType, ModuleType
-from typing import Dict, Iterator, List, Optional, Set, Tuple, FrozenSet
+from typing import Dict, Iterator, List, Optional, Set, Tuple
 
 import pydantic
 import pytest
@@ -561,7 +561,7 @@ class ProjectLoader:
 
 
 def get_resources_matching(
-    resources: collections.abc.Set[Resource], resource_type: str, **filter_args: object
+    resources: "collections.abc.Set[Resource]", resource_type: str, **filter_args: object
 ) -> Iterator[Resource]:
     def apply_filter(resource: Resource) -> bool:
         for arg, value in filter_args.items():
