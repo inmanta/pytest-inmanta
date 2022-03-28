@@ -4,7 +4,7 @@ from pytest_inmanta.handler import DATA
 import pytest
 
 
-def test_close_cache(project):
+def test_full_deploy(project):
     project.compile(
         """
         import unittest
