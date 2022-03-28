@@ -1,5 +1,5 @@
 inmanta-dev-dependencies==1.76.0; python_version <= '3.6'
-inmanta-dev-dependencies==2.10.0; python_version > '3.6'
+inmanta-dev-dependencies==2.11.0; python_version > '3.6'
 inmanta-core
 pydantic==1.9.0
 pyyaml==6.0
