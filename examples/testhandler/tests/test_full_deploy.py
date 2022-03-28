@@ -1,7 +1,7 @@
-from inmanta.const import ResourceState
-
-from pytest_inmanta.handler import DATA
 import pytest
+
+from inmanta.const import ResourceState
+from pytest_inmanta.handler import DATA
 
 
 def test_full_deploy(project):
@@ -34,11 +34,21 @@ def test_full_deploy(project):
         results.get_context_for("unittest::Resource")
 
     # This returns all of them
-    assert len(results.get_contexts_for("unittest::Resource",desired_value="x")) == 7
+    assert len(results.get_contexts_for("unittest::Resource", desired_value="x")) == 7
 
-    assert results.get_context_for("unittest::Resource", name="first").status == ResourceState.deployed
-    assert results.get_context_for("unittest::Resource", name="r_skip").status == ResourceState.skipped
-    assert results.get_context_for("unittest::Resource", name="skip_to").status == ResourceState.skipped
-    assert results.get_context_for("unittest::Resource", name="r_fail").status == ResourceState.failed
-
-
+    assert (
+        results.get_context_for("unittest::Resource", name="first").status
+        == ResourceState.deployed
+    )
+    assert (
+        results.get_context_for("unittest::Resource", name="r_skip").status
+        == ResourceState.skipped
+    )
+    assert (
+        results.get_context_for("unittest::Resource", name="skip_to").status
+        == ResourceState.skipped
+    )
+    assert (
+        results.get_context_for("unittest::Resource", name="r_fail").status
+        == ResourceState.failed
+    )

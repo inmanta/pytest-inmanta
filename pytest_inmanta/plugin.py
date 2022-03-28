@@ -561,7 +561,9 @@ class ProjectLoader:
 
 
 def get_resources_matching(
-    resources: "collections.abc.Set[Resource]", resource_type: str, **filter_args: object
+    resources: "collections.abc.Set[Resource]",
+    resource_type: str,
+    **filter_args: object,
 ) -> Iterator[Resource]:
     def apply_filter(resource: Resource) -> bool:
         for arg, value in filter_args.items():
@@ -793,13 +795,16 @@ class Project:
 
     def deploy_all(self, run_as_root: bool = False) -> DeployResult:
         """
-            Deploy all resources, in the correct order
+        Deploy all resources, in the correct order
 
-            This method handles skips and failures like the normal orchestrator
+        This method handles skips and failures like the normal orchestrator
 
-            However, it can not handle Undefined resources.
+        However, it can not handle Undefined resources.
         """
-        def build_handler_and_context(resource: Resource) -> Tuple[Resource, ResourceHandler, HandlerContext]:
+
+        def build_handler_and_context(
+            resource: Resource,
+        ) -> Tuple[Resource, ResourceHandler, HandlerContext]:
             h = self.get_handler(resource, run_as_root)
             assert h is not None
             ctx = HandlerContext(resource)
