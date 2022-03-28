@@ -1,6 +1,7 @@
 # v 2.1.0 (?)
 Changes in this release:
 - Fix bug where the `project` fixture doesn't reset the current working directory in the cleanup stage.
+- Add deploy_all method to the `project` fixture
 
 # v 2.0.0 (2022-01-24)
 Changes in this release:
