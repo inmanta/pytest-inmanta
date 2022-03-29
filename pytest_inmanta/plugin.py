@@ -846,6 +846,7 @@ class Project:
             skip = any(
                 all_contexts[str(dependency)][2].status != ResourceState.deployed
                 for dependency in resource.requires
+                if str(dependency) in all_contexts
             )
             if skip:
                 LOGGER.debug("Skipping %s", resource.id)

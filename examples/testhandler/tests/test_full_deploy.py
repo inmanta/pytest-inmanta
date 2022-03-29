@@ -26,7 +26,7 @@ def test_full_deploy(project):
         """
         import unittest
 
-        r1 = unittest::Resource(name="first", desired_value="x")
+        r1 = unittest::Resource(name="first", desired_value="x", requires=ac1)
         r2 = unittest::Resource(name="second", desired_value="x", requires = r1)
         r3 = unittest::Resource(name="third", desired_value="x", requires = r2)
         unittest::Resource(name="first_to", desired_value="x")
@@ -35,6 +35,7 @@ def test_full_deploy(project):
         rf = unittest::Resource(name="r_fail", desired_value="x")
         unittest::Resource(name="skip_to", desired_value="x", requires=[rs,rf])
 
+        ac1 = std::AgentConfig(agentname="test", autostart=true)
         """
     )
 
