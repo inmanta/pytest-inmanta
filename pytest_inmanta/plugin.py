@@ -15,6 +15,7 @@
 
     Contact: code@inmanta.com
 """
+import collections
 import importlib
 import inspect
 import json
@@ -33,6 +34,7 @@ from itertools import chain
 from pathlib import Path
 from textwrap import dedent
 from types import FunctionType, ModuleType
+from typing import Dict, Iterator, List, Optional, Set, Tuple
 
 import pydantic
 import pytest
@@ -45,6 +47,7 @@ from inmanta import compiler, config, const, module, plugins, protocol
 from inmanta.agent import cache, handler
 from inmanta.agent import io as agent_io
 from inmanta.agent.handler import HandlerContext, ResourceHandler
+from inmanta.const import ResourceState
 from inmanta.data import LogLine
 from inmanta.data.model import AttributeStateChange, ResourceIdStr
 from inmanta.execute.proxy import DynamicProxy
@@ -199,7 +202,7 @@ def get_module_data(filename: str) -> str:
 @pytest.fixture(scope="session")
 def project_shared(
     project_factory: typing.Callable[[typing.Dict[str, typing.Any]], "Project"]
-) -> "Project":
+) -> Iterator["Project"]:
     """
     A test fixture that creates a new inmanta project with the current module in. The returned object can be used
     to add files to the unittest module, compile a model and access the results, stdout and stderr.
@@ -211,7 +214,7 @@ def project_shared(
 @pytest.fixture(scope="session")
 def project_shared_no_plugins(
     project_factory: typing.Callable[[typing.Dict[str, typing.Any]], "Project"]
-) -> "Project":
+) -> Iterator["Project"]:
     """
     A test fixture that creates a new inmanta project with the current module in. The returned object can be used
     to add files to the unittest module, compile a model and access the results, stdout and stderr.
@@ -557,6 +560,66 @@ class ProjectLoader:
                         func()
 
 
+def get_resources_matching(
+    resources: "collections.abc.Set[Resource]",
+    resource_type: str,
+    **filter_args: object,
+) -> Iterator[Resource]:
+    def apply_filter(resource: Resource) -> bool:
+        for arg, value in filter_args.items():
+            if not hasattr(resource, arg):
+                return False
+
+            if getattr(resource, arg) != value:
+                return False
+
+        return True
+
+    for resource in resources:
+        if not resource.is_type(resource_type):
+            continue
+
+        if not apply_filter(resource):
+            continue
+
+        yield resource
+
+
+class DeployResult:
+    def __init__(self, results: Dict[Resource, HandlerContext]):
+        self.results = results
+
+    def assert_all(self, status: ResourceState = ResourceState.deployed):
+        for r, ct in self.results.items():
+            assert (
+                ct.status == status
+            ), f"Resource {r.id} has deploy status {ct.status}, expected {status}"
+
+    def get_contexts_for(
+        self, resource_type: str, **filter_args: object
+    ) -> Set[HandlerContext]:
+        return {
+            self.results[resource]
+            for resource in get_resources_matching(
+                self.results.keys(), resource_type, **filter_args
+            )
+        }
+
+    def get_context_for(
+        self, resource_type: str, **filter_args: object
+    ) -> Optional[HandlerContext]:
+        resources = list(
+            get_resources_matching(self.results.keys(), resource_type, **filter_args)
+        )
+        if not resources:
+            return None
+        if len(resources) > 1:
+            raise LookupError(
+                "Multiple resources match this filter, if this is intentional, use get_contexts_for"
+            )
+        return self.results[resources[0]]
+
+
 class Project:
     """
     This class provides a TestCase class for creating module unit tests. It uses the current module and loads required
@@ -698,27 +761,16 @@ class Project:
         :param resource_type: The exact type used in the model (no super types)
         """
 
-        def apply_filter(resource: Resource) -> bool:
-            for arg, value in filter_args.items():
-                if not hasattr(resource, arg):
-                    return False
-
-                if getattr(resource, arg) != value:
-                    return False
-
-            return True
-
-        for resource in self.resources.values():
-            if not resource.is_type(resource_type):
-                continue
-
-            if not apply_filter(resource):
-                continue
-
+        try:
+            resource = next(
+                get_resources_matching(
+                    self.resources.values(), resource_type, **filter_args
+                )
+            )
             resource = self.check_serialization(resource)
             return resource
-
-        return None
+        except StopIteration:
+            return None
 
     def deploy(
         self, resource: Resource, dry_run: bool = False, run_as_root: bool = False
@@ -738,6 +790,69 @@ class Project:
         self.ctx = ctx
         self.finalize_handler(h)
         return ctx
+
+    def deploy_all(self, run_as_root: bool = False) -> DeployResult:
+        """
+        Deploy all resources, in the correct order.
+
+        This method handles skips and failures like the normal orchestrator.
+
+        However, it can not handle Undefined resources.
+        """
+        # clear context, just to avoid confusion
+        self.ctx = None
+
+        def build_handler_and_context(
+            resource: Resource,
+        ) -> Tuple[Resource, ResourceHandler, HandlerContext]:
+            h = self.get_handler(resource, run_as_root)
+            assert h is not None
+            ctx = HandlerContext(resource)
+            return resource, h, ctx
+
+        all_contexts = {
+            str(rid): build_handler_and_context(resource)
+            for rid, resource in self.resources.items()
+        }
+
+        todo: List[str] = sorted(list(all_contexts.keys()))
+        order: List[str] = []
+
+        def topo_sort(doing: List[str], current: str):
+            # to be replace with graphlib.TopologicalSorter when we drop python 3.6 support
+            # Will not win a beauty contest, but it is stable and works
+            if current not in todo:
+                return
+            if current in doing:
+                raise Exception(f"Cycle detected: {doing}")
+
+            todo.remove(current)
+
+            new_doing = doing + [current]
+            for req in all_contexts[current][0].requires:
+                topo_sort(new_doing, str(req))
+            order.append(current)
+
+        while todo:
+            topo_sort([], todo[0])
+
+        for rid in order:
+            resource, h, ctx = all_contexts[rid]
+            skip = any(
+                all_contexts[str(dependency)][2].status != ResourceState.deployed
+                for dependency in resource.requires
+            )
+            if skip:
+                LOGGER.debug("Skipping %s", resource.id)
+                ctx.set_status(ResourceState.skipped)
+            else:
+                LOGGER.debug("Start executing %s", resource.id)
+                h.execute(ctx, resource)
+                LOGGER.debug("Done executing %s", resource.id)
+            self.finalize_context(ctx)
+            self.finalize_handler(h)
+
+        return DeployResult({r: ctx for r, _, ctx in all_contexts.values()})
 
     def dryrun(self, resource: Resource, run_as_root: bool = False) -> HandlerContext:
         return self.deploy(resource, True, run_as_root)

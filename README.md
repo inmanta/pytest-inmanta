@@ -58,7 +58,7 @@ std::print(std::template("unittest/test.tmpl"))
     assert project.get_stdout() == "1234\n"
 ```
 
-And allows deploy
+And allows deployment of specific resources
 
 ```python
     project.deploy_resource("std::ConfigFile")
@@ -69,6 +69,14 @@ And dryrun
 ```python
     changes = project.dryrun_resource("testmodule::Resource")
     assert changes == {"value": {'current': 'read', 'desired': 'write'}}
+```
+
+It is also possible to deploy all resources at once:
+
+```python
+    results = project.deploy_all()
+    results.assert_all(status=ResourceState.deployed)
+    assert results.get_context_for("std::ConfigFile", path="/tmp/test").status == ResourceState.deployed
 ```
 
 Testing functions and classes defined in a v1 module is also possible
