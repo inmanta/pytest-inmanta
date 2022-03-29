@@ -584,9 +584,6 @@ def get_resources_matching(
 
         yield resource
 
-    return
-
-
 class DeployResult:
     def __init__(self, results: Dict[Resource, HandlerContext]):
         self.results = results
@@ -795,9 +792,9 @@ class Project:
 
     def deploy_all(self, run_as_root: bool = False) -> DeployResult:
         """
-        Deploy all resources, in the correct order
+        Deploy all resources, in the correct order.
 
-        This method handles skips and failures like the normal orchestrator
+        This method handles skips and failures like the normal orchestrator.
 
         However, it can not handle Undefined resources.
         """
