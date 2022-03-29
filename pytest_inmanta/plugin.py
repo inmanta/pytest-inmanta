@@ -584,6 +584,7 @@ def get_resources_matching(
 
         yield resource
 
+
 class DeployResult:
     def __init__(self, results: Dict[Resource, HandlerContext]):
         self.results = results
@@ -798,6 +799,8 @@ class Project:
 
         However, it can not handle Undefined resources.
         """
+        # clear context, just to avoid confusion
+        self.ctx = None
 
         def build_handler_and_context(
             resource: Resource,
@@ -847,7 +850,6 @@ class Project:
                 h.execute(ctx, resource)
                 LOGGER.debug("Done executing %s", resource.id)
             self.finalize_context(ctx)
-            self.ctx = ctx
             self.finalize_handler(h)
 
         return DeployResult({r: ctx for r, _, ctx in all_contexts.values()})

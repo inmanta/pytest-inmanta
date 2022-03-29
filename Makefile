@@ -86,9 +86,3 @@ clean:
 	rm -rf build
 	find -name .env | xargs rm -rf
 	python setup.py clean
-	make -C docs clean
-
-.PHONY: docs
-docs:
-	make -C docs html
-
