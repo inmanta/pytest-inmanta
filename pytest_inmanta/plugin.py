@@ -791,13 +791,17 @@ class Project:
         self.finalize_handler(h)
         return ctx
 
-    def deploy_all(self, run_as_root: bool = False) -> DeployResult:
+    def deploy_all(
+        self, run_as_root: bool = False, exclude_all: List[str] = ["std::AgentConfig"]
+    ) -> DeployResult:
         """
         Deploy all resources, in the correct order.
 
         This method handles skips and failures like the normal orchestrator.
 
         However, it can not handle Undefined resources.
+
+        :param exclude_all: list of resource types to exclude from the deploy
         """
         # clear context, just to avoid confusion
         self.ctx = None
@@ -813,6 +817,7 @@ class Project:
         all_contexts = {
             str(rid): build_handler_and_context(resource)
             for rid, resource in self.resources.items()
+            if not any(resource.is_type(extype) for extype in exclude_all)
         }
 
         todo: List[str] = sorted(list(all_contexts.keys()))
