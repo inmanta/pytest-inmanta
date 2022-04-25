@@ -142,7 +142,7 @@ def test_close_cache(project):
     assert len(handler.cache.cache) == 0
 
 
-def test_sys_executable(project):
+def test_280_sys_executable(project):
     """
     Make sure the current python interpreter is the same as the one used by the compiler
     """
