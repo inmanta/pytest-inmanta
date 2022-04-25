@@ -188,7 +188,7 @@ def project_no_plugins(
     DATA.clear()
     project_shared_no_plugins.clean()
     project_shared_no_plugins.init(capsys)
-    project_shared.synchronize_interpreters()
+    project_shared_no_plugins.synchronize_interpreters()
     yield project_shared_no_plugins
     project_shared_no_plugins.clean()
 
