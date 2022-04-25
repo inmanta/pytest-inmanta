@@ -169,8 +169,11 @@ def project(
     DATA.clear()
     project_shared.clean()
     project_shared.init(capsys)
+    stashed_path = sys.executable
+    sys.executable = project_shared.get_compiler_executable()
     yield project_shared
     project_shared.clean()
+    sys.executable = stashed_path
 
 
 @pytest.fixture()
@@ -658,6 +661,12 @@ class Project:
         self.ctx: typing.Optional[HandlerContext] = None
         self._handlers: typing.Set[ResourceHandler] = set()
         config.Config.load_config()
+
+    def get_compiler_executable(self) -> str:
+        if sys.platform != "win32":
+            return os.path.join(self._env_path, "bin", "python")
+        else:
+            return os.path.join(self._env_path, "Scripts", "python.exe")
 
     def init(self, capsys: CaptureFixture) -> None:
         self._stdout = None
