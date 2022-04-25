@@ -62,6 +62,7 @@ from .handler import DATA
 
 CURDIR = os.getcwd()
 LOGGER = logging.getLogger()
+SYS_EXECUTABLE = sys.executable
 
 
 option_to_env = {
@@ -169,11 +170,9 @@ def project(
     DATA.clear()
     project_shared.clean()
     project_shared.init(capsys)
-    stashed_path = sys.executable
-    sys.executable = project_shared.get_compiler_executable()
+    project_shared.synchronize_interpreters()
     yield project_shared
     project_shared.clean()
-    sys.executable = stashed_path
 
 
 @pytest.fixture()
@@ -189,6 +188,7 @@ def project_no_plugins(
     DATA.clear()
     project_shared_no_plugins.clean()
     project_shared_no_plugins.init(capsys)
+    project_shared.synchronize_interpreters()
     yield project_shared_no_plugins
     project_shared_no_plugins.clean()
 
@@ -662,11 +662,17 @@ class Project:
         self._handlers: typing.Set[ResourceHandler] = set()
         config.Config.load_config()
 
-    def get_compiler_executable(self) -> str:
-        if sys.platform != "win32":
-            return os.path.join(self._env_path, "bin", "python")
+    def synchronize_interpreters(self) -> None:
+        """
+        Store the python interpreter used by the compiler in sys.executable
+        """
+        python_name: str = os.path.basename(sys.executable)
+        if sys.platform == "win32":
+            compiler_executable = os.path.join(self._env_path, "Scripts", python_name)
         else:
-            return os.path.join(self._env_path, "Scripts", "python.exe")
+            compiler_executable = os.path.join(self._env_path, "bin", python_name)
+
+        sys.executable = compiler_executable
 
     def init(self, capsys: CaptureFixture) -> None:
         self._stdout = None
@@ -1157,6 +1163,7 @@ license: Test License
         )
         ProjectLoader.clear_dynamic_modules()
         os.chdir(CURDIR)
+        sys.executable = SYS_EXECUTABLE
 
     def finalize_handler(self, handler: ResourceHandler) -> None:
         handler.cache.close()
