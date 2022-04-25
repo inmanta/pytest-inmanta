@@ -170,7 +170,6 @@ def project(
     DATA.clear()
     project_shared.clean()
     project_shared.init(capsys)
-    project_shared.synchronize_interpreters()
     yield project_shared
     project_shared.clean()
 
@@ -188,7 +187,6 @@ def project_no_plugins(
     DATA.clear()
     project_shared_no_plugins.clean()
     project_shared_no_plugins.init(capsys)
-    project_shared_no_plugins.synchronize_interpreters()
     yield project_shared_no_plugins
     project_shared_no_plugins.clean()
 
@@ -662,7 +660,7 @@ class Project:
         self._handlers: typing.Set[ResourceHandler] = set()
         config.Config.load_config()
 
-    def synchronize_interpreters(self) -> None:
+    def _synchronize_interpreters(self) -> None:
         """
         Store the python interpreter used by the compiler in sys.executable
         """
@@ -688,6 +686,7 @@ class Project:
         self.ctx = None
         self._handlers = set()
         self._load()
+        self._synchronize_interpreters()
         config.Config.load_config()
 
     def _create_project_and_load(self, model: str) -> module.Project:
