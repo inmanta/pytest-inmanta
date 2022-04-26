@@ -1,4 +1,4 @@
-# v 2.2.0 (?)
+# v 2.2.0 (2022-04-26)
 Changes in this release:
 - The `project` fixture now makes `sys.executable` point to the compiler's executable
 
