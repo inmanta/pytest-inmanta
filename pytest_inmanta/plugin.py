@@ -660,7 +660,7 @@ class Project:
         self._handlers: typing.Set[ResourceHandler] = set()
         config.Config.load_config()
 
-    def _synchronize_interpreters(self) -> None:
+    def _set_sys_executable(self) -> None:
         """
         Store the python interpreter used by the compiler in sys.executable
         """
@@ -686,7 +686,7 @@ class Project:
         self.ctx = None
         self._handlers = set()
         self._load()
-        self._synchronize_interpreters()
+        self._set_sys_executable()
         config.Config.load_config()
 
     def _create_project_and_load(self, model: str) -> module.Project:
