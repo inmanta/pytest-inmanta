@@ -62,6 +62,7 @@ from .handler import DATA
 
 CURDIR = os.getcwd()
 LOGGER = logging.getLogger()
+SYS_EXECUTABLE = sys.executable
 
 
 option_to_env = {
@@ -659,6 +660,18 @@ class Project:
         self._handlers: typing.Set[ResourceHandler] = set()
         config.Config.load_config()
 
+    def _set_sys_executable(self) -> None:
+        """
+        Store the python interpreter used by the compiler in sys.executable
+        """
+        python_name: str = os.path.basename(sys.executable)
+        if sys.platform == "win32":
+            compiler_executable = os.path.join(self._env_path, "Scripts", python_name)
+        else:
+            compiler_executable = os.path.join(self._env_path, "bin", python_name)
+
+        sys.executable = compiler_executable
+
     def init(self, capsys: CaptureFixture) -> None:
         self._stdout = None
         self._stderr = None
@@ -673,6 +686,7 @@ class Project:
         self.ctx = None
         self._handlers = set()
         self._load()
+        self._set_sys_executable()
         config.Config.load_config()
 
     def _create_project_and_load(self, model: str) -> module.Project:
@@ -1148,6 +1162,7 @@ license: Test License
         )
         ProjectLoader.clear_dynamic_modules()
         os.chdir(CURDIR)
+        sys.executable = SYS_EXECUTABLE
 
     def finalize_handler(self, handler: ResourceHandler) -> None:
         handler.cache.close()

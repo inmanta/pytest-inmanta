@@ -22,7 +22,7 @@ def test_resource(testdir):
 
     result = testdir.runpytest("tests/test_handler.py")
 
-    result.assert_outcomes(passed=5)
+    result.assert_outcomes(passed=6)
 
 
 def test_dryrun(testdir):

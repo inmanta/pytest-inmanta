@@ -15,6 +15,9 @@
 
     Contact: code@inmanta.com
 """
+import sys
+from pathlib import Path
+
 import pytest
 
 from inmanta import const
@@ -137,3 +140,10 @@ def test_close_cache(project):
     versions = handler.cache.counterforVersion.keys()
     assert len(versions) == 0
     assert len(handler.cache.cache) == 0
+
+
+def test_280_sys_executable(project):
+    """
+    Make sure the current python interpreter is the same as the one used by the compiler
+    """
+    assert Path(project._env_path) == Path(sys.executable).parent.parent
