@@ -34,13 +34,14 @@ from itertools import chain
 from pathlib import Path
 from textwrap import dedent
 from types import FunctionType, ModuleType
-from typing import Dict, Iterator, List, Optional, Set, Tuple
+from typing import Dict, Iterator, List, Optional, Set, Tuple, Union
 
 import pydantic
 import pytest
 import yaml
 from pytest import CaptureFixture
 from tornado import ioloop
+from _pytest.config.argparsing import OptionGroup, Parser
 
 import inmanta.ast
 from inmanta import compiler, config, const, module, plugins, protocol
@@ -59,6 +60,8 @@ if typing.TYPE_CHECKING:
     from inmanta.agent.io.local import IOBase
 
 from .handler import DATA
+from .test_parameter import TestParameterRegistry
+from .parameters import inm_venv, inm_mod_in_place, inm_mod_repo, inm_no_load_plugins, inm_install_mode
 
 CURDIR = os.getcwd()
 LOGGER = logging.getLogger()
@@ -66,45 +69,26 @@ SYS_EXECUTABLE = sys.executable
 
 
 option_to_env = {
-    "inm_venv": "INMANTA_TEST_ENV",
-    "inm_module_repo": "INMANTA_MODULE_REPO",
-    "inm_install_mode": "INMANTA_INSTALL_MODE",
     "inm_no_load_plugins": "INMANTA_TEST_NO_LOAD_PLUGINS",
 }
 
 
-def pytest_addoption(parser) -> None:
-    group = parser.getgroup("inmanta", "inmanta module testing plugin")
-    group.addoption(
-        "--venv",
-        dest="inm_venv",
-        help="folder in which to place the virtual env for tests (will be shared by all tests), overrides INMANTA_TEST_ENV. "
-        "This options depends on symlink support. This does not work on all windows versions. "
-        "On windows 10 you need to run pytest in an admin shell. "
-        "Using a fixed virtual environment can speed up running the tests.",
-    )
-    group.addoption(
-        "--use-module-in-place",
-        action="store_true",
-        help="tell pytest-inmanta to run with the module in place, useful for debugging. "
-        "Makes inmanta add the parent directory of your module directory to it's directory path, instead of copying your "
-        "module to a temporary libs directory. "
-        "It allows testing the current module against specific versions of dependent modules. "
-        "Using this option can speed up the tests, because the module dependencies are not downloaded multiple times.",
-    )
-    group.addoption(
-        "--module_repo",
-        dest="inm_module_repo",
-        action="append",
-        help="location to download modules from, overrides INMANTA_MODULE_REPO."
-        "Can be specified multiple times to add multiple locations",
-    )
-    group.addoption(
-        "--install_mode",
-        dest="inm_install_mode",
-        help="Install mode for modules downloaded during this test, overrides INMANTA_INSTALL_MODE.",
-        choices=module.INSTALL_OPTS,
-    )
+def pytest_addoption(parser: Parser) -> None:
+    for group_name, parameters in TestParameterRegistry.test_parameter_groups().items():
+        group: Union[Parser, OptionGroup]
+        if group_name is None:
+            group = parser
+        else:
+            group = parser.getgroup(group_name)
+
+        for param in parameters:
+            group.addoption(
+                param.argument,
+                action=param.action,
+                help=param.help,
+            )
+
+    group = parser.getgroup("inmanta", "inmanta module testing plugin (@deprecated use pytest-inmanta option instead)")
     group.addoption(
         "--no_load_plugins",
         action="store_true",
@@ -176,12 +160,12 @@ def project(
 
 @pytest.fixture()
 def project_no_plugins(
-    project_shared_no_plugins, capsys: CaptureFixture
+    project_shared_no_plugins: "Project", capsys: CaptureFixture
 ) -> typing.Iterator["Project"]:
     warnings.warn(
         DeprecationWarning(
             "The project_no_plugins fixture is deprecated in favor of the %s environment variable."
-            % option_to_env["inm_no_load_plugins"]
+            % inm_no_load_plugins.environment_variable
         )
     )
     DATA.clear()
@@ -259,9 +243,7 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
     test_project_dir = tempfile.mkdtemp()
     os.mkdir(os.path.join(test_project_dir, "libs"))
 
-    repo_options = get_opt_or_env_or(
-        request.config, "inm_module_repo", "https://github.com/inmanta/"
-    )
+    repo_options = inm_mod_repo.resolve(request.config)
     repos: typing.Sequence[object] = get_project_repos(
         chain.from_iterable(
             repo.split(" ")
@@ -271,14 +253,14 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
         )
     )
 
-    install_mode = get_opt_or_env_or(request.config, "inm_install_mode", "release")
+    install_mode = inm_install_mode.resolve(request.config)
 
     modulepath = ["libs"]
-    in_place = request.config.getoption("--use-module-in-place")
+    in_place = inm_mod_in_place.resolve(request.config)
     if in_place:
         modulepath.append(str(Path(CURDIR).parent))
 
-    env_override = get_opt_or_env_or(request.config, "inm_venv", None)
+    env_override = inm_venv.resolve(request.config)
     env_dir = os.path.join(test_project_dir, ".env")
     if env_override and not os.path.isdir(env_override):
         raise Exception(f"Specified venv {env_override} does not exist")
@@ -307,10 +289,12 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
     ensure_current_module_install(os.path.join(test_project_dir, "libs"), in_place)
 
     def create_project(**kwargs: object):
+        load_plugins = inm_no_load_plugins.resolve(request.config) 
+        load_plugins = load_plugins or not get_opt_or_env_or(
+            request.config, "inm_no_load_plugins", False
+        )
         extended_kwargs: typing.Dict[str, object] = {
-            "load_plugins": not get_opt_or_env_or(
-                request.config, "inm_no_load_plugins", False
-            ),
+            "load_plugins": load_plugins,
             "env_path": env_dir,
             **kwargs,
         }
