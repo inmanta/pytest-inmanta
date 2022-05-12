@@ -22,7 +22,25 @@ from .parameter import TestParameter
 
 class BooleanTestParameter(TestParameter[bool]):
     """
-    A test parameter that should contain a boolean value
+    A test parameter that should contain a boolean value.  The option will act as a flag.
+    If it is not set, the default value will be used when resolved.  If it is set, the opposite
+    of the default value is resolved.
+
+    .. code-block:: python
+
+        inm_mod_in_place = BooleanTestParameter(
+            argument="--use-module-in-place",
+            environment_variable="INMANTA_USE_MODULE_IN_PLACE",
+            usage=(
+                "tell pytest-inmanta to run with the module in place, useful for debugging. "
+                "Makes inmanta add the parent directory of your module directory to it's directory path, instead of copying your "
+                "module to a temporary libs directory. "
+                "It allows testing the current module against specific versions of dependent modules. "
+                "Using this option can speed up the tests, because the module dependencies are not downloaded multiple times."
+            ),
+            group=param_group,
+        )
+
     """
 
     def __init__(

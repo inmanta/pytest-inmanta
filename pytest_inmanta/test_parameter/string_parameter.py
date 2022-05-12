@@ -20,7 +20,19 @@ from .parameter import TestParameter
 
 class StringTestParameter(TestParameter[str]):
     """
-    A test parameter that should contain a string value
+    A test parameter that should contain a string value.  The option will be
+    store as a string, and resolved as is.
+
+    .. code-block:: python
+
+        inm_lsm_host = StringTestParameter(
+            argument="--lsm-host",
+            environment_variable="INMANTA_LSM_HOST",
+            usage="Remote orchestrator to use for the remote_inmanta fixture",
+            default="127.0.0.1",
+            group=param_group,
+        )
+
     """
 
     def validate(self, raw_value: object) -> str:

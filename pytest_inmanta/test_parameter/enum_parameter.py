@@ -25,7 +25,20 @@ E = TypeVar("E", bound=Enum)
 
 class EnumTestParameter(TestParameter[E]):
     """
-    A test parameter that should contain a boolean value
+    A test parameter that should contain a boolean value.  The option will store a string value
+    but it will only accepts values from the provided enum.
+
+    .. code-block:: python
+
+        inm_install_mode = EnumTestParameter(
+            argument="--install_mode",
+            environment_variable="INMANTA_INSTALL_MODE",
+            usage="Install mode for modules downloaded during this test",
+            enum=InstallMode,
+            default=InstallMode.release,
+            group=param_group,
+        )
+
     """
 
     def __init__(

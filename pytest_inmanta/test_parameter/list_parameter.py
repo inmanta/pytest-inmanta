@@ -26,7 +26,23 @@ from .parameter import ParameterNotSetException, TestParameter
 
 class ListTestParameter(TestParameter[Sequence[str]]):
     """
-    A test parameter that should contain a boolean value
+    A test parameter that should contain a list of string.  For each mention of the option, the value
+    will be added to the string.  If the value is passed as an environment variable, the string will
+    be splitted in each space.
+
+    .. code-block:: python
+
+        inm_mod_repo = ListTestParameter(
+            argument="--module_repo",
+            environment_variable="INMANTA_MODULE_REPO",
+            usage=(
+                "Location to download modules from."
+                "Can be specified multiple times to add multiple locations"
+            ),
+            default=["https://github.com/inmanta/"],
+            group=param_group,
+        )
+
     """
 
     def __init__(

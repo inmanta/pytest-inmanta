@@ -27,6 +27,21 @@ class PathTestParameter(TestParameter[Path]):
 
     If specified, the parameter can check if the path exists, and if the path is a file or a dir.
     If is_file is set, exists will always be True.
+
+    .. code-block:: python
+
+        inm_venv = PathTestParameter(
+            argument="--venv",
+            environment_variable="INMANTA_TEST_ENV",
+            usage=(
+                "Folder in which to place the virtual env for tests (will be shared by all tests). "
+                "This options depends on symlink support. This does not work on all windows versions. "
+                "On windows 10 you need to run pytest in an admin shell. "
+                "Using a fixed virtual environment can speed up running the tests."
+            ),
+            group=param_group,
+        )
+
     """
 
     def __init__(

@@ -20,7 +20,19 @@ from .parameter import TestParameter
 
 class FloatTestParameter(TestParameter[float]):
     """
-    A test parameter that should contain an float value
+    A test parameter that should contain an float value.  The option will store the value
+    as a string and convert it to a float.
+
+    .. code-block:: python
+
+        inm_test_timeout = FloatTestParameter(
+            argument="--test-timeout",
+            environment_variable="INMANTA_TEST_TIMEOUT",
+            usage="Delay before which the test should timeout",
+            default=15.64,
+            group=param_group,
+        )
+
     """
 
     def validate(self, raw_value: object) -> float:

@@ -177,7 +177,7 @@ The following options are available.
     defined in the project config documentation. If type is omitted, git is assumed.
     Multiple repos can be passed by space-separating them or by passing the parameter multiple times.
  * `--install_mode`: install mode to use for modules downloaded during this test, overrides `INMANTA_INSTALL_MODE`.
- * `--no_load-plugins`: Don't load plugins in the Project class. Overrides `INMANTA_TEST_NO_LOAD_PLUGINS`. 
+ * `--no-load-plugins`: Don't load plugins in the Project class. Overrides `INMANTA_NO_LOAD_PLUGINS`. 
  The value of INMANTA_TEST_NO_LOAD_PLUGINS environment variable has to be a non-empty string to not load plugins.
  When not using this option during the testing of plugins with the `project.get_plugin_function` method, 
  it's possible that the module's `plugin/__init__.py` is loaded multiple times, 
@@ -189,3 +189,22 @@ The following options are available.
 ## Compatibility with pytest-cov
 
 The `--use-module-in-place` option should be set when pytest-inmanta is used in combination with the `pytest-cov` pytest plugin. Without the `--use-module-in-place` option, the reported test coverage will be incorrect.
+
+## Using the pytest option framework
+
+The `pytest-inmanta` extension contains a framework to help create pytest options to use in your test suite or test extension.  Options/parameters created with the framework will automatically be registered and picked up by pytest.  
+
+Each option can be set via cli argument or via environment variable.  If both are set, the cli argument value takes precedence over the environment variable.  
+
+When creating a new option, pay attention to place it in a place that will always be loaded by pytest, e.g. the `conftest.py` file.
+
+The different type of test parameters that can be used are shown here: [`pytest_inmanta/test_parameters`](pytest_inmanta/test_parameter).  The currently supported types are:
+ - [`BooleanTestParameter`](pytest_inmanta/test_parameter/boolean_parameter.py)
+ - [`EnumTestParameter`](pytest_inmanta/test_parameter/enum_parameter.py)
+ - [`FloatTestParameter`](pytest_inmanta/test_parameter/float_parameter.py)
+ - [`IntegerTestParameter`](pytest_inmanta/test_parameter/integer_parameter.py)
+ - [`ListTestParameter`](pytest_inmanta/test_parameter/list_parameter.py)
+ - [`PathTestParameter`](pytest_inmanta/test_parameter/path_parameter.py)
+ - [`StringTestParameter`](pytest_inmanta/test_parameter/string_parameter.py)  
+
+You can off course add and use your own option type, as long as it extends the base class [`TestParameter`](pytest_inmanta/test_parameter/parameter.py) properly.

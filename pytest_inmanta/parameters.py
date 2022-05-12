@@ -30,7 +30,7 @@ inm_venv = PathTestParameter(
     argument="--venv",
     environment_variable="INMANTA_TEST_ENV",
     usage=(
-        "folder in which to place the virtual env for tests (will be shared by all tests). "
+        "Folder in which to place the virtual env for tests (will be shared by all tests). "
         "This options depends on symlink support. This does not work on all windows versions. "
         "On windows 10 you need to run pytest in an admin shell. "
         "Using a fixed virtual environment can speed up running the tests."
@@ -42,7 +42,7 @@ inm_mod_in_place = BooleanTestParameter(
     argument="--use-module-in-place",
     environment_variable="INMANTA_USE_MODULE_IN_PLACE",
     usage=(
-        "tell pytest-inmanta to run with the module in place, useful for debugging. "
+        "Tell pytest-inmanta to run with the module in place, useful for debugging. "
         "Makes inmanta add the parent directory of your module directory to it's directory path, instead of copying your "
         "module to a temporary libs directory. "
         "It allows testing the current module against specific versions of dependent modules. "
@@ -55,7 +55,7 @@ inm_mod_repo = ListTestParameter(
     argument="--module_repo",
     environment_variable="INMANTA_MODULE_REPO",
     usage=(
-        "location to download modules from."
+        "Location to download modules from."
         "Can be specified multiple times to add multiple locations"
     ),
     default=["https://github.com/inmanta/"],

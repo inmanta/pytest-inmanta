@@ -103,6 +103,8 @@ class TestParameter(Generic[ParameterType]):
         :param usage: This is a small description of what the parameter value will be used for.
         :param default: This is the default value to provide if the parameter is resolved but
             hasn't been set.
+        :param group: A group in which the option should be added.  If None is provided, the
+            option isn't part of any group.
         """
         self.argument = argument
         self.environment_variable = environment_variable
