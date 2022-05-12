@@ -60,7 +60,13 @@ if typing.TYPE_CHECKING:
     from inmanta.agent.io.local import IOBase
 
 from .handler import DATA
-from .parameters import inm_install_mode, inm_mod_in_place, inm_mod_repo, inm_no_load_plugins, inm_venv
+from .parameters import (
+    inm_install_mode,
+    inm_mod_in_place,
+    inm_mod_repo,
+    inm_no_load_plugins,
+    inm_venv,
+)
 from .test_parameter import ParameterNotSetException, TestParameterRegistry
 
 CURDIR = os.getcwd()

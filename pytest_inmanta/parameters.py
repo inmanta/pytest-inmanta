@@ -17,7 +17,12 @@
 """
 from inmanta.module import InstallMode
 
-from .test_parameter import BooleanTestParameter, EnumTestParameter, ListTestParameter, PathTestParameter
+from .test_parameter import (
+    BooleanTestParameter,
+    EnumTestParameter,
+    ListTestParameter,
+    PathTestParameter,
+)
 
 param_group = "pytest-inmanta"
 
