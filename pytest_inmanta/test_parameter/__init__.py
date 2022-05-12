@@ -19,11 +19,6 @@ from .boolean_parameter import BooleanTestParameter  # noqa: F401
 from .enum_parameter import EnumTestParameter  # noqa: F401
 from .integer_parameter import IntegerTestParameter  # noqa: F401
 from .list_parameter import ListTestParameter  # noqa: F401
-from .parameter import (  # noqa: F401
-    ParameterNotSetException,
-    ParameterType,
-    TestParameter,
-    TestParameterRegistry,
-)
+from .parameter import ParameterNotSetException, ParameterType, TestParameter, TestParameterRegistry  # noqa: F401
 from .path_parameter import PathTestParameter  # noqa: F401
 from .string_parameter import StringTestParameter  # noqa: F401
