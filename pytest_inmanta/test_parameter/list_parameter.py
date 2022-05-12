@@ -16,11 +16,12 @@
     Contact: code@inmanta.com
 """
 import collections
-from enum import Enum
 import os
+from enum import Enum
 from typing import Container, Optional, Sequence, Union
 
 from _pytest.config import Config
+
 from .parameter import ParameterNotSetException, TestParameter
 
 
@@ -39,7 +40,9 @@ class ListTestParameter(TestParameter[Sequence[str]]):
         key: Optional[str] = None,
         group: Optional[str] = None,
     ) -> None:
-        super().__init__(argument, environment_variable, usage, default=default, key=key, group=group)
+        super().__init__(
+            argument, environment_variable, usage, default=default, key=key, group=group
+        )
 
     @property
     def action(self) -> str:
@@ -47,7 +50,9 @@ class ListTestParameter(TestParameter[Sequence[str]]):
 
     def validate(self, raw_value: object) -> Sequence[str]:
         if not isinstance(raw_value, collections.Sequence):
-            raise ValueError(f"Type of {raw_value} is {type(raw_value)}, expected sequence")
+            raise ValueError(
+                f"Type of {raw_value} is {type(raw_value)}, expected sequence"
+            )
 
         return [str(item) for item in raw_value]
 

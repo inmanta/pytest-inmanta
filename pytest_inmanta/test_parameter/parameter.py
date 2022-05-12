@@ -49,7 +49,12 @@ class TestParameterRegistry:
     __test_parameter_groups: Dict[Optional[str], Set["TestParameter"]] = dict()
 
     @classmethod
-    def register(cls, key: Optional[str], test_parameter: "TestParameter", group: Optional[str] = None) -> None:
+    def register(
+        cls,
+        key: Optional[str],
+        test_parameter: "TestParameter",
+        group: Optional[str] = None,
+    ) -> None:
         if key is None:
             key = str(uuid.uuid4())
         cls.__test_parameters[key] = test_parameter

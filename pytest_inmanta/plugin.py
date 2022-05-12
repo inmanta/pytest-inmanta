@@ -41,9 +41,9 @@ import pytest
 import yaml
 from pytest import CaptureFixture
 from tornado import ioloop
-from _pytest.config.argparsing import OptionGroup, Parser
 
 import inmanta.ast
+from _pytest.config.argparsing import OptionGroup, Parser
 from inmanta import compiler, config, const, module, plugins, protocol
 from inmanta.agent import cache, handler
 from inmanta.agent import io as agent_io
@@ -60,8 +60,14 @@ if typing.TYPE_CHECKING:
     from inmanta.agent.io.local import IOBase
 
 from .handler import DATA
+from .parameters import (
+    inm_install_mode,
+    inm_mod_in_place,
+    inm_mod_repo,
+    inm_no_load_plugins,
+    inm_venv,
+)
 from .test_parameter import TestParameterRegistry
-from .parameters import inm_venv, inm_mod_in_place, inm_mod_repo, inm_no_load_plugins, inm_install_mode
 
 CURDIR = os.getcwd()
 LOGGER = logging.getLogger()
@@ -88,7 +94,11 @@ def pytest_addoption(parser: Parser) -> None:
                 help=param.help,
             )
 
-    group = parser.getgroup("inmanta", "inmanta module testing plugin (@deprecated use pytest-inmanta option instead)")
+    # The option below is kept for backward compatibility
+    group = parser.getgroup(
+        "inmanta",
+        "inmanta module testing plugin (@deprecated use pytest-inmanta option instead)",
+    )
     group.addoption(
         "--no_load_plugins",
         action="store_true",
@@ -282,14 +292,17 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
             "repo": repos,
             "modulepath": modulepath,
             "downloadpath": "libs",
-            "install_mode": install_mode,
+            "install_mode": install_mode.value,
         }
         yaml.dump(metadata, fd)
 
     ensure_current_module_install(os.path.join(test_project_dir, "libs"), in_place)
 
     def create_project(**kwargs: object):
-        load_plugins = inm_no_load_plugins.resolve(request.config) 
+        load_plugins = not inm_no_load_plugins.resolve(request.config)
+
+        # If load_plugins is False (the option is not set), it might be because the old
+        # option is still in use, so we check if it is set here
         load_plugins = load_plugins or not get_opt_or_env_or(
             request.config, "inm_no_load_plugins", False
         )

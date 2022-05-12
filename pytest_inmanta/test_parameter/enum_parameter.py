@@ -20,7 +20,6 @@ from typing import Container, Optional, Type, TypeVar
 
 from .parameter import TestParameter
 
-
 E = TypeVar("E", bound=Enum)
 
 
@@ -40,7 +39,9 @@ class EnumTestParameter(TestParameter[E]):
         key: Optional[str] = None,
         group: Optional[str] = None,
     ) -> None:
-        super().__init__(argument, environment_variable, usage, default=default, key=key, group=group)
+        super().__init__(
+            argument, environment_variable, usage, default=default, key=key, group=group
+        )
         self.enum = enum
 
     def choices(self) -> Optional[Container[str]]:

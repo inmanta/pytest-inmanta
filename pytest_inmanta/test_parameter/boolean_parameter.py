@@ -35,7 +35,9 @@ class BooleanTestParameter(TestParameter[bool]):
         key: Optional[str] = None,
         group: Optional[str] = None,
     ) -> None:
-        super().__init__(argument, environment_variable, usage, default=default, key=key, group=group)
+        super().__init__(
+            argument, environment_variable, usage, default=default, key=key, group=group
+        )
 
     @property
     def action(self) -> str:

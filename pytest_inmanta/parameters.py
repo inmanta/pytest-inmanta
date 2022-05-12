@@ -16,7 +16,12 @@
     Contact: code@inmanta.com
 """
 from inmanta.module import InstallMode
-from test_parameter import PathTestParameter, BooleanTestParameter, ListTestParameter, EnumTestParameter
+from test_parameter import (
+    BooleanTestParameter,
+    EnumTestParameter,
+    ListTestParameter,
+    PathTestParameter,
+)
 
 param_group = "pytest-inmanta"
 
@@ -76,5 +81,5 @@ inm_no_load_plugins = BooleanTestParameter(
         "When not using this option during the testing of plugins with the `project.get_plugin_function` method, "
         "it's possible that the module's `plugin/__init__.py` is loaded multiple times, "
         "which can cause issues when it has side effects, as they are executed multiple times as well."
-    )
+    ),
 )
