@@ -17,8 +17,7 @@
 """
 import collections
 import os
-from enum import Enum
-from typing import Container, Optional, Sequence, Union
+from typing import Optional, Sequence
 
 from _pytest.config import Config
 

@@ -18,7 +18,7 @@
 import os
 import uuid
 from abc import abstractmethod
-from typing import Container, Dict, Generic, List, Optional, Sequence, Set, TypeVar
+from typing import Container, Dict, Generic, List, Optional, Set, TypeVar
 
 from _pytest.config import Config
 

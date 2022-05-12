@@ -16,7 +16,8 @@
     Contact: code@inmanta.com
 """
 from inmanta.module import InstallMode
-from test_parameter import (
+
+from .test_parameter import (
     BooleanTestParameter,
     EnumTestParameter,
     ListTestParameter,
@@ -63,7 +64,7 @@ inm_mod_repo = ListTestParameter(
 
 inm_install_mode = EnumTestParameter(
     argument="--install_mode",
-    environment_variable="INMANTA_MODULE_REPO",
+    environment_variable="INMANTA_INSTALL_MODE",
     usage="Install mode for modules downloaded during this test",
     enum=InstallMode,
     default=InstallMode.release,
@@ -76,8 +77,9 @@ inm_install_mode = EnumTestParameter(
 # This is why the env var and the option names have been changed
 inm_no_load_plugins = BooleanTestParameter(
     argument="--no-load-plugins",
-    environment_variable="INMANTA_TEST_NO_LOAD_PLUGINS",
+    environment_variable="INMANTA_NO_LOAD_PLUGINS",
     usage=(
+        "Don't load plugins in the Project class.  "
         "When not using this option during the testing of plugins with the `project.get_plugin_function` method, "
         "it's possible that the module's `plugin/__init__.py` is loaded multiple times, "
         "which can cause issues when it has side effects, as they are executed multiple times as well."

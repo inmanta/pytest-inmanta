@@ -16,18 +16,61 @@
     Contact: code@inmanta.com
 """
 from pathlib import Path
+from typing import Optional
 
 from .parameter import TestParameter
 
 
 class PathTestParameter(TestParameter[Path]):
     """
-    A test parameter that should contain a valid path
+    A test parameter that should contain a valid path.
+
+    If specified, the parameter can check if the path exists, and if the path is a file or a dir.
+    If is_file is set, exists will always be True.
     """
 
-    def validate(self, raw_value: object) -> Path:
-        path = Path(str(raw_value))
-        if not path.exists():
-            raise ValueError(f"Invalid path: {raw_value}")
+    def __init__(
+        self,
+        argument: str,
+        environment_variable: str,
+        usage: str,
+        *,
+        default: Optional[Path] = None,
+        key: Optional[str] = None,
+        group: Optional[str] = None,
+        is_file: Optional[bool] = None,
+        exists: Optional[bool] = None,
+    ) -> None:
+        super().__init__(
+            argument, environment_variable, usage, default=default, key=key, group=group
+        )
+        self.is_file = is_file
+        self.exists = exists if is_file is None else True
 
-        return path.absolute()
+    def validate(self, raw_value: object) -> Path:
+        path = Path(str(raw_value)).absolute()
+        if self.exists is None:
+            # We don't need the file to exist, nothing to check here
+            return path
+
+        if path.exists() != self.exists:
+            expected = "not " if not self.exists else ""
+            actual = "not " if self.exists else ""
+            raise ValueError(
+                f"The path should {expected}exist but does{actual}: {path}"
+            )
+
+        if not self.exists:
+            # If the path doesn't exist, it won't be a file not a dir
+            return path
+
+        if self.is_file is None:
+            # Nothing more to check
+            return path
+
+        if path.is_file() != self.is_file:
+            expected = "file" if self.is_file else "dir"
+            actual = "file" if not self.is_file else "dir"
+            raise ValueError(f"Got a {actual} where a {expected} was expected: {path}")
+
+        return path

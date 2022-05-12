@@ -44,6 +44,7 @@ class EnumTestParameter(TestParameter[E]):
         )
         self.enum = enum
 
+    @property
     def choices(self) -> Optional[Container[str]]:
         return [str(item.value) for item in self.enum]
 

@@ -67,7 +67,7 @@ from .parameters import (
     inm_no_load_plugins,
     inm_venv,
 )
-from .test_parameter import TestParameterRegistry
+from .test_parameter import ParameterNotSetException, TestParameterRegistry
 
 CURDIR = os.getcwd()
 LOGGER = logging.getLogger()
@@ -88,11 +88,19 @@ def pytest_addoption(parser: Parser) -> None:
             group = parser.getgroup(group_name)
 
         for param in parameters:
-            group.addoption(
-                param.argument,
-                action=param.action,
-                help=param.help,
-            )
+            if param.choices is not None:
+                group.addoption(
+                    param.argument,
+                    action=param.action,
+                    help=param.help,
+                    choices=param.choices,
+                )
+            else:
+                group.addoption(
+                    param.argument,
+                    action=param.action,
+                    help=param.help,
+                )
 
     # The option below is kept for backward compatibility
     group = parser.getgroup(
@@ -270,7 +278,10 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
     if in_place:
         modulepath.append(str(Path(CURDIR).parent))
 
-    env_override = inm_venv.resolve(request.config)
+    try:
+        env_override: Optional[str] = str(inm_venv.resolve(request.config))
+    except ParameterNotSetException:
+        env_override = None
     env_dir = os.path.join(test_project_dir, ".env")
     if env_override and not os.path.isdir(env_override):
         raise Exception(f"Specified venv {env_override} does not exist")
