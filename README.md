@@ -178,7 +178,6 @@ The following options are available.
     Multiple repos can be passed by space-separating them or by passing the parameter multiple times.
  * `--install_mode`: install mode to use for modules downloaded during this test, overrides `INMANTA_INSTALL_MODE`.
  * `--no-load-plugins`: Don't load plugins in the Project class. Overrides `INMANTA_NO_LOAD_PLUGINS`. 
- The value of INMANTA_TEST_NO_LOAD_PLUGINS environment variable has to be a non-empty string to not load plugins.
  When not using this option during the testing of plugins with the `project.get_plugin_function` method, 
  it's possible that the module's `plugin/__init__.py` is loaded multiple times, 
  which can cause issues when it has side effects, as they are executed multiple times as well.
