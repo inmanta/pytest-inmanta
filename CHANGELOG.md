@@ -1,10 +1,10 @@
 # v 2.3.0 (?)
 Changes in this release:
+- Added test parameter framework (#288).
 
 # v 2.2.0 (2022-04-26)
 Changes in this release:
 - The `project` fixture now makes `sys.executable` point to the compiler's executable
-
 
 # v 2.1.0 (2022-03-30)
 Changes in this release:
