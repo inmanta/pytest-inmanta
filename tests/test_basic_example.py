@@ -153,7 +153,7 @@ def test_project_no_plugins(testdir):
     result.assert_outcomes(passed=1)
     assert (
         "DeprecationWarning: The project_no_plugins fixture is deprecated"
-        " in favor of the INMANTA_TEST_NO_LOAD_PLUGINS environment variable."
+        " in favor of the INMANTA_NO_LOAD_PLUGINS environment variable."
     ) in result.stdout.str()
 
 
