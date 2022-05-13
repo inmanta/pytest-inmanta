@@ -172,11 +172,11 @@ The following options are available.
  * `--use-module-in-place`: makes inmanta add the parent directory of your module directory to it's directory path, instead of copying your
     module to a temporary libs directory. It allows testing the current module against specific versions of dependent modules. 
     Using this option can speed up the tests, because the module dependencies are not downloaded multiple times.
- * `--module_repo`: location to download modules from, overrides `INMANTA_MODULE_REPO`. The default value is the inmanta github organisation.
+ * `--module-repo`: location to download modules from, overrides `INMANTA_MODULE_REPO`. The default value is the inmanta github organisation.
     For versions of inmanta-core that support v2 modules, the repo accepts the format "[<type>:]<url>" with "type" the repository type as
     defined in the project config documentation. If type is omitted, git is assumed.
     Multiple repos can be passed by space-separating them or by passing the parameter multiple times.
- * `--install_mode`: install mode to use for modules downloaded during this test, overrides `INMANTA_INSTALL_MODE`.
+ * `--install-mode`: install mode to use for modules downloaded during this test, overrides `INMANTA_INSTALL_MODE`.
  * `--no-load-plugins`: Don't load plugins in the Project class. Overrides `INMANTA_NO_LOAD_PLUGINS`. 
  When not using this option during the testing of plugins with the `project.get_plugin_function` method, 
  it's possible that the module's `plugin/__init__.py` is loaded multiple times, 
