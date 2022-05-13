@@ -96,3 +96,5 @@ tmp
 .pyenv
 .idea
 .vscode
+
+mypy

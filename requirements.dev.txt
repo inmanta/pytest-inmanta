@@ -1,1 +1,2 @@
 pip2pi==0.8.2
+types-PyYAML
