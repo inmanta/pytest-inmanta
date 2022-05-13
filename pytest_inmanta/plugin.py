@@ -39,11 +39,10 @@ from typing import Dict, Iterator, List, Optional, Set, Tuple, Union
 import pydantic
 import pytest
 import yaml
-from pytest import CaptureFixture
+from pytest import CaptureFixture, OptionGroup, Parser
 from tornado import ioloop
 
 import inmanta.ast
-from _pytest.config.argparsing import OptionGroup, Parser
 from inmanta import compiler, config, const, module, plugins, protocol
 from inmanta.agent import cache, handler
 from inmanta.agent import io as agent_io

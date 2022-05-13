@@ -17,7 +17,8 @@
 """
 import os
 
-from _pytest.config import Config
+from pytest import Config
+
 from inmanta.module import InstallMode
 from pytest_inmanta.test_parameter.parameter import NotSet
 

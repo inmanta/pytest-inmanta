@@ -22,7 +22,7 @@ from abc import abstractmethod
 from collections import defaultdict
 from typing import Container, Dict, Generic, List, Optional, Set, TypeVar
 
-from _pytest.config import Config
+from pytest import Config
 
 LOGGER = logging.getLogger(__name__)
 

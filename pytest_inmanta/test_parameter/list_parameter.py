@@ -19,7 +19,7 @@ import collections
 import os
 from typing import Optional, Sequence
 
-from _pytest.config import Config
+from pytest import Config
 
 from .parameter import ParameterNotSetException, TestParameter
 
