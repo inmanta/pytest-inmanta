@@ -22,7 +22,14 @@ from abc import abstractmethod
 from collections import defaultdict
 from typing import Container, Dict, Generic, List, Optional, Set, TypeVar
 
-from pytest import Config
+try:
+    """
+    Those classes are only used in type annotation, but the import doesn't work
+    in python 3.6.  So we simply catch the error and ignore it.
+    """
+    from pytest import Config
+except ImportError:
+    pass
 
 LOGGER = logging.getLogger(__name__)
 
@@ -165,7 +172,7 @@ class TestParameter(Generic[ParameterType]):
         it to whatever value it wants.
         """
 
-    def resolve(self, config: Config) -> ParameterType:
+    def resolve(self, config: "Config") -> ParameterType:
         """
         Resolve the test parameter.
         First, we try to get it from the provided options.

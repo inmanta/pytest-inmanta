@@ -17,8 +17,6 @@
 """
 import os
 
-from pytest import Config
-
 from inmanta.module import InstallMode
 
 from .test_parameter import (
@@ -27,6 +25,15 @@ from .test_parameter import (
     ListTestParameter,
     PathTestParameter,
 )
+
+try:
+    """
+    Those classes are only used in type annotation, but the import doesn't work
+    in python 3.6.  So we simply catch the error and ignore it.
+    """
+    from pytest import Config
+except ImportError:
+    pass
 
 param_group = "pytest-inmanta"
 
@@ -103,7 +110,7 @@ inm_install_mode = EnumTestParameter(
 # This is the legacy no load plugins option
 # TODO remove this in next major version bump
 class _LegacyBooleanTestParameter(BooleanTestParameter):
-    def resolve(self, config: Config) -> bool:
+    def resolve(self, config: "Config") -> bool:
         """
         The legacy option for --no-load-plugins requires some more treatment than the other
         as the behavior when the env variable is set is different.  Any non-empty string set

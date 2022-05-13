@@ -19,7 +19,14 @@ import collections
 import os
 from typing import Optional, Sequence
 
-from pytest import Config
+try:
+    """
+    Those classes are only used in type annotation, but the import doesn't work
+    in python 3.6.  So we simply catch the error and ignore it.
+    """
+    from pytest import Config
+except ImportError:
+    pass
 
 from .parameter import ParameterNotSetException, TestParameter
 
@@ -78,7 +85,7 @@ class ListTestParameter(TestParameter[Sequence[str]]):
 
         return [str(item) for item in raw_value]
 
-    def resolve(self, config: Config) -> Sequence[str]:
+    def resolve(self, config: "Config") -> Sequence[str]:
         option = config.getoption(self.argument, default=self.default)
         if option is not None and option is not self.default:
             # A value is set, and it is not the default one
