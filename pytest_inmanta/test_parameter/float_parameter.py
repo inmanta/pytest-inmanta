@@ -36,4 +36,4 @@ class FloatTestParameter(TestParameter[float]):
     """
 
     def validate(self, raw_value: object) -> float:
-        return float(raw_value)
+        return float(str(raw_value))

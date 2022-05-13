@@ -54,9 +54,16 @@ class ListTestParameter(TestParameter[Sequence[str]]):
         default: Optional[Sequence[str]] = None,
         key: Optional[str] = None,
         group: Optional[str] = None,
+        legacy: Optional["ListTestParameter"] = None,
     ) -> None:
         super().__init__(
-            argument, environment_variable, usage, default=default, key=key, group=group
+            argument,
+            environment_variable,
+            usage,
+            default=default,
+            key=key,
+            group=group,
+            legacy=legacy,
         )
 
     @property

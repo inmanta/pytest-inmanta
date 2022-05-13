@@ -53,11 +53,18 @@ class PathTestParameter(TestParameter[Path]):
         default: Optional[Path] = None,
         key: Optional[str] = None,
         group: Optional[str] = None,
+        legacy: Optional["PathTestParameter"] = None,
         is_file: Optional[bool] = None,
         exists: Optional[bool] = None,
     ) -> None:
         super().__init__(
-            argument, environment_variable, usage, default=default, key=key, group=group
+            argument,
+            environment_variable,
+            usage,
+            default=default,
+            key=key,
+            group=group,
+            legacy=legacy,
         )
         self.is_file = is_file
         self.exists = exists if is_file is None else True

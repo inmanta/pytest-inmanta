@@ -16,6 +16,7 @@
     Contact: code@inmanta.com
 """
 from enum import Enum
+from turtle import left
 from typing import Container, Optional, Type, TypeVar
 
 from .parameter import TestParameter
@@ -51,9 +52,16 @@ class EnumTestParameter(TestParameter[E]):
         default: Optional[E] = None,
         key: Optional[str] = None,
         group: Optional[str] = None,
+        legacy: Optional["EnumTestParameter[E]"] = None,
     ) -> None:
         super().__init__(
-            argument, environment_variable, usage, default=default, key=key, group=group
+            argument,
+            environment_variable,
+            usage,
+            default=default,
+            key=key,
+            group=group,
+            legacy=legacy,
         )
         self.enum = enum
 

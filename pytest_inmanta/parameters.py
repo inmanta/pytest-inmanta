@@ -15,7 +15,11 @@
 
     Contact: code@inmanta.com
 """
+import os
+
+from _pytest.config import Config
 from inmanta.module import InstallMode
+from pytest_inmanta.test_parameter.parameter import NotSet
 
 from .test_parameter import (
     BooleanTestParameter,
@@ -38,6 +42,7 @@ inm_venv = PathTestParameter(
     group=param_group,
 )
 
+
 inm_mod_in_place = BooleanTestParameter(
     argument="--use-module-in-place",
     environment_variable="INMANTA_USE_MODULE_IN_PLACE",
@@ -51,7 +56,10 @@ inm_mod_in_place = BooleanTestParameter(
     group=param_group,
 )
 
-inm_mod_repo = ListTestParameter(
+
+# This is the legacy module repo option
+# TODO remove this in next major version bump
+inm_mod_repo_legacy = ListTestParameter(
     argument="--module_repo",
     environment_variable="INMANTA_MODULE_REPO",
     usage=(
@@ -59,16 +67,73 @@ inm_mod_repo = ListTestParameter(
         "Can be specified multiple times to add multiple locations"
     ),
     default=["https://github.com/inmanta/"],
-    group=param_group,
 )
 
-inm_install_mode = EnumTestParameter(
+inm_mod_repo = ListTestParameter(
+    argument="--module-repo",
+    environment_variable=inm_mod_repo_legacy.environment_variable,
+    usage=inm_mod_repo_legacy.usage,
+    default=inm_mod_repo_legacy.default,
+    group=param_group,
+    legacy=inm_mod_repo_legacy,
+)
+
+
+# This is the legacy install mode option
+# TODO remove this in next major version bump
+inm_install_mode_legacy = EnumTestParameter(
     argument="--install_mode",
     environment_variable="INMANTA_INSTALL_MODE",
     usage="Install mode for modules downloaded during this test",
     enum=InstallMode,
     default=InstallMode.release,
+)
+
+inm_install_mode = EnumTestParameter(
+    argument="--install-mode",
+    environment_variable=inm_install_mode_legacy.environment_variable,
+    usage=inm_install_mode_legacy.usage,
+    enum=inm_install_mode_legacy.enum,
+    default=inm_install_mode_legacy.default,
     group=param_group,
+    legacy=inm_install_mode_legacy,
+)
+
+
+# This is the legacy no load plugins option
+# TODO remove this in next major version bump
+class _LegacyBooleanTestParameter(BooleanTestParameter):
+    def resolve(self, config: Config) -> bool:
+        """
+        The legacy option for --no-load-plugins requires some more treatment than the other
+        as the behavior when the env variable is set is different.  Any non-empty string set
+        in env variable means that the option is set, and we should not load the plugins.
+
+        This helper function comes to overwrite the resolve method in the legacy option.
+        """
+        option = config.getoption(self.argument, default=NotSet)
+        if option is not NotSet:
+            # A value is set, and it is not the default one
+            return self.validate(option)
+
+        if os.getenv(self.environment_variable):
+            return True
+
+        return False
+
+
+# This is the legacy no load plugins option
+# TODO remove this in next major version bump
+inm_no_load_plugins_legacy = _LegacyBooleanTestParameter(
+    argument="--no_load_plugins",
+    environment_variable="INMANTA_TEST_NO_LOAD_PLUGINS",
+    usage=(
+        "Don't load plugins in the Project class. Overrides INMANTA_TEST_NO_LOAD_PLUGINS."
+        "The value of INMANTA_TEST_NO_LOAD_PLUGINS environment variable has to be a non-empty string to not load plugins."
+        "When not using this option during the testing of plugins with the `project.get_plugin_function` method, "
+        "it's possible that the module's `plugin/__init__.py` is loaded multiple times, "
+        "which can cause issues when it has side effects, as they are executed multiple times as well."
+    ),
 )
 
 # This option behaves slightly differently than --no_load_plugins
@@ -84,4 +149,5 @@ inm_no_load_plugins = BooleanTestParameter(
         "it's possible that the module's `plugin/__init__.py` is loaded multiple times, "
         "which can cause issues when it has side effects, as they are executed multiple times as well."
     ),
+    legacy=inm_no_load_plugins_legacy,
 )

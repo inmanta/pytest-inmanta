@@ -20,7 +20,6 @@ import os
 import subprocess
 
 # Note: These tests only function when the pytest output is not modified by plugins such as pytest-sugar!
-import sys
 import tempfile
 from importlib.abc import Loader
 from typing import Iterator, Optional, Tuple
@@ -60,7 +59,6 @@ def testmodulev2_venv(pytestconfig) -> Iterator[env.VirtualEnv]:
                 "install",
                 str(pytestconfig.rootpath / "examples" / "testmodulev2"),
             ],
-            stderr=sys.stderr,
         )
         yield venv
 

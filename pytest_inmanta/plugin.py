@@ -74,11 +74,6 @@ LOGGER = logging.getLogger()
 SYS_EXECUTABLE = sys.executable
 
 
-option_to_env = {
-    "inm_no_load_plugins": "INMANTA_TEST_NO_LOAD_PLUGINS",
-}
-
-
 def pytest_addoption(parser: Parser) -> None:
     for group_name, parameters in TestParameterRegistry.test_parameter_groups().items():
         group: Union[Parser, OptionGroup]
@@ -88,43 +83,14 @@ def pytest_addoption(parser: Parser) -> None:
             group = parser.getgroup(group_name)
 
         for param in parameters:
+            kwargs: Dict[str, object] = dict(
+                action=param.action,
+                help=param.help,
+            )
             if param.choices is not None:
-                group.addoption(
-                    param.argument,
-                    action=param.action,
-                    help=param.help,
-                    choices=param.choices,
-                )
-            else:
-                group.addoption(
-                    param.argument,
-                    action=param.action,
-                    help=param.help,
-                )
+                kwargs["choices"] = param.choices
 
-    # The option below is kept for backward compatibility
-    group = parser.getgroup(
-        "inmanta",
-        "inmanta module testing plugin (@deprecated use pytest-inmanta option instead)",
-    )
-    group.addoption(
-        "--no_load_plugins",
-        action="store_true",
-        dest="inm_no_load_plugins",
-        help="Don't load plugins in the Project class. Overrides INMANTA_TEST_NO_LOAD_PLUGINS."
-        "The value of INMANTA_TEST_NO_LOAD_PLUGINS environment variable has to be a non-empty string to not load plugins."
-        "When not using this option during the testing of plugins with the `project.get_plugin_function` method, "
-        "it's possible that the module's `plugin/__init__.py` is loaded multiple times, "
-        "which can cause issues when it has side effects, as they are executed multiple times as well.",
-    )
-
-
-def get_opt_or_env_or(config, key: str, default: str) -> str:
-    if config.getoption(key):
-        return config.getoption(key)
-    if option_to_env[key] in os.environ:
-        return os.environ[option_to_env[key]]
-    return default
+            group.addoption(param.argument, **kwargs)
 
 
 def get_module() -> typing.Tuple[module.Module, str]:
@@ -311,12 +277,6 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
 
     def create_project(**kwargs: object):
         load_plugins = not inm_no_load_plugins.resolve(request.config)
-
-        # If load_plugins is False (the option is not set), it might be because the old
-        # option is still in use, so we check if it is set here
-        load_plugins = load_plugins or not get_opt_or_env_or(
-            request.config, "inm_no_load_plugins", False
-        )
         extended_kwargs: typing.Dict[str, object] = {
             "load_plugins": load_plugins,
             "env_path": env_dir,

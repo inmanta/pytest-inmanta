@@ -15,14 +15,29 @@
 
     Contact: code@inmanta.com
 """
+import logging
 import os
 import uuid
 from abc import abstractmethod
+from collections import defaultdict
 from typing import Container, Dict, Generic, List, Optional, Set, TypeVar
 
 from _pytest.config import Config
 
-ParameterType = TypeVar("ParameterType", bound=object)
+LOGGER = logging.getLogger(__name__)
+
+
+NotSet = object()
+"""
+The NotSet object is used as default value when getting an option from pytest.
+If the same object is returned, we know that the option is not set.
+"""
+
+ParameterType = TypeVar("ParameterType")
+"""
+The parameter type is a TypeVar which specify which type a specific TestParameter
+instance or class will resolve.
+"""
 
 
 class ParameterNotSetException(ValueError):
@@ -46,7 +61,9 @@ class TestParameterRegistry:
     """
 
     __test_parameters: Dict[str, "TestParameter"] = dict()
-    __test_parameter_groups: Dict[Optional[str], Set["TestParameter"]] = dict()
+    __test_parameter_groups: Dict[Optional[str], Set["TestParameter"]] = defaultdict(
+        set
+    )
 
     @classmethod
     def register(
@@ -58,10 +75,6 @@ class TestParameterRegistry:
         if key is None:
             key = str(uuid.uuid4())
         cls.__test_parameters[key] = test_parameter
-
-        if group not in cls.__test_parameter_groups:
-            cls.__test_parameter_groups[group] = set()
-
         cls.__test_parameter_groups[group].add(test_parameter)
 
     @classmethod
@@ -95,6 +108,7 @@ class TestParameter(Generic[ParameterType]):
         default: Optional[ParameterType] = None,
         key: Optional[str] = None,
         group: Optional[str] = None,
+        legacy: Optional["TestParameter[ParameterType]"] = None,
     ) -> None:
         """
         :param argument: This is the argument that can be passed to the pytest command.
@@ -103,13 +117,21 @@ class TestParameter(Generic[ParameterType]):
         :param usage: This is a small description of what the parameter value will be used for.
         :param default: This is the default value to provide if the parameter is resolved but
             hasn't been set.
+        :param key: Optionally, a key can be set, its sole purpose is to allow the creator of
+            the option to access it directly from the parameter registry, thanks to this key,
+            using TestParameterRegistry.test_parameter(<the-key>)
         :param group: A group in which the option should be added.  If None is provided, the
             option isn't part of any group.
+        :param legacy: An optional legacy parameter, that this one replaces, but will be removed
+            in future version of the product.  When resolving a value, we first check this
+            parameter, and if it is not set, we check the legacy one and raise a warning about
+            its deprecation.
         """
         self.argument = argument
         self.environment_variable = environment_variable
         self.usage = usage
         self.default = default
+        self.legacy = legacy
 
         TestParameterRegistry.register(key, self, group)
 
@@ -133,7 +155,7 @@ class TestParameter(Generic[ParameterType]):
         return "store"
 
     @property
-    def choices(self) -> Optional[Container[ParameterType]]:
+    def choices(self) -> Optional[Container[str]]:
         """
         The argparse choices for this option
         https://docs.python.org/3/library/argparse.html#choices
@@ -157,8 +179,8 @@ class TestParameter(Generic[ParameterType]):
         Then, if there is a default, we use it.
         Finally, if none of the above worked, we raise a ParameterNotSetException.
         """
-        option = config.getoption(self.argument, default=self.default)
-        if option is not None and option is not self.default:
+        option = config.getoption(self.argument, default=NotSet)
+        if option is not NotSet:
             # A value is set, and it is not the default one
             return self.validate(option)
 
@@ -166,6 +188,18 @@ class TestParameter(Generic[ParameterType]):
         if env_var is not None:
             # A value is set
             return self.validate(env_var)
+
+        if self.legacy is not None:
+            # If we have a legacy option, we check if it is set
+            try:
+                val = self.legacy.resolve(config)
+                LOGGER.warning(
+                    f"The usage of {self.legacy.argument} is deprecated, "
+                    f"use {self.argument} instead"
+                )
+                return val
+            except ParameterNotSetException:
+                pass
 
         if self.default is not None:
             return self.default

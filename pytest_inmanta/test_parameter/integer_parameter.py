@@ -36,4 +36,4 @@ class IntegerTestParameter(TestParameter[int]):
     """
 
     def validate(self, raw_value: object) -> int:
-        return int(raw_value)
+        return int(str(raw_value))

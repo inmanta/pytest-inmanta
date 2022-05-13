@@ -24,7 +24,9 @@ class BooleanTestParameter(TestParameter[bool]):
     """
     A test parameter that should contain a boolean value.  The option will act as a flag.
     If it is not set, the default value will be used when resolved.  If it is set, the opposite
-    of the default value is resolved.
+    of the default value is resolved.  If the option is set via environment variable, the value
+    should, once "stripped" of any space, and transformed to lower case, evaluate to either "true"
+    or "false".  The resolved value would then be, respectively, True or False.
 
     .. code-block:: python
 
@@ -52,9 +54,16 @@ class BooleanTestParameter(TestParameter[bool]):
         default=False,
         key: Optional[str] = None,
         group: Optional[str] = None,
+        legacy: Optional["BooleanTestParameter"] = None,
     ) -> None:
         super().__init__(
-            argument, environment_variable, usage, default=default, key=key, group=group
+            argument,
+            environment_variable,
+            usage,
+            default=default,
+            key=key,
+            group=group,
+            legacy=legacy,
         )
 
     @property
@@ -72,4 +81,6 @@ class BooleanTestParameter(TestParameter[bool]):
         if parsed == "true":
             return True
 
-        raise ValueError("Boolean env var should be set to either 'true' or 'false'")
+        raise ValueError(
+            f"Boolean env var should be set to either 'true' or 'false', got '{parsed}' instead"
+        )

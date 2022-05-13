@@ -1,6 +1,10 @@
 # v 2.3.0 (?)
 Changes in this release:
 - Added test parameter framework (#288).
+- Some options have been deprecated:
+  -  `--no_load_plugins` in favor of `--no-load-plugins` (and `INMANTA_TEST_NO_LOAD_PLUGINS` in favor of `INMANTA_NO_LOAD_PLUGINS`)
+  -  `--module_repo` in favor of `--module-repo`
+  -  `--install_mode` in favor of `--install-mode`
 
 # v 2.2.0 (2022-04-26)
 Changes in this release:
