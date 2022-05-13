@@ -26,7 +26,7 @@ class PathTestParameter(TestParameter[Path]):
     A test parameter that should contain a valid path.
 
     If specified, the parameter can check if the path exists, and if the path is a file or a dir.
-    If is_file is set, exists will always be True.
+    If is_file is set (to either True or False), exists will always be True.
 
     .. code-block:: python
 

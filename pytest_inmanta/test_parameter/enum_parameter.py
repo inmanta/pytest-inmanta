@@ -25,7 +25,7 @@ E = TypeVar("E", bound=Enum)
 
 class EnumTestParameter(TestParameter[E]):
     """
-    A test parameter that should contain a boolean value.  The option will store a string value
+    A test parameter that should contain an enumeration value.  The option will store a string value
     but it will only accepts values from the provided enum.
 
     .. code-block:: python

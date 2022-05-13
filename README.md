@@ -206,4 +206,4 @@ The different type of test parameters that can be used are shown here: [`pytest_
  - [`PathTestParameter`](pytest_inmanta/test_parameter/path_parameter.py)
  - [`StringTestParameter`](pytest_inmanta/test_parameter/string_parameter.py)  
 
-You can off course add and use your own option type, as long as it extends the base class [`TestParameter`](pytest_inmanta/test_parameter/parameter.py) properly.
+You can of course add and use your own option type, as long as it extends the base class [`TestParameter`](pytest_inmanta/test_parameter/parameter.py) properly.

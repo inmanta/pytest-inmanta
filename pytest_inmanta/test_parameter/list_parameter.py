@@ -64,7 +64,7 @@ class ListTestParameter(TestParameter[Sequence[str]]):
         return "append"
 
     def validate(self, raw_value: object) -> Sequence[str]:
-        if not isinstance(raw_value, collections.Sequence):
+        if not isinstance(raw_value, collections.abc.Sequence):
             raise ValueError(
                 f"Type of {raw_value} is {type(raw_value)}, expected sequence"
             )
@@ -75,7 +75,7 @@ class ListTestParameter(TestParameter[Sequence[str]]):
         option = config.getoption(self.argument, default=self.default)
         if option is not None and option is not self.default:
             # A value is set, and it is not the default one
-            if isinstance(option, list):
+            if isinstance(option, collections.abc.Sequence):
                 return self.validate(option)
             else:
                 return self.validate([option])
