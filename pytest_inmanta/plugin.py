@@ -81,9 +81,9 @@ LOGGER = logging.getLogger()
 SYS_EXECUTABLE = sys.executable
 
 
-def pytest_addoption(parser: Parser) -> None:
+def pytest_addoption(parser: "Parser") -> None:
     for group_name, parameters in TestParameterRegistry.test_parameter_groups().items():
-        group: Union[Parser, OptionGroup]
+        group: Union["Parser", "OptionGroup"]
         if group_name is None:
             group = parser
         else:
@@ -140,7 +140,7 @@ def inmanta_plugins(
 
 @pytest.fixture()
 def project(
-    project_shared: "Project", capsys: CaptureFixture
+    project_shared: "Project", capsys: "CaptureFixture"
 ) -> typing.Iterator["Project"]:
     DATA.clear()
     project_shared.clean()
@@ -151,7 +151,7 @@ def project(
 
 @pytest.fixture()
 def project_no_plugins(
-    project_shared_no_plugins: "Project", capsys: CaptureFixture
+    project_shared_no_plugins: "Project", capsys: "CaptureFixture"
 ) -> typing.Iterator["Project"]:
     warnings.warn(
         DeprecationWarning(
@@ -630,7 +630,7 @@ class Project:
         self._should_load_plugins: typing.Optional[bool] = load_plugins
         self._plugins: typing.Optional[typing.Dict[str, FunctionType]] = None
         self._load()
-        self._capsys: typing.Optional[CaptureFixture] = None
+        self._capsys: typing.Optional["CaptureFixture"] = None
         self.ctx: typing.Optional[HandlerContext] = None
         self._handlers: typing.Set[ResourceHandler] = set()
         config.Config.load_config()
@@ -647,7 +647,7 @@ class Project:
 
         sys.executable = compiler_executable
 
-    def init(self, capsys: CaptureFixture) -> None:
+    def init(self, capsys: "CaptureFixture") -> None:
         self._stdout = None
         self._stderr = None
         self._capsys = capsys
