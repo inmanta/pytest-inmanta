@@ -1,4 +1,4 @@
-# v 2.3.0 (?)
+# v 2.3.0 (2022-05-13)
 Changes in this release:
 - Added test parameter framework (#288).
 - Some options have been deprecated:
