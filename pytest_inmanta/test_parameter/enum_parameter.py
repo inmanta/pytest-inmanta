@@ -16,7 +16,6 @@
     Contact: code@inmanta.com
 """
 from enum import Enum
-from turtle import left
 from typing import Container, Optional, Type, TypeVar
 
 from .parameter import TestParameter
