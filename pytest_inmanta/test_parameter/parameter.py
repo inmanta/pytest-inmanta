@@ -27,12 +27,6 @@ from pytest import Config
 LOGGER = logging.getLogger(__name__)
 
 
-NotSet = object()
-"""
-The NotSet object is used as default value when getting an option from pytest.
-If the same object is returned, we know that the option is not set.
-"""
-
 ParameterType = TypeVar("ParameterType")
 """
 The parameter type is a TypeVar which specify which type a specific TestParameter
@@ -179,8 +173,8 @@ class TestParameter(Generic[ParameterType]):
         Then, if there is a default, we use it.
         Finally, if none of the above worked, we raise a ParameterNotSetException.
         """
-        option = config.getoption(self.argument, default=NotSet)
-        if option is not NotSet:
+        option = config.getoption(self.argument, default=None)
+        if option is not None:
             # A value is set, and it is not the default one
             return self.validate(option)
 

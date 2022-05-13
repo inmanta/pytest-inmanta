@@ -20,7 +20,6 @@ import os
 from pytest import Config
 
 from inmanta.module import InstallMode
-from pytest_inmanta.test_parameter.parameter import NotSet
 
 from .test_parameter import (
     BooleanTestParameter,
@@ -112,8 +111,8 @@ class _LegacyBooleanTestParameter(BooleanTestParameter):
 
         This helper function comes to overwrite the resolve method in the legacy option.
         """
-        option = config.getoption(self.argument, default=NotSet)
-        if option is not NotSet:
+        option = config.getoption(self.argument, default=None)
+        if option is not None:
             # A value is set, and it is not the default one
             return self.validate(option)
 
