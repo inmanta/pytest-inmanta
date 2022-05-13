@@ -39,7 +39,6 @@ from typing import Dict, Iterator, List, Optional, Set, Tuple, Union
 import pydantic
 import pytest
 import yaml
-from pytest import CaptureFixture, OptionGroup, Parser
 from tornado import ioloop
 
 import inmanta.ast
@@ -67,6 +66,15 @@ from .parameters import (
     inm_venv,
 )
 from .test_parameter import ParameterNotSetException, TestParameterRegistry
+
+try:
+    """
+    Those classes are only used in type annotation, but the import doesn't work
+    in python 3.6.  So we simply catch the error and ignore it.
+    """
+    from pytest import CaptureFixture, OptionGroup, Parser
+except ImportError:
+    pass
 
 CURDIR = os.getcwd()
 LOGGER = logging.getLogger()
