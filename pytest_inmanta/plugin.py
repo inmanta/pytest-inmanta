@@ -93,6 +93,11 @@ def pytest_addoption(parser: "Parser") -> None:
             kwargs: Dict[str, object] = dict(
                 action=param.action,
                 help=param.help,
+                # We overwrite the default here, to ensure that even boolean options don't default to the opposite of
+                # the store action.  If we don't do this, config.getoption will always return a value, either True or
+                # False depending on the action and whether the flag is set or not, this makes it impossible to use
+                # environment variables for the option.
+                default=None,
             )
             if param.choices is not None:
                 kwargs["choices"] = param.choices
