@@ -1,3 +1,7 @@
+# v 2.3.1 (2022-05-16)
+Changes in this release:
+ - Fixed test parameter framework for boolean options.
+
 # v 2.3.0 (2022-05-13)
 Changes in this release:
 - Added test parameter framework (#288).
