@@ -34,7 +34,7 @@ from itertools import chain
 from pathlib import Path
 from textwrap import dedent
 from types import FunctionType, ModuleType
-from typing import Dict, Iterator, List, Optional, Set, Tuple, Union
+from typing import Dict, Iterator, List, Optional, Set, Tuple
 
 import pydantic
 import pytest
@@ -72,7 +72,7 @@ try:
     Those classes are only used in type annotation, but the import doesn't work
     in python 3.6.  So we simply catch the error and ignore it.
     """
-    from pytest import CaptureFixture, OptionGroup, Parser
+    from pytest import CaptureFixture, Parser
 except ImportError:
     pass
 
@@ -82,27 +82,7 @@ SYS_EXECUTABLE = sys.executable
 
 
 def pytest_addoption(parser: "Parser") -> None:
-    for group_name, parameters in TestParameterRegistry.test_parameter_groups().items():
-        group: Union["Parser", "OptionGroup"]
-        if group_name is None:
-            group = parser
-        else:
-            group = parser.getgroup(group_name)
-
-        for param in parameters:
-            kwargs: Dict[str, object] = dict(
-                action=param.action,
-                help=param.help,
-                # We overwrite the default here, to ensure that even boolean options don't default to the opposite of
-                # the store action.  If we don't do this, config.getoption will always return a value, either True or
-                # False depending on the action and whether the flag is set or not, this makes it impossible to use
-                # environment variables for the option.
-                default=None,
-            )
-            if param.choices is not None:
-                kwargs["choices"] = param.choices
-
-            group.addoption(param.argument, **kwargs)
+    TestParameterRegistry.pytest_addoption(parser)
 
 
 def get_module() -> typing.Tuple[module.Module, str]:
