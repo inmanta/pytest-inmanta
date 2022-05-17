@@ -1,6 +1,10 @@
 # v 2.4.0 (?)
 Changes in this release:
 
+# v 2.3.3 (2022-05-17)
+Changes in this release:
+ - Fix enum test parameters registered after pytest has loaded pytest-inmanta plugin.
+
 # v 2.3.2 (2022-05-17)
 Changes in this release:
  - Allow other plugins to register test parameters after pytest has loaded pytest-inmanta plugin.
