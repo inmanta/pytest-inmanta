@@ -153,9 +153,8 @@ class TestParameterRegistry:
         It will register the parser for later use and setup all the options that have already been
         registered.
         """
-        if cls.__parser is not None:
-            # Options can not be registered more than once
-            return
+        if cls.__parser == parser:
+            raise RuntimeError("Options can not be registered more than once")
 
         # Saving the parser for late option registration
         cls.__parser = parser
