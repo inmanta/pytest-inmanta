@@ -53,6 +53,7 @@ class EnumTestParameter(TestParameter[E]):
         group: Optional[str] = None,
         legacy: Optional["EnumTestParameter[E]"] = None,
     ) -> None:
+        self.enum = enum
         super().__init__(
             argument,
             environment_variable,
@@ -62,7 +63,6 @@ class EnumTestParameter(TestParameter[E]):
             group=group,
             legacy=legacy,
         )
-        self.enum = enum
 
     @property
     def choices(self) -> Optional[Container[str]]:
