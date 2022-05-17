@@ -73,14 +73,13 @@ inm_mod_repo_legacy = ListTestParameter(
         "Location to download modules from."
         "Can be specified multiple times to add multiple locations"
     ),
-    default=["https://github.com/inmanta/"],
 )
 
 inm_mod_repo = ListTestParameter(
     argument="--module-repo",
     environment_variable=inm_mod_repo_legacy.environment_variable,
     usage=inm_mod_repo_legacy.usage,
-    default=inm_mod_repo_legacy.default,
+    default=["https://github.com/inmanta/"],
     group=param_group,
     legacy=inm_mod_repo_legacy,
 )
@@ -93,7 +92,6 @@ inm_install_mode_legacy = EnumTestParameter(
     environment_variable="INMANTA_INSTALL_MODE",
     usage="Install mode for modules downloaded during this test",
     enum=InstallMode,
-    default=InstallMode.release,
 )
 
 inm_install_mode = EnumTestParameter(
@@ -101,7 +99,7 @@ inm_install_mode = EnumTestParameter(
     environment_variable=inm_install_mode_legacy.environment_variable,
     usage=inm_install_mode_legacy.usage,
     enum=inm_install_mode_legacy.enum,
-    default=inm_install_mode_legacy.default,
+    default=InstallMode.release,
     group=param_group,
     legacy=inm_install_mode_legacy,
 )
