@@ -57,6 +57,8 @@ class PathTestParameter(TestParameter[Path]):
         is_file: Optional[bool] = None,
         exists: Optional[bool] = None,
     ) -> None:
+        self.is_file = is_file
+        self.exists = exists if is_file is None else True
         super().__init__(
             argument,
             environment_variable,
@@ -66,8 +68,6 @@ class PathTestParameter(TestParameter[Path]):
             group=group,
             legacy=legacy,
         )
-        self.is_file = is_file
-        self.exists = exists if is_file is None else True
 
     def validate(self, raw_value: object) -> Path:
         path = Path(str(raw_value)).absolute()
