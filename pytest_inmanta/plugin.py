@@ -1152,6 +1152,6 @@ def session_temp_dir(tmpdir_factory: "TempdirFactory") -> Generator[str, None, N
 
 
 @pytest.fixture
-def use_session_temp_dir(session_temp_dir: str) -> Generator[str, None, None]:
+def use_session_temp_dir(session_temp_dir: str) -> Iterator[str]:
     inmanta_config.state_dir.set(str(session_temp_dir))
     yield inmanta_config.state_dir.get()
