@@ -57,7 +57,15 @@ from inmanta.protocol import json_encode
 from inmanta.resources import Resource
 
 if typing.TYPE_CHECKING:
+    # Local type stub for mypy that works with both pytest < 7 and pytest >=7
+    # https://docs.pytest.org/en/7.1.x/_modules/_pytest/legacypath.html#TempdirFactory
+    import py
     from inmanta.agent.io.local import IOBase
+
+    class TempdirFactory:
+        def mktemp(self, path: str) -> py.path.local:
+            ...
+
 
 from .handler import DATA
 from .parameters import (
@@ -1134,6 +1142,13 @@ license: Test License
     def finalize_all_handlers(self) -> None:
         for handler_instance in self._handlers:
             self.finalize_handler(handler_instance)
+
+
+@pytest.fixture(scope="function")
+def inmanta_state_dir(tmpdir_factory: "TempdirFactory") -> Iterator[str]:
+    inmanta_state_dir = tmpdir_factory.mktemp("inmanta_state_dir")
+    yield str(inmanta_state_dir)
+    inmanta_state_dir.remove(ignore_errors=True)
 
 
 @pytest.fixture
