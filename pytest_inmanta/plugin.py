@@ -57,15 +57,7 @@ from inmanta.protocol import json_encode
 from inmanta.resources import Resource
 
 if typing.TYPE_CHECKING:
-    # Local type stub for mypy that works with both pytest < 7 and pytest >=7
-    # https://docs.pytest.org/en/7.1.x/_modules/_pytest/legacypath.html#TempdirFactory
-    import py
     from inmanta.agent.io.local import IOBase
-
-    class TempdirFactory:
-        def mktemp(self, path: str) -> py.path.local:
-            ...
-
 
 from .handler import DATA
 from .parameters import (
@@ -135,7 +127,7 @@ def inmanta_plugins(
 
 @pytest.fixture()
 def project(
-    project_shared: "Project", capsys: "CaptureFixture", use_session_temp_dir: str
+    project_shared: "Project", capsys: "CaptureFixture", set_inmanta_state_dir
 ) -> typing.Iterator["Project"]:
     DATA.clear()
     project_shared.clean()
@@ -148,7 +140,7 @@ def project(
 def project_no_plugins(
     project_shared_no_plugins: "Project",
     capsys: "CaptureFixture",
-    use_session_temp_dir: str,
+    set_inmanta_state_dir,
 ) -> typing.Iterator["Project"]:
     warnings.warn(
         DeprecationWarning(
@@ -1144,14 +1136,6 @@ license: Test License
             self.finalize_handler(handler_instance)
 
 
-@pytest.fixture(scope="session")
-def session_temp_dir(tmpdir_factory: "TempdirFactory") -> Generator[str, None, None]:
-    session_temp_dir = tmpdir_factory.mktemp("session")
-    yield str(session_temp_dir)
-    session_temp_dir.remove(ignore_errors=True)
-
-
 @pytest.fixture
-def use_session_temp_dir(session_temp_dir: str) -> Iterator[str]:
-    inmanta_config.state_dir.set(str(session_temp_dir))
-    yield inmanta_config.state_dir.get()
+def set_inmanta_state_dir(inmanta_state_dir) -> None:
+    inmanta_config.state_dir.set(str(inmanta_state_dir))

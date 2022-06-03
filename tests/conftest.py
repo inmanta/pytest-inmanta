@@ -20,6 +20,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import typing
 from pathlib import Path
 from typing import Iterator, Optional
 
@@ -30,10 +31,20 @@ import pytest
 import core
 import pytest_inmanta.plugin
 from inmanta import env, loader, plugins
+from inmanta.agent import config as inmanta_config
 from inmanta.loader import PluginModuleFinder
 from libpip2pi.commands import dir2pi
 
 pytest_plugins = ["pytester"]
+
+if typing.TYPE_CHECKING:
+    # Local type stub for mypy that works with both pytest < 7 and pytest >=7
+    # https://docs.pytest.org/en/7.1.x/_modules/_pytest/legacypath.html#TempdirFactory
+    import py
+
+    class TempdirFactory:
+        def mktemp(self, path: str) -> py.path.local:
+            ...
 
 
 @pytest.fixture(autouse=True)
@@ -114,3 +125,10 @@ def examples_v2_package_index(pytestconfig) -> Iterator[str]:
             )
         dir2pi(argv=["dir2pi", artifact_dir])
         yield os.path.join(artifact_dir, "simple")
+
+
+@pytest.fixture(scope="function")
+def inmanta_state_dir(tmpdir_factory: "TempdirFactory") -> Iterator[str]:
+    inmanta_state_dir = tmpdir_factory.mktemp("inmanta_state_dir")
+    yield str(inmanta_state_dir)
+    inmanta_state_dir.remove(ignore_errors=True)
