@@ -20,7 +20,6 @@ import os
 import subprocess
 import sys
 import tempfile
-import typing
 from pathlib import Path
 from typing import Iterator, Optional
 
@@ -31,7 +30,6 @@ import pytest
 import core
 import pytest_inmanta.plugin
 from inmanta import env, loader, plugins
-from inmanta.agent import config as inmanta_config
 from inmanta.loader import PluginModuleFinder
 from libpip2pi.commands import dir2pi
 
