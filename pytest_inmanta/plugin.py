@@ -1146,11 +1146,15 @@ license: Test License
 
 @pytest.fixture(scope="function")
 def inmanta_state_dir(tmpdir_factory: "TempdirFactory") -> Iterator[str]:
+    """
+    This fixture can be overridden in the conftest of any individual project
+    in order to set the Inmanta state directory at the desired level.
+    """
     inmanta_state_dir = tmpdir_factory.mktemp("inmanta_state_dir")
     yield str(inmanta_state_dir)
-    inmanta_state_dir.remove(ignore_errors=True)
+    inmanta_state_dir.remove()
 
 
 @pytest.fixture
 def set_inmanta_state_dir(inmanta_state_dir) -> None:
-    inmanta_config.state_dir.set(str(inmanta_state_dir))
+    inmanta_config.state_dir.set(inmanta_state_dir)
