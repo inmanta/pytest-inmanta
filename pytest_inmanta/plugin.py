@@ -43,7 +43,9 @@ from tornado import ioloop
 
 import inmanta.ast
 from inmanta import compiler, config, const, module, plugins, protocol
-from inmanta.agent import cache, handler
+from inmanta.agent import cache
+from inmanta.agent import config as inmanta_config
+from inmanta.agent import handler
 from inmanta.agent import io as agent_io
 from inmanta.agent.handler import HandlerContext, ResourceHandler
 from inmanta.const import ResourceState
@@ -55,7 +57,15 @@ from inmanta.protocol import json_encode
 from inmanta.resources import Resource
 
 if typing.TYPE_CHECKING:
+    # Local type stub for mypy that works with both pytest < 7 and pytest >=7
+    # https://docs.pytest.org/en/7.1.x/_modules/_pytest/legacypath.html#TempdirFactory
+    import py
     from inmanta.agent.io.local import IOBase
+
+    class TempdirFactory:
+        def mktemp(self, path: str) -> py.path.local:
+            ...
+
 
 from .handler import DATA
 from .parameters import (
@@ -125,7 +135,7 @@ def inmanta_plugins(
 
 @pytest.fixture()
 def project(
-    project_shared: "Project", capsys: "CaptureFixture"
+    project_shared: "Project", capsys: "CaptureFixture", set_inmanta_state_dir: None
 ) -> typing.Iterator["Project"]:
     DATA.clear()
     project_shared.clean()
@@ -136,7 +146,9 @@ def project(
 
 @pytest.fixture()
 def project_no_plugins(
-    project_shared_no_plugins: "Project", capsys: "CaptureFixture"
+    project_shared_no_plugins: "Project",
+    capsys: "CaptureFixture",
+    set_inmanta_state_dir: None,
 ) -> typing.Iterator["Project"]:
     warnings.warn(
         DeprecationWarning(
@@ -1130,3 +1142,19 @@ license: Test License
     def finalize_all_handlers(self) -> None:
         for handler_instance in self._handlers:
             self.finalize_handler(handler_instance)
+
+
+@pytest.fixture(scope="function")
+def inmanta_state_dir(tmpdir_factory: "TempdirFactory") -> Iterator[str]:
+    """
+    This fixture can be overridden in the conftest of any individual project
+    in order to set the Inmanta state directory at the desired level.
+    """
+    inmanta_state_dir = tmpdir_factory.mktemp("inmanta_state_dir")
+    yield str(inmanta_state_dir)
+    inmanta_state_dir.remove()
+
+
+@pytest.fixture
+def set_inmanta_state_dir(inmanta_state_dir: str) -> None:
+    inmanta_config.state_dir.set(inmanta_state_dir)
