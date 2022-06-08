@@ -135,7 +135,7 @@ def inmanta_plugins(
 
 @pytest.fixture()
 def project(
-    project_shared: "Project", capsys: "CaptureFixture", set_inmanta_state_dir
+    project_shared: "Project", capsys: "CaptureFixture", set_inmanta_state_dir: None
 ) -> typing.Iterator["Project"]:
     DATA.clear()
     project_shared.clean()
@@ -148,7 +148,7 @@ def project(
 def project_no_plugins(
     project_shared_no_plugins: "Project",
     capsys: "CaptureFixture",
-    set_inmanta_state_dir,
+    set_inmanta_state_dir: None,
 ) -> typing.Iterator["Project"]:
     warnings.warn(
         DeprecationWarning(
@@ -1156,5 +1156,5 @@ def inmanta_state_dir(tmpdir_factory: "TempdirFactory") -> Iterator[str]:
 
 
 @pytest.fixture
-def set_inmanta_state_dir(inmanta_state_dir) -> None:
+def set_inmanta_state_dir(inmanta_state_dir: str) -> None:
     inmanta_config.state_dir.set(inmanta_state_dir)
