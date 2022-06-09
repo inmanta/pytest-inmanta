@@ -626,7 +626,6 @@ class Project:
         ] = defaultdict(dict)
         self._should_load_plugins: typing.Optional[bool] = load_plugins
         self._plugins: typing.Optional[typing.Dict[str, FunctionType]] = None
-        self._load()
         self._capsys: typing.Optional["CaptureFixture"] = None
         self.ctx: typing.Optional[HandlerContext] = None
         self._handlers: typing.Set[ResourceHandler] = set()
