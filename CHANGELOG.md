@@ -1,6 +1,7 @@
 # v 2.4.0 (?)
 Changes in this release:
 - Add fixture to change the Inmanta state dir to a writable location for the current user.
+- Ensure logs can be serialized in finalize_context
 
 # v 2.3.3 (2022-05-18)
 Changes in this release:
