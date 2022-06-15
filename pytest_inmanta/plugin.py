@@ -735,7 +735,10 @@ class Project:
 
     def finalize_context(self, ctx: handler.HandlerContext) -> None:
         # ensure logs can be serialized
-        json_encode({"message": ctx.logs})
+        try:
+            json_encode({"message": ctx.logs})
+        except TypeError as e:
+            raise Exception(f"Unserializable logs. : {ctx.logs}") from e
 
     def get_resource(
         self, resource_type: str, **filter_args: object
