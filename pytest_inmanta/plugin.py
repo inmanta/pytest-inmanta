@@ -73,6 +73,7 @@ from .parameters import (
     inm_mod_in_place,
     inm_mod_repo,
     inm_no_load_plugins,
+    inm_no_strict_deps_check,
     inm_venv,
 )
 from .test_parameter import ParameterNotSetException, TestParameterRegistry
@@ -281,7 +282,9 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
 
     def create_project(**kwargs: object):
         load_plugins = not inm_no_load_plugins.resolve(request.config)
+        no_strict_deps_check = inm_no_strict_deps_check.resolve(request.config)
         extended_kwargs: typing.Dict[str, object] = {
+            "no_strict_deps_check": no_strict_deps_check,
             "load_plugins": load_plugins,
             "env_path": env_dir,
             **kwargs,
@@ -446,6 +449,7 @@ class ProjectLoader:
         extra_kwargs_set = (
             {"clean": False} if "clean" in signature_set.parameters.keys() else {}
         )
+        # TODO: backward compatible: look at pytest in docker if it test module test
         module.Project.set(project, **extra_kwargs_set)
 
         # deregister plugins
@@ -605,6 +609,7 @@ class Project:
         project_dir: str,
         env_path: str,
         load_plugins: typing.Optional[bool] = True,
+        no_strict_deps_check: typing.Optional[bool] = False,
     ) -> None:
         """
         :param project_dir: Directory containing the Inmanta project.
@@ -613,6 +618,7 @@ class Project:
         """
         self._test_project_dir = project_dir
         self._env_path = env_path
+        self.no_strict_deps_check = no_strict_deps_check
         self._stdout: typing.Optional[str] = None
         self._stderr: typing.Optional[str] = None
         self.types: typing.Optional[typing.Dict[str, inmanta.ast.Type]] = None
@@ -663,7 +669,7 @@ class Project:
 
     def _create_project_and_load(self, model: str) -> module.Project:
         """
-        This method doesn the following:
+        This method does the following:
         * Add the given model file to the Inmanta project
         * Install the module dependencies
         * Load the project
@@ -683,7 +689,11 @@ class Project:
             if "venv_path" in signature_init.parameters.keys()
             else {}
         )
-        test_project = module.Project(self._test_project_dir, **extra_kwargs_init)
+        test_project = module.Project(
+            self._test_project_dir,
+            **extra_kwargs_init,
+            strict_deps_check=not self.no_strict_deps_check,
+        )
 
         ProjectLoader.load(test_project)
 
