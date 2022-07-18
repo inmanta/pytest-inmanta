@@ -684,6 +684,13 @@ class Project:
             module.Project.__init__
         )
         # The venv_path parameter only exists on ISO5+
+
+        extra_kwargs_strict_deps_check = (
+            {"strict_deps_check": not self.no_strict_deps_check}
+            if "strict_deps_check" in signature_init.parameters.keys()
+            else {}
+        )
+
         extra_kwargs_init = (
             {"venv_path": self._env_path}
             if "venv_path" in signature_init.parameters.keys()
@@ -692,7 +699,7 @@ class Project:
         test_project = module.Project(
             self._test_project_dir,
             **extra_kwargs_init,
-            strict_deps_check=not self.no_strict_deps_check,
+            **extra_kwargs_strict_deps_check,
         )
 
         ProjectLoader.load(test_project)
