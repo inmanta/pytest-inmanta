@@ -65,7 +65,7 @@ def test_conflicing_dependencies_strict(
     )
     """
     when using the pytest-inmanta without specifying the --no-strict-deps-check, the constraints
-    of the installed modules/packages are veryfied and if a conflict is detected a ConflictingRequirements
+    of the installed modules/packages are veryfied and if a conflict is detected a ConflictingRequirement
     error is raised
     """
     testdir.copy_example("test_conflict_dependencies")
@@ -100,7 +100,7 @@ def test_conflicing_dependencies_no_strict(
     """
     when using pytest-inmanta with --no-strict-deps-check option,
     the legacy check on the constraints is done. If the installed modules are not compatible
-    a CompilerException is raised. In the used exemples for this test,
+    a CompilerException is raised. In the used exemple for this test,
     test_conflict_dependencies(v1 module) requires inmanta-module-testmodulev2conflict1 and
     inmanta-module-testmodulev2conflict2. The later two are incompatible as one requires lorem 0.0.1
     and the other one 0.1.1.
