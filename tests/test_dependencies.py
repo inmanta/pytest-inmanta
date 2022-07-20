@@ -58,7 +58,7 @@ def test_transitive_v2_dependencies(examples_v2_package_index, pytestconfig, tes
             utils.unload_modules_for_path(venv.site_packages_dir)
 
 
-@pytest.mark.parametrize_any(
+@pytest.mark.parametrize(
     "is_strict, error_msg",
     [
         (False, "CompilerException"),
