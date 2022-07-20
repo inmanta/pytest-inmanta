@@ -84,6 +84,7 @@ def test_conflicing_dependencies_strict(
                 "package:"
                 + os.environ.get("PIP_INDEX_URL", "package:https://pypi.org/simple"),
             )
+            print("================================================================")
             result.assert_outcomes(errors=1)
             print(result)
         finally:
@@ -119,6 +120,7 @@ def test_conflicing_dependencies_no_strict(
                 "package:"
                 + os.environ.get("PIP_INDEX_URL", "package:https://pypi.org/simple"),
             )
+            print("================================================================")
             result.assert_outcomes(errors=1)
             print(result)
         finally:
