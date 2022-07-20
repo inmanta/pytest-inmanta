@@ -1,4 +1,4 @@
-include inmanta_plugins/testmodule-v2-conflict-2/setup.cfg
-recursive-include inmanta_plugins/testmodule-v2-conflict-2/model *.cf
-graft inmanta_plugins/testmodule-v2-conflict-2/files
-graft inmanta_plugins/testmodule-v2-conflict-2/templates
+include inmanta_plugins/testmodulev2conflict2/setup.cfg
+recursive-include inmanta_plugins/testmodulev2conflict2/model *.cf
+graft inmanta_plugins/testmodulev2conflict2/files
+graft inmanta_plugins/testmodulev2conflict2/templates
