@@ -1,2 +1,0 @@
-lorem~=0.0.1
-inmanta-module-testmodulev2
