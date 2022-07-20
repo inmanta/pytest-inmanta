@@ -63,7 +63,11 @@ def test_conflicing_dependencies_strict(
     pytest_inmanta.plugin.CURDIR = str(
         pytestconfig.rootpath / "examples" / "test_conflict_dependencies"
     )
-
+    """
+    when using the pytest-inmanta without specifying the --no-strict-deps-check, the constraints
+    of the installed modules/packages are veryfied and if a conflict is detected a ConflictingRequirements
+    error is raised
+    """
     testdir.copy_example("test_conflict_dependencies")
 
     with tempfile.TemporaryDirectory() as venv_dir:
@@ -93,6 +97,14 @@ def test_conflicing_dependencies_strict(
 def test_conflicing_dependencies_no_strict(
     examples_v2_package_index, pytestconfig, testdir
 ):
+    """
+    when using the pytest-inmanta with the --no-strict-deps-check option, the constraints
+    the legacy check on the constraints is done. If the installed modules are not compatible
+    a CompilerException is raised. In the used exemples for this test,
+    test_conflict_dependencies(v1 module) requires inmanta-module-testmodulev2conflict1 and
+    inmanta-module-testmodulev2conflict2. The later two are incompatible as one requires lorem 0.0.1
+    and the other one 0.1.1.
+    """
     # set working directory to allow in-place with all example modules
     pytest_inmanta.plugin.CURDIR = str(
         pytestconfig.rootpath / "examples" / "test_conflict_dependencies"
