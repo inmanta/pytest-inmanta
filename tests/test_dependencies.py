@@ -59,14 +59,14 @@ def test_transitive_v2_dependencies(examples_v2_package_index, pytestconfig, tes
 
 
 @pytest.mark.parametrize(
-    "is_strict, error_msg",
+    "no_strict_deps_check, error_msg",
     [
-        (False, "CompilerException"),
-        (True, "ConflictingRequirements"),
+        (True, "CompilerException"),
+        (False, "ConflictingRequirements"),
     ],
 )
 def test_conflicing_dependencies(
-    examples_v2_package_index, pytestconfig, testdir, is_strict, error_msg
+    examples_v2_package_index, pytestconfig, testdir, no_strict_deps_check, error_msg
 ):
     """
     when using the pytest-inmanta without specifying the --no-strict-deps-check, the constraints
@@ -94,7 +94,7 @@ def test_conflicing_dependencies(
             # run tests
             result = testdir.runpytest_inprocess(
                 "tests/test_basics.py",
-                "--no-strict-deps-check" if not is_strict else "",
+                *(["--no-strict-deps-check"] if no_strict_deps_check else []),
                 "--use-module-in-place",
                 # add pip index containing examples packages as module repo
                 "--module_repo",
