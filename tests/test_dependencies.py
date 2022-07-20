@@ -84,17 +84,8 @@ def test_conflicing_dependencies_strict(
                 "package:"
                 + os.environ.get("PIP_INDEX_URL", "package:https://pypi.org/simple"),
             )
-            print("================================================================")
             result.assert_outcomes(errors=1)
-            print("floflo1")
-            print(result.stdout)
-            print("floflo2")
-            print(result.outlines)
-            print(result.outlines)
-            print(result.outlines)
-            print("floflo3")
-            print(result.errlines)
-            print("floflo4")
+            assert "ConflictingRequirements" in result.outlines
         finally:
             utils.unload_modules_for_path(venv.site_packages_dir)
 
@@ -128,16 +119,7 @@ def test_conflicing_dependencies_no_strict(
                 "package:"
                 + os.environ.get("PIP_INDEX_URL", "package:https://pypi.org/simple"),
             )
-            print("================================================================")
             result.assert_outcomes(errors=1)
-            print("floflo1")
-            print(result.stdout)
-            print("floflo2")
-            print(result.outlines)
-            print(result.outlines)
-            print(result.outlines)
-            print("floflo3")
-            print(result.errlines)
-            print("floflo4")
+            assert "ConflictingRequirements" in result.outlines
         finally:
             utils.unload_modules_for_path(venv.site_packages_dir)
