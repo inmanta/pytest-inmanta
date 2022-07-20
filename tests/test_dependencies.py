@@ -94,7 +94,7 @@ def test_conflicing_dependencies(
             # run tests
             result = testdir.runpytest_inprocess(
                 "tests/test_basics.py",
-                "--no-strict-deps-check" if is_strict else "",
+                "--no-strict-deps-check" if not is_strict else "",
                 "--use-module-in-place",
                 # add pip index containing examples packages as module repo
                 "--module_repo",
