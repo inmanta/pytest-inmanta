@@ -86,7 +86,7 @@ def test_conflicing_dependencies_strict(
             )
             print("================================================================")
             result.assert_outcomes(errors=1)
-            print(result)
+            print(result.stdout)
         finally:
             utils.unload_modules_for_path(venv.site_packages_dir)
 
@@ -122,6 +122,6 @@ def test_conflicing_dependencies_no_strict(
             )
             print("================================================================")
             result.assert_outcomes(errors=1)
-            print(result)
+            print(result.stdout)
         finally:
             utils.unload_modules_for_path(venv.site_packages_dir)
