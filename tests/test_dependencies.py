@@ -86,11 +86,11 @@ def test_conflicing_dependencies_strict(
             )
             print("================================================================")
             result.assert_outcomes(errors=1)
-            print("floflo")
+            print("floflo1")
             print(result.stdout)
             print(result.outlines)
             print(result.errlines)
-            print("floflo")
+            print("floflo2")
         finally:
             utils.unload_modules_for_path(venv.site_packages_dir)
 
@@ -126,10 +126,10 @@ def test_conflicing_dependencies_no_strict(
             )
             print("================================================================")
             result.assert_outcomes(errors=1)
-            print("floflo")
+            print("floflo1")
             print(result.stdout)
             print(result.outlines)
             print(result.errlines)
-            print("floflo")
+            print("floflo2")
         finally:
             utils.unload_modules_for_path(venv.site_packages_dir)
