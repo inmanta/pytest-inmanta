@@ -98,7 +98,7 @@ def test_conflicing_dependencies_no_strict(
     examples_v2_package_index, pytestconfig, testdir
 ):
     """
-    when using the pytest-inmanta with the --no-strict-deps-check option, the constraints
+    when using pytest-inmanta with --no-strict-deps-check option,
     the legacy check on the constraints is done. If the installed modules are not compatible
     a CompilerException is raised. In the used exemples for this test,
     test_conflict_dependencies(v1 module) requires inmanta-module-testmodulev2conflict1 and
