@@ -181,6 +181,7 @@ The following options are available.
  When not using this option during the testing of plugins with the `project.get_plugin_function` method, 
  it's possible that the module's `plugin/__init__.py` is loaded multiple times, 
  which can cause issues when it has side effects, as they are executed multiple times as well.
+ * `--no-strict-deps-check`: option to run pytest-inmanta using the legacy check(less strict) on requirements. By default the new strict will be used.
  
  Use the generic pytest options `--log-cli-level` to show Inmanta logger to see any setup or cleanup warnings. For example,
  `--log-cli-level=INFO`

@@ -69,7 +69,7 @@ inm_no_strict_deps_check = BooleanTestParameter(
     usage=(
         "Tell pytest-inmanta to run without using the deps check after module installation."
         "When using the dependency check, an error is raised if there are conflicting requirements"
-        "when disabling the check, a warning is shown but no error is raised"
+        "when disabling the check, the less strict legacy behavior is used instead."
     ),
     default=False,
     group=param_group,
