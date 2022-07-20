@@ -449,7 +449,6 @@ class ProjectLoader:
         extra_kwargs_set = (
             {"clean": False} if "clean" in signature_set.parameters.keys() else {}
         )
-        # TODO: backward compatible: look at pytest in docker if it test module test
         module.Project.set(project, **extra_kwargs_set)
 
         # deregister plugins
