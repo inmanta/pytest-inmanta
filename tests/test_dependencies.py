@@ -20,6 +20,8 @@
 import os
 import tempfile
 
+import pytest
+
 import pytest_inmanta.plugin
 import utils
 from inmanta import env
@@ -56,18 +58,25 @@ def test_transitive_v2_dependencies(examples_v2_package_index, pytestconfig, tes
             utils.unload_modules_for_path(venv.site_packages_dir)
 
 
-def test_conflicing_dependencies_strict(
-    examples_v2_package_index, pytestconfig, testdir
+@pytest.mark.parametrize_any(
+    "is_strict, result",
+    [
+        (False, "CompilerException"),
+        (True, "ConflictingRequirements"),
+    ],
+)
+def test_conflicing_dependencies(
+    examples_v2_package_index, pytestconfig, testdir, is_strict, result
 ):
-    # set working directory to allow in-place with all example modules
-    pytest_inmanta.plugin.CURDIR = str(
-        pytestconfig.rootpath / "examples" / "test_conflict_dependencies"
-    )
     """
     when using the pytest-inmanta without specifying the --no-strict-deps-check, the constraints
     of the installed modules/packages are veryfied and if a conflict is detected a ConflictingRequirement
     error is raised
     """
+    # set working directory to allow in-place with all example modules
+    pytest_inmanta.plugin.CURDIR = str(
+        pytestconfig.rootpath / "examples" / "test_conflict_dependencies"
+    )
     testdir.copy_example("test_conflict_dependencies")
 
     with tempfile.TemporaryDirectory() as venv_dir:
@@ -79,6 +88,7 @@ def test_conflicing_dependencies_strict(
             # run tests
             result = testdir.runpytest_inprocess(
                 "tests/test_basics.py",
+                "--no-strict-deps-check" if is_strict else "",
                 "--use-module-in-place",
                 # add pip index containing examples packages as module repo
                 "--module_repo",
@@ -89,49 +99,6 @@ def test_conflicing_dependencies_strict(
                 + os.environ.get("PIP_INDEX_URL", "package:https://pypi.org/simple"),
             )
             result.assert_outcomes(errors=1)
-            assert "ConflictingRequirements" "\n".join(result.outlines)
-        finally:
-            utils.unload_modules_for_path(venv.site_packages_dir)
-
-
-def test_conflicing_dependencies_no_strict(
-    examples_v2_package_index, pytestconfig, testdir
-):
-    """
-    when using pytest-inmanta with --no-strict-deps-check option,
-    the legacy check on the constraints is done. If the installed modules are not compatible
-    a CompilerException is raised. In the used exemple for this test,
-    test_conflict_dependencies(v1 module) requires inmanta-module-testmodulev2conflict1 and
-    inmanta-module-testmodulev2conflict2. The later two are incompatible as one requires lorem 0.0.1
-    and the other one 0.1.1.
-    """
-    # set working directory to allow in-place with all example modules
-    pytest_inmanta.plugin.CURDIR = str(
-        pytestconfig.rootpath / "examples" / "test_conflict_dependencies"
-    )
-
-    testdir.copy_example("test_conflict_dependencies")
-
-    with tempfile.TemporaryDirectory() as venv_dir:
-        # set up environment
-        venv: env.VirtualEnv = env.VirtualEnv(env_path=venv_dir)
-        try:
-            venv.use_virtual_env()
-
-            # run tests
-            result = testdir.runpytest_inprocess(
-                "tests/test_basics.py",
-                "--no-strict-deps-check",
-                "--use-module-in-place",
-                # add pip index containing examples packages as module repo
-                "--module_repo",
-                f"package:{examples_v2_package_index}",
-                # include configured pip index for inmanta-module-std
-                "--module_repo",
-                "package:"
-                + os.environ.get("PIP_INDEX_URL", "package:https://pypi.org/simple"),
-            )
-            result.assert_outcomes(errors=1)
-            assert "CompilerException" in "\n".join(result.outlines)
+            assert result in "\n".join(result.outlines)
         finally:
             utils.unload_modules_for_path(venv.site_packages_dir)
