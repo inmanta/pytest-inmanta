@@ -59,14 +59,14 @@ def test_transitive_v2_dependencies(examples_v2_package_index, pytestconfig, tes
 
 
 @pytest.mark.parametrize_any(
-    "is_strict, result",
+    "is_strict, error_msg",
     [
         (False, "CompilerException"),
         (True, "ConflictingRequirements"),
     ],
 )
 def test_conflicing_dependencies(
-    examples_v2_package_index, pytestconfig, testdir, is_strict, result
+    examples_v2_package_index, pytestconfig, testdir, is_strict, error_msg
 ):
     """
     when using the pytest-inmanta without specifying the --no-strict-deps-check, the constraints
@@ -105,6 +105,6 @@ def test_conflicing_dependencies(
                 + os.environ.get("PIP_INDEX_URL", "package:https://pypi.org/simple"),
             )
             result.assert_outcomes(errors=1)
-            assert result in "\n".join(result.outlines)
+            assert error_msg in "\n".join(result.outlines)
         finally:
             utils.unload_modules_for_path(venv.site_packages_dir)
