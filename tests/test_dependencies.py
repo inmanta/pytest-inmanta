@@ -85,7 +85,7 @@ def test_conflicing_dependencies_strict(
                 + os.environ.get("PIP_INDEX_URL", "package:https://pypi.org/simple"),
             )
             result.assert_outcomes(errors=1)
-            assert "ConflictingRequirements" in result.outlines
+            assert "ConflictingRequirements" "\n".join(result.outlines)
         finally:
             utils.unload_modules_for_path(venv.site_packages_dir)
 
@@ -120,6 +120,7 @@ def test_conflicing_dependencies_no_strict(
                 + os.environ.get("PIP_INDEX_URL", "package:https://pypi.org/simple"),
             )
             result.assert_outcomes(errors=1)
-            assert "ConflictingRequirements" in result.outlines
+            # assert "CompilerException" in "\n".join(result.outlines)
+            assert "ConflictingRequirements" in "\n".join(result.outlines)
         finally:
             utils.unload_modules_for_path(venv.site_packages_dir)
