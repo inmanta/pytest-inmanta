@@ -83,7 +83,7 @@ def test_conflicing_dependencies_strict(
                 # add pip index containing examples packages as module repo
                 "--module_repo",
                 f"package:{examples_v2_package_index}",
-                # include configured pip index for inmanta-module-std
+                # include configured pip index for inmanta-module-std and lorem
                 "--module_repo",
                 "package:"
                 + os.environ.get("PIP_INDEX_URL", "package:https://pypi.org/simple"),
