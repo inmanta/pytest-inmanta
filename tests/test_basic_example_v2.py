@@ -16,13 +16,9 @@
     Contact: code@inmanta.com
 """
 import logging
-import os
-import subprocess
 
 # Note: These tests only function when the pytest output is not modified by plugins such as pytest-sugar!
-import tempfile
-from importlib.abc import Loader
-from typing import Iterator, Optional, Tuple
+from typing import Iterator
 
 import pytest
 
@@ -43,13 +39,16 @@ def testmodulev2_venv(pytestconfig) -> Iterator[env.VirtualEnv]:
     """
     Yields a Python environment with testmodulev2 installed in it.
     """
-    with utils.module_v2_venv(pytestconfig.rootpath / "examples" / "testmodulev2") as venv:
+    with utils.module_v2_venv(
+        pytestconfig.rootpath / "examples" / "testmodulev2"
+    ) as venv:
         yield venv
 
 
 @pytest.fixture(scope="function")
 def testmodulev2_venv_active(
-    deactive_venv: None, testmodulev2_venv: env.VirtualEnv,
+    deactive_venv: None,
+    testmodulev2_venv: env.VirtualEnv,
 ) -> Iterator[env.VirtualEnv]:
     """
     Activates a Python environment with testmodulev2 installed in it for the currently running process.

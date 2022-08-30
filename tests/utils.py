@@ -22,9 +22,11 @@ import os
 import subprocess
 import sys
 import tempfile
-from inmanta import env
+from importlib.abc import Loader
 from types import ModuleType
-from typing import Optional, Iterator, Sequence
+from typing import Iterator, Optional, Sequence, Tuple
+
+from inmanta import env
 
 
 @contextlib.contextmanager
@@ -66,7 +68,7 @@ def activate_venv(venv: env.VirtualEnv) -> Iterator[env.VirtualEnv]:
         try:
             yield unique_env
         finally:
-            utils.unload_modules_for_path(unique_env.site_packages_dir)
+            unload_modules_for_path(unique_env.site_packages_dir)
 
 
 def venv_unset_python_path(venv: env.VirtualEnv) -> None:
