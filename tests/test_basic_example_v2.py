@@ -43,68 +43,19 @@ def testmodulev2_venv(pytestconfig) -> Iterator[env.VirtualEnv]:
     """
     Yields a Python environment with testmodulev2 installed in it.
     """
-    with tempfile.TemporaryDirectory() as venv_dir:
-        # set up environment
-        venv: env.VirtualEnv = env.VirtualEnv(env_path=venv_dir)
-        venv.init_env()
-        venv_unset_python_path(venv)
-        # install test module into environment
-        subprocess.check_call(
-            [
-                venv.python_path,
-                "-m",
-                "inmanta.app",
-                "-X",
-                "module",
-                "install",
-                str(pytestconfig.rootpath / "examples" / "testmodulev2"),
-            ],
-        )
+    with utils.module_v2_venv(pytestconfig.rootpath / "examples" / "testmodulev2") as venv:
         yield venv
-
-
-def venv_unset_python_path(venv: env.VirtualEnv) -> None:
-    """
-    Workaround for pypa/build#405: unset PYTHONPATH because it's not required in this case and it triggers a bug in build
-    """
-    sitecustomize_existing: Optional[
-        Tuple[Optional[str], Loader]
-    ] = env.ActiveEnv.get_module_file("sitecustomize")
-    # inherit from existing sitecustomize.py
-    sitecustomize_inherit: str
-    if sitecustomize_existing is not None and sitecustomize_existing[0] is not None:
-        with open(sitecustomize_existing[0], "r") as fd:
-            sitecustomize_inherit = fd.read()
-    else:
-        sitecustomize_inherit = ""
-    with open(os.path.join(venv.site_packages_dir, "sitecustomize.py"), "a") as fd:
-        fd.write(
-            f"""
-{sitecustomize_inherit}
-
-import os
-
-if "PYTHONPATH" in os.environ:
-    del os.environ["PYTHONPATH"]
-            """.strip()
-        )
 
 
 @pytest.fixture(scope="function")
 def testmodulev2_venv_active(
-    deactive_venv, testmodulev2_venv
+    deactive_venv: None, testmodulev2_venv: env.VirtualEnv,
 ) -> Iterator[env.VirtualEnv]:
     """
     Activates a Python environment with testmodulev2 installed in it for the currently running process.
     """
-    with tempfile.TemporaryDirectory() as tmpdir:
-        # Create a unique function-scoped venv dir to prevent caching issues with inmanta_plugins' submodule_search_locations
-        unique_env_dir: str = os.path.join(tmpdir, ".env")
-        os.symlink(testmodulev2_venv.env_path, unique_env_dir)
-        unique_env: env.VirtualEnv = env.VirtualEnv(env_path=unique_env_dir)
-        unique_env.use_virtual_env()
-        yield unique_env
-        utils.unload_modules_for_path(unique_env.site_packages_dir)
+    with utils.activate_venv(testmodulev2_venv) as venv:
+        yield venv
 
 
 def test_basic_example(testdir, caplog, testmodulev2_venv_active):
