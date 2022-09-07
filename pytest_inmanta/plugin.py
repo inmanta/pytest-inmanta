@@ -43,7 +43,9 @@ from tornado import ioloop
 
 import inmanta.ast
 from inmanta import compiler, config, const, module, plugins, protocol
-from inmanta.agent import cache, handler
+from inmanta.agent import cache
+from inmanta.agent import config as inmanta_config
+from inmanta.agent import handler
 from inmanta.agent import io as agent_io
 from inmanta.agent.handler import HandlerContext, ResourceHandler
 from inmanta.const import ResourceState
@@ -55,7 +57,15 @@ from inmanta.protocol import json_encode
 from inmanta.resources import Resource
 
 if typing.TYPE_CHECKING:
+    # Local type stub for mypy that works with both pytest < 7 and pytest >=7
+    # https://docs.pytest.org/en/7.1.x/_modules/_pytest/legacypath.html#TempdirFactory
+    import py
     from inmanta.agent.io.local import IOBase
+
+    class TempdirFactory:
+        def mktemp(self, path: str) -> py.path.local:
+            ...
+
 
 from .handler import DATA
 from .parameters import (
@@ -63,6 +73,7 @@ from .parameters import (
     inm_mod_in_place,
     inm_mod_repo,
     inm_no_load_plugins,
+    inm_no_strict_deps_check,
     inm_venv,
 )
 from .test_parameter import ParameterNotSetException, TestParameterRegistry
@@ -125,7 +136,7 @@ def inmanta_plugins(
 
 @pytest.fixture()
 def project(
-    project_shared: "Project", capsys: "CaptureFixture"
+    project_shared: "Project", capsys: "CaptureFixture", set_inmanta_state_dir: None
 ) -> typing.Iterator["Project"]:
     DATA.clear()
     project_shared.clean()
@@ -136,7 +147,9 @@ def project(
 
 @pytest.fixture()
 def project_no_plugins(
-    project_shared_no_plugins: "Project", capsys: "CaptureFixture"
+    project_shared_no_plugins: "Project",
+    capsys: "CaptureFixture",
+    set_inmanta_state_dir: None,
 ) -> typing.Iterator["Project"]:
     warnings.warn(
         DeprecationWarning(
@@ -269,7 +282,9 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
 
     def create_project(**kwargs: object):
         load_plugins = not inm_no_load_plugins.resolve(request.config)
+        no_strict_deps_check = inm_no_strict_deps_check.resolve(request.config)
         extended_kwargs: typing.Dict[str, object] = {
+            "no_strict_deps_check": no_strict_deps_check,
             "load_plugins": load_plugins,
             "env_path": env_dir,
             **kwargs,
@@ -593,6 +608,7 @@ class Project:
         project_dir: str,
         env_path: str,
         load_plugins: typing.Optional[bool] = True,
+        no_strict_deps_check: typing.Optional[bool] = False,
     ) -> None:
         """
         :param project_dir: Directory containing the Inmanta project.
@@ -601,6 +617,7 @@ class Project:
         """
         self._test_project_dir = project_dir
         self._env_path = env_path
+        self.no_strict_deps_check = no_strict_deps_check
         self._stdout: typing.Optional[str] = None
         self._stderr: typing.Optional[str] = None
         self.types: typing.Optional[typing.Dict[str, inmanta.ast.Type]] = None
@@ -651,7 +668,7 @@ class Project:
 
     def _create_project_and_load(self, model: str) -> module.Project:
         """
-        This method doesn the following:
+        This method does the following:
         * Add the given model file to the Inmanta project
         * Install the module dependencies
         * Load the project
@@ -666,12 +683,20 @@ class Project:
             module.Project.__init__
         )
         # The venv_path parameter only exists on ISO5+
+
         extra_kwargs_init = (
             {"venv_path": self._env_path}
             if "venv_path" in signature_init.parameters.keys()
             else {}
         )
-        test_project = module.Project(self._test_project_dir, **extra_kwargs_init)
+
+        if "strict_deps_check" in signature_init.parameters.keys():
+            extra_kwargs_init["strict_deps_check"] = not self.no_strict_deps_check
+
+        test_project = module.Project(
+            self._test_project_dir,
+            **extra_kwargs_init,
+        )
 
         ProjectLoader.load(test_project)
 
@@ -1130,3 +1155,19 @@ license: Test License
     def finalize_all_handlers(self) -> None:
         for handler_instance in self._handlers:
             self.finalize_handler(handler_instance)
+
+
+@pytest.fixture(scope="function")
+def inmanta_state_dir(tmpdir_factory: "TempdirFactory") -> Iterator[str]:
+    """
+    This fixture can be overridden in the conftest of any individual project
+    in order to set the Inmanta state directory at the desired level.
+    """
+    inmanta_state_dir = tmpdir_factory.mktemp("inmanta_state_dir")
+    yield str(inmanta_state_dir)
+    inmanta_state_dir.remove()
+
+
+@pytest.fixture
+def set_inmanta_state_dir(inmanta_state_dir: str) -> None:
+    inmanta_config.state_dir.set(inmanta_state_dir)

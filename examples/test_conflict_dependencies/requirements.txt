@@ -1,0 +1,2 @@
+inmanta-module-testmodulev2conflict1
+inmanta-module-testmodulev2conflict2

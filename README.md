@@ -173,7 +173,7 @@ The following options are available.
     module to a temporary libs directory. It allows testing the current module against specific versions of dependent modules. 
     Using this option can speed up the tests, because the module dependencies are not downloaded multiple times.
  * `--module-repo`: location to download modules from, overrides `INMANTA_MODULE_REPO`. The default value is the inmanta github organisation.
-    For versions of inmanta-core that support v2 modules, the repo accepts the format "[<type>:]<url>" with "type" the repository type as
+    For versions of inmanta-core that support v2 modules, the repo accepts the format "[\<type\>:]\<url\>" with "type" the repository type as
     defined in the project config documentation. If type is omitted, git is assumed.
     Multiple repos can be passed by space-separating them or by passing the parameter multiple times.
  * `--install-mode`: install mode to use for modules downloaded during this test, overrides `INMANTA_INSTALL_MODE`.
@@ -181,6 +181,7 @@ The following options are available.
  When not using this option during the testing of plugins with the `project.get_plugin_function` method, 
  it's possible that the module's `plugin/__init__.py` is loaded multiple times, 
  which can cause issues when it has side effects, as they are executed multiple times as well.
+ * `--no-strict-deps-check`: option to run pytest-inmanta using the legacy check(less strict) on requirements. By default the new strict will be used.
  
  Use the generic pytest options `--log-cli-level` to show Inmanta logger to see any setup or cleanup warnings. For example,
  `--log-cli-level=INFO`
