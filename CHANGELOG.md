@@ -1,4 +1,7 @@
-# v 2.4.0 (?)
+# v 2.5.0 (?)
+Changes in this release:
+
+# v 2.4.0 (2022-09-07)
 Changes in this release:
 - Add fixture to change the Inmanta state dir to a writable location for the current user.
 - Add a new '--no-strict-deps-check' option to run pytest-inmanta using the legacy check on requirements.
