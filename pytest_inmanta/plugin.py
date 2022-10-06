@@ -224,13 +224,31 @@ def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[obj
 
 
 @pytest.fixture(scope="session")
-def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Project"]:
+def project_dir() -> str:
+    """
+    Returns the directory that will be used by the project_factory fixture to store the Inmanta project.
+    """
+    project_dir_path = tempfile.mkdtemp()
+
+    yield project_dir_path
+
+    try:
+        shutil.rmtree(project_dir_path)
+    except PermissionError:
+        LOGGER.warning(
+            "Cannot cleanup test project %s. This can be caused because we try to remove a virtual environment, "
+            "loaded by this python process. Try to use a shared environment with --venv",
+            project_dir_path,
+        )
+
+
+@pytest.fixture(scope="session")
+def project_factory(request: pytest.FixtureRequest, project_dir: str) -> typing.Callable[[], "Project"]:
     """
     A factory that constructs a single Project.
     """
     _sys_path = sys.path
-    test_project_dir = tempfile.mkdtemp()
-    os.mkdir(os.path.join(test_project_dir, "libs"))
+    os.mkdir(os.path.join(project_dir, "libs"))
 
     repo_options = inm_mod_repo.resolve(request.config)
     repos: typing.Sequence[object] = get_project_repos(
@@ -253,7 +271,7 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
         env_override: Optional[str] = str(inm_venv.resolve(request.config))
     except ParameterNotSetException:
         env_override = None
-    env_dir = os.path.join(test_project_dir, ".env")
+    env_dir = os.path.join(project_dir, ".env")
     if env_override and not os.path.isdir(env_override):
         raise Exception(f"Specified venv {env_override} does not exist")
     if env_override is not None:
@@ -263,11 +281,11 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
             LOGGER.exception(
                 "Unable to use shared env (symlink creation from %s to %s failed).",
                 env_override,
-                os.path.join(test_project_dir, ".env"),
+                os.path.join(project_dir, ".env"),
             )
             raise
 
-    with open(os.path.join(test_project_dir, "project.yml"), "w+") as fd:
+    with open(os.path.join(project_dir, "project.yml"), "w+") as fd:
         metadata: typing.Mapping[str, object] = {
             "name": "testcase",
             "description": "Project for testcase",
@@ -278,7 +296,7 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
         }
         yaml.dump(metadata, fd)
 
-    ensure_current_module_install(os.path.join(test_project_dir, "libs"), in_place)
+    ensure_current_module_install(os.path.join(project_dir, "libs"), in_place)
 
     def create_project(**kwargs: object):
         load_plugins = not inm_no_load_plugins.resolve(request.config)
@@ -289,7 +307,7 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
             "env_path": env_dir,
             **kwargs,
         }
-        test_project = Project(test_project_dir, **extended_kwargs)
+        test_project = Project(project_dir, **extended_kwargs)
 
         # create the unittest module
         test_project.create_module(
@@ -301,15 +319,6 @@ def project_factory(request: pytest.FixtureRequest) -> typing.Callable[[], "Proj
         return test_project
 
     yield create_project
-
-    try:
-        shutil.rmtree(test_project_dir)
-    except PermissionError:
-        LOGGER.warning(
-            "Cannot cleanup test project %s. This can be caused because we try to remove a virtual environment, "
-            "loaded by this python process. Try to use a shared environment with --venv",
-            test_project_dir,
-        )
 
     sys.path = _sys_path
 
