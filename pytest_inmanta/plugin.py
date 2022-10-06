@@ -243,7 +243,9 @@ def project_dir() -> str:
 
 
 @pytest.fixture(scope="session")
-def project_factory(request: pytest.FixtureRequest, project_dir: str) -> typing.Callable[[], "Project"]:
+def project_factory(
+    request: pytest.FixtureRequest, project_dir: str
+) -> typing.Callable[[], "Project"]:
     """
     A factory that constructs a single Project.
     """
