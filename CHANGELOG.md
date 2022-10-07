@@ -1,3 +1,7 @@
+# v 2.4.1 (2022-10-07)
+Changes in this release:
+- Fix bug where the temporary directory used to store the Inmanta project is not cleaned up when an exception occurs in the setup stage of the project\_factory fixture.
+
 # v 2.4.0 (2022-09-07)
 Changes in this release:
 - Add fixture to change the Inmanta state dir to a writable location for the current user.
