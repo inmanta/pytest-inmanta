@@ -4,7 +4,10 @@
     License: Apache 2.0
 """
 
+import pytest
 
+
+@pytest.mark.xfail(strict=True)
 def test_badlog_run(project):
     basemodel = """
     import testmodule
