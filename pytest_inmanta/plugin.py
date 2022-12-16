@@ -32,6 +32,7 @@ from collections import defaultdict
 from distutils import dir_util
 from itertools import chain
 from pathlib import Path
+from pkg_resources import Requirement
 from textwrap import dedent
 from types import FunctionType, ModuleType
 from typing import Dict, Iterator, List, Optional, Set, Tuple
@@ -982,6 +983,16 @@ license: Test License
         mod, _ = get_module()
         self._create_project_and_load(model=f"import {mod.name}")
 
+    # TODO: README
+    # TODO: CHANGELOG
+    # TODO: release pytest-inmanta and notify solutions
+    def set_requirements(self, requirements: "collections.abc.Sequence[Requirement]") -> None:
+        """
+        Set the requirements for this project. Any existing requirements will be overridden.
+        """
+        with open(os.path.join(self._test_project_dir, "requirements.txt"), "w") as fd:
+            fd.write("\n".join(str(req) for req in requirements))
+
     def compile(self, main: str, export: bool = False, no_dedent: bool = True) -> None:
         """
         Compile the configuration model in main. This method will load all required modules.
@@ -1150,6 +1161,9 @@ license: Test License
 
     def clean(self) -> None:
         shutil.rmtree(os.path.join(self._test_project_dir, "libs", "unittest"))
+        requirements_file: str = os.path.join(self._test_project_dir, "requirements.txt")
+        if os.path.exists(requirements_file):
+            os.remove(requirements_file)
         self.finalize_all_handlers()
         self.create_module(
             "unittest",
