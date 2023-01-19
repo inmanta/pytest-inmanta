@@ -442,6 +442,15 @@ class ProjectLoader:
     _dynamic_modules: typing.Set[str] = set()
 
     @classmethod
+    def reset(cls) -> None:
+        """
+        Fully resets the ProjectLoader. For normal pytest-inmanta use this is not required (or even desired). It is used for
+        resetting the singleton state in between distinct module tests for pytest-inmanta's own test suite.
+        """
+        cls._registered_plugins = {}
+        cls._dynamic_modules = set()
+
+    @classmethod
     def load(cls, project: module.Project) -> None:
         """
         Sets and loads the given project.

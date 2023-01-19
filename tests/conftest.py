@@ -42,6 +42,12 @@ def set_cwd(testdir):
 
 
 @pytest.fixture(scope="function", autouse=True)
+def reset_pytest_inmanta_state():
+    yield
+    pytest_inmanta.plugin.ProjectLoader.reset()
+
+
+@pytest.fixture(scope="function", autouse=True)
 def deactive_venv():
     old_os_path = os.environ.get("PATH", "")
     old_prefix = sys.prefix
