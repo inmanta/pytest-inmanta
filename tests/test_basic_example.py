@@ -83,7 +83,7 @@ def test_badlog(testdir):
 
     result = testdir.runpytest("tests/test_BadLog.py")
 
-    result.assert_outcomes(failed=1)
+    result.assert_outcomes(xfailed=1)
 
 
 def test_release_mode_validation(testdir):
