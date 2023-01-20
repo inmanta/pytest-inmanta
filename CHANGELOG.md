@@ -1,3 +1,6 @@
+# v 2.6.0 (?)
+Changes in this release:
+
 # v 2.5.0 (2023-01-20)
 Changes in this release:
 - Fix bug where the temporary directory used to store the Inmanta project is not cleaned up when an exception occurs in the setup stage of the project\_factory fixture.
