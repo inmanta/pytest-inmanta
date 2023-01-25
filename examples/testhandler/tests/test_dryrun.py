@@ -47,3 +47,16 @@ def test_dryrun_fail_skip(project):
         """
     )
     project.dryrun_resource("unittest::Resource", status=const.ResourceState.skipped)
+
+def test_dryrun_all(project):
+    project.compile(
+        """
+    import unittest
+
+    unittest::Resource(name="res", desired_value="x")
+    unittest::Resource(name="res2", desired_value="y")
+    unittest::Resource(name="res3", desired_value="z")
+    """
+    )
+    result = project.dryrun_all("unittest::Resource", status=const.ResourceState.dry)
+    assert result
