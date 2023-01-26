@@ -61,3 +61,16 @@ def test_dryrun_all(project):
     )
     results = project.dryrun_all().values()
     assert len(results) == 3
+
+
+def test_dryrun_and_deploy_all(project):
+    project.compile(
+        """
+    import unittest
+
+    unittest::Resource(name="res", desired_value="x")
+    unittest::Resource(name="res2", desired_value="y")
+    unittest::Resource(name="res3", desired_value="z")
+    """
+    )
+    project.dryrun_and_deploy_all()

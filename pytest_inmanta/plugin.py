@@ -950,28 +950,38 @@ class Project:
         ctx = self.dryrun(res, run_as_root)
         assert ctx.status == status
         return ctx.changes
-    
+
     def dryrun_all(
-        self,
-        run_as_root: bool = False,
-        first_dry: bool = False
+        self, run_as_root: bool = False, first_dry: bool = False
     ) -> Dict[str, typing.Dict[str, AttributeStateChange]]:
         """
         Runs a dryrun for every resource.
         :param run_as_root: run the mock agent as root
-        :param first_dry: check if `purged` is in the result of the dryrun, useful to confirm that
-            the resource was not already deployed
+        :param first_dry: check if `purged` is in the result of the dryrun and that every resource has actual changes
+            (useful to confirm that the resource was not already deployed)
         """
         results = {}
         for resource in self.resources.values():
             changes = self.dryrun(resource, run_as_root=run_as_root).changes
-            if first_dry:
+            if changes:
+                results[resource.id] = changes
+            elif first_dry:
                 assert "purged" in changes
-            results[resource.id] = changes
+        if first_dry:
+            assert len(results.values()) == len(self.resources.values())
         return results
 
-
-
+    def dryrun_and_deploy_all(self, run_as_root: bool = False, first_dry: bool = False):
+        """
+        Runs a dryrun, followed by a deploy and a final dryrun for every resource and asserts the expected behaviour.
+        :param run_as_root: run the mock agent as root
+        :param first_dry: check if `purged` is in the result of the first dryrun and that every resource has actual changes
+            (useful to confirm that the resource was not already deployed)
+        """
+        self.dryrun_all(run_as_root=run_as_root, first_dry=first_dry)
+        self.deploy_all(run_as_root=run_as_root)
+        results = self.dryrun_all(run_as_root=run_as_root)
+        assert not results
 
     def io(self, run_as_root: bool = False) -> "IOBase":
         version = 1
