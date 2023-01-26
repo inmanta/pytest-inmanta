@@ -48,6 +48,7 @@ def test_dryrun_fail_skip(project):
     )
     project.dryrun_resource("unittest::Resource", status=const.ResourceState.skipped)
 
+
 def test_dryrun_all(project):
     project.compile(
         """
@@ -58,5 +59,7 @@ def test_dryrun_all(project):
     unittest::Resource(name="res3", desired_value="z")
     """
     )
-    result = project.dryrun_all("unittest::Resource", status=const.ResourceState.dry)
-    assert result
+    results = project.dryrun_all().values()
+    assert len(results) == 3
+    for result in results:
+        assert "purged" in result

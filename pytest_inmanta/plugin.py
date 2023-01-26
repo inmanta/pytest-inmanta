@@ -953,12 +953,11 @@ class Project:
     
     def dryrun_all(
         self,
-        status: const.ResourceState = const.ResourceState.dry,
         run_as_root: bool = False
     ) -> Dict[str, typing.Dict[str, AttributeStateChange]]:
         result = {}
-        for rid, resource in self.resources.items():
-            result[rid] = self.dryrun_resource(resource, status, run_as_root)
+        for resource in self.resources.values():
+            result[resource.id] = self.dryrun(resource, run_as_root=run_as_root).changes
         return result
 
     # def evaluate_correct_resource_behaviour(
