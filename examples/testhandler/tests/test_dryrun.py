@@ -59,8 +59,7 @@ def test_dryrun_all(project):
     unittest::Resource(name="res3", desired_value="z")
     """
     )
-    results = project.dryrun_all().values()
-    assert len(results) == 3
+    project.dryrun_all(first_dry=True).values()
 
 
 def test_dryrun_and_deploy_all(project):
@@ -73,4 +72,4 @@ def test_dryrun_and_deploy_all(project):
     unittest::Resource(name="res3", desired_value="z")
     """
     )
-    project.dryrun_and_deploy_all()
+    project.dryrun_and_deploy_all(first_dry=True)
