@@ -952,36 +952,38 @@ class Project:
         return ctx.changes
 
     def dryrun_all(
-        self, run_as_root: bool = False, first_dry: bool = False
-    ) -> Dict[str, typing.Dict[str, AttributeStateChange]]:
+        self, run_as_root: bool = False, assert_create_or_delete: bool = False
+    ) -> Dict[Resource, HandlerContext]:
         """
         Runs a dryrun for every resource.
         :param run_as_root: run the mock agent as root
-        :param first_dry: check if `purged` is in the result of the dryrun and that every resource has actual changes
-            (useful to confirm that the resource was not already deployed)
+        :param assert_create_or_delete: assert that every resource will either be created or deleted.
         """
         results = {}
         for resource in self.resources.values():
-            changes = self.dryrun(resource, run_as_root=run_as_root).changes
-            if changes:
-                results[resource.id] = changes
-            elif first_dry:
-                assert "purged" in changes
-        if first_dry:
-            assert len(results.values()) == len(self.resources.values())
+            ctx = self.dryrun(resource, run_as_root=run_as_root)
+            if ctx.changes:
+                results[resource] = ctx
+            if assert_create_or_delete:
+                assert "purged" in ctx.changes
         return results
 
-    def dryrun_and_deploy_all(self, run_as_root: bool = False, first_dry: bool = False):
+    def dryrun_and_deploy_all(
+        self, run_as_root: bool = False, assert_create_or_delete: bool = False
+    ) -> Dict[str, Dict[Resource, HandlerContext]]:
         """
         Runs a dryrun, followed by a deploy and a final dryrun for every resource and asserts the expected behaviour.
         :param run_as_root: run the mock agent as root
-        :param first_dry: check if `purged` is in the result of the first dryrun and that every resource has actual changes
-            (useful to confirm that the resource was not already deployed)
+        :param assert_create_or_delete: assert that every resource will either be created or deleted.
         """
-        self.dryrun_all(run_as_root=run_as_root, first_dry=first_dry)
-        self.deploy_all(run_as_root=run_as_root)
-        results = self.dryrun_all(run_as_root=run_as_root)
-        assert not results
+        dryrun_result = self.dryrun_all(
+            run_as_root=run_as_root, assert_create_or_delete=assert_create_or_delete
+        )
+        deploy_result = self.deploy_all(run_as_root=run_as_root)
+
+        assert not self.dryrun_all(run_as_root=run_as_root)
+        assert dryrun_result == deploy_result.results
+        return {"dryrun": dryrun_result, "deploy": deploy_result.results}
 
     def io(self, run_as_root: bool = False) -> "IOBase":
         version = 1

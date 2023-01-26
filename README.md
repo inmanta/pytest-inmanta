@@ -69,6 +69,8 @@ And dryrun
 ```python
     changes = project.dryrun_resource("testmodule::Resource")
     assert changes == {"value": {'current': 'read', 'desired': 'write'}}
+    # Or dryrun all resources at once
+    project.dryrun_all()
 ```
 
 It is also possible to deploy all resources at once:
@@ -78,6 +80,14 @@ It is also possible to deploy all resources at once:
     results.assert_all(status=ResourceState.deployed)
     assert results.get_context_for("std::ConfigFile", path="/tmp/test").status == ResourceState.deployed
 ```
+
+For convenience, it is also possible to dryrun and deploy all resources at once.
+This method also asserts that a dryrun after the deploy will not have changes:
+
+```python
+    project.dryrun_and_deploy_all()
+```
+
 
 Testing functions and classes defined in a v1 module is also possible
 using the `inmanta_plugins` fixture. The fixture exposes inmanta modules as its attributes
