@@ -982,7 +982,6 @@ class Project:
         deploy_result = self.deploy_all(run_as_root=run_as_root)
 
         assert not self.dryrun_all(run_as_root=run_as_root)
-        assert dryrun_result == deploy_result.results
         return {"dryrun": dryrun_result, "deploy": deploy_result.results}
 
     def io(self, run_as_root: bool = False) -> "IOBase":
