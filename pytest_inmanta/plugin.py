@@ -953,43 +953,25 @@ class Project:
     
     def dryrun_all(
         self,
-        run_as_root: bool = False
+        run_as_root: bool = False,
+        first_dry: bool = False
     ) -> Dict[str, typing.Dict[str, AttributeStateChange]]:
-        result = {}
+        """
+        Runs a dryrun for every resource.
+        :param run_as_root: run the mock agent as root
+        :param first_dry: check if `purged` is in the result of the dryrun, useful to confirm that
+            the resource was not already deployed
+        """
+        results = {}
         for resource in self.resources.values():
-            result[resource.id] = self.dryrun(resource, run_as_root=run_as_root).changes
-        return result
+            changes = self.dryrun(resource, run_as_root=run_as_root).changes
+            if first_dry:
+                assert "purged" in changes
+            results[resource.id] = changes
+        return results
 
-    # def evaluate_correct_resource_behaviour(
-    #     self, resource_types: List, first_dry: bool = False
-    # ):
-    #     """
-    #     Runs a dryrun, followed by a deploy and a final dryrun for a list of resources and asserts the expected behaviour.
 
-    #     :param resource_types: a list of the types of resource to run, as a fully qualified inmanta types each entry may
-    #         also include additional filter arguments (e.g. [`unittest::Resource`, (`unittest::Resource`, {`myid`:`test.1`} )] )
-    #     :param first_dry: check if `purged` is in the result of the first dryrun, useful to confirm that
-    #         the resource was not already deployed
-    #     """
 
-    #     for current_type in resource_types:
-    #         if len(current_type) == 2:
-    #             current_type, filter_args = current_type
-    #         else:
-    #             filter_args = None
-    #         result = self.dryrun_resource(current_type)
-
-    #         if first_dry:
-    #             assert "purged" in result
-
-    #         if filter_args is None:
-    #             self.deploy_resource(current_type)
-    #             result = self.dryrun_resource(current_type)
-    #         else:
-    #             self.deploy_resource(current_type, **filter_args)
-    #             result = self.dryrun_resource(current_type, **filter_args)
-
-    #         assert not result
 
     def io(self, run_as_root: bool = False) -> "IOBase":
         version = 1

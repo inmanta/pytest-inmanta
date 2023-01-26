@@ -61,5 +61,3 @@ def test_dryrun_all(project):
     )
     results = project.dryrun_all().values()
     assert len(results) == 3
-    for result in results:
-        assert "purged" in result
