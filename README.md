@@ -70,22 +70,23 @@ And dryrun
     changes = project.dryrun_resource("testmodule::Resource")
     assert changes == {"value": {'current': 'read', 'desired': 'write'}}
     # Or dryrun all resources at once
-    project.dryrun_all()
+    result = project.dryrun_all()
+    result.assert_expected_behaviour()
 ```
 
 It is also possible to deploy all resources at once:
 
 ```python
     results = project.deploy_all()
-    results.assert_all(status=ResourceState.deployed)
+    results.assert_expected_behaviour()
     assert results.get_context_for("std::ConfigFile", path="/tmp/test").status == ResourceState.deployed
 ```
 
 For convenience, it is also possible to dryrun and deploy all resources at once.
-This method also asserts that a dryrun after the deploy will not have changes:
+This method also asserts that the dryruns and deploys pass some sanity checks.
 
 ```python
-    project.dryrun_and_deploy_all()
+    project.dryrun_and_deploy_all(assert_create_or_delete=True)
 ```
 
 

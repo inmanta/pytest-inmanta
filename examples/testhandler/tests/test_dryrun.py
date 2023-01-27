@@ -16,7 +16,7 @@
     Contact: code@inmanta.com
 """
 from inmanta import const
-
+import pytest
 
 def test_dryrun(project):
     project.compile(
@@ -59,8 +59,30 @@ def test_dryrun_all(project):
     unittest::Resource(name="res3", desired_value="z")
     """
     )
-    project.dryrun_all(assert_create_or_delete=True).values()
+    result = project.dryrun_all()
+    ctx = result.get_context_for("unittest::Resource", name="res")
+    assert ctx.resource.desired_value == "x"
 
+    ctx = result.get_context_for("unittest::Resource", name="res2")
+    assert ctx.resource.desired_value == "y"
+
+    ctx = result.get_context_for("unittest::Resource", name="res3")
+    assert ctx.resource.desired_value == "z"
+
+
+def test_failures_in_dryrun_all(project):
+    project.compile(
+    """
+    import unittest
+
+    unittest::Resource(name="res", desired_value="x")
+    unittest::Resource(name="res2", desired_value="y", fail=true)
+    unittest::Resource(name="res3", desired_value="z")
+    """
+    )
+    result = project.dryrun_all()
+    with pytest.raises(AssertionError, match="has status failed, expected dry"):
+        result.assert_expected_behaviour()
 
 def test_dryrun_and_deploy_all(project):
     project.compile(
@@ -73,3 +95,16 @@ def test_dryrun_and_deploy_all(project):
     """
     )
     project.dryrun_and_deploy_all(assert_create_or_delete=True)
+
+def test_failures_in_dryrun_and_deploy_all(project):
+    project.compile(
+    """
+    import unittest
+
+    unittest::Resource(name="res", desired_value="x")
+    unittest::Resource(name="res2", desired_value="y", fail=true)
+    unittest::Resource(name="res3", desired_value="z")
+    """
+    )
+    with pytest.raises(AssertionError, match="has status failed, expected dry"):
+        project.dryrun_and_deploy_all(assert_create_or_delete=True)

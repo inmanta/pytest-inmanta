@@ -30,6 +30,7 @@ import typing
 import warnings
 from collections import defaultdict
 from distutils import dir_util
+from enum import Enum
 from itertools import chain
 from pathlib import Path
 from textwrap import dedent
@@ -90,6 +91,12 @@ except ImportError:
 CURDIR = os.getcwd()
 LOGGER = logging.getLogger()
 SYS_EXECUTABLE = sys.executable
+
+
+class DryrunType(str, Enum):
+    normal = "normal"  # This state is set by the agent when no handler is available for the resource
+    empty = "empty"  #
+    create_or_delete = "create_or_delete"
 
 
 def pytest_addoption(parser: "Parser") -> None:
@@ -581,15 +588,29 @@ def get_resources_matching(
         yield resource
 
 
-class DeployResult:
+class GenericResult:
     def __init__(self, results: Dict[Resource, HandlerContext]):
         self.results = results
 
-    def assert_all(self, status: ResourceState = ResourceState.deployed):
+    def assert_expected_behaviour(self):
+        pass
+
+    def assert_all(self, status):
         for r, ct in self.results.items():
             assert (
                 ct.status == status
-            ), f"Resource {r.id} has deploy status {ct.status}, expected {status}"
+            ), f"Resource {r.id} has status {ct.status}, expected {status}"
+
+    def assert_has_no_changes(self):
+        for r, ct in self.results.items():
+            assert (
+                ct.change is const.Change.nochange
+            ), f"Resource {r.id} has changes {ct.changes}, expected no changes"
+
+    def assert_resources_have_purged(self):
+        for r, ct in self.results.items():
+            assert ct.changes, f"Resource {r.id} has no changes, expected some changes"
+            assert "purged" in ct.changes
 
     def get_contexts_for(
         self, resource_type: str, **filter_args: object
@@ -614,6 +635,37 @@ class DeployResult:
                 "Multiple resources match this filter, if this is intentional, use get_contexts_for"
             )
         return self.results[resources[0]]
+
+
+class DryrunResult(GenericResult):
+    def assert_expected_behaviour(self):
+        self.assert_all(status=ResourceState.dry)
+
+
+class CreateOrDeleteDryrunResult(DryrunResult):
+    def assert_expected_behaviour(self):
+        super().assert_expected_behaviour()
+        self.assert_resources_have_purged()
+
+
+class EmptyDryrunResult(DryrunResult):
+    def assert_expected_behaviour(self):
+        super().assert_expected_behaviour()
+        self.assert_has_no_changes()
+
+
+class DeployResult(GenericResult):
+    def assert_expected_behaviour(self):
+        self.assert_all(status=ResourceState.deployed)
+
+
+class ResultCollection:
+    def __init__(self, results: List[GenericResult]):
+        self.results = results
+
+    def assert_expected_behaviour(self):
+        for result in self.results:
+            result.assert_expected_behaviour()
 
 
 class Project:
@@ -952,37 +1004,44 @@ class Project:
         return ctx.changes
 
     def dryrun_all(
-        self, run_as_root: bool = False, assert_create_or_delete: bool = False
-    ) -> Dict[Resource, HandlerContext]:
+        self, run_as_root: bool = False, dryrun_type: DryrunType = DryrunType.normal
+    ) -> DryrunResult:
         """
         Runs a dryrun for every resource.
         :param run_as_root: run the mock agent as root
-        :param assert_create_or_delete: assert that every resource will either be created or deleted.
+        :param dryrun_type: determines what type of DryrunResult to create
         """
-        results = {}
-        for resource in self.resources.values():
-            ctx = self.dryrun(resource, run_as_root=run_as_root)
-            if ctx.changes:
-                results[resource] = ctx
-            if assert_create_or_delete:
-                assert "purged" in ctx.changes
-        return results
+        results = {
+                r: self.dryrun(r, run_as_root=run_as_root)
+                for r in self.resources.values()
+            }
+        if dryrun_type == DryrunType.empty:
+            return EmptyDryrunResult(results)
+        if dryrun_type == DryrunType.create_or_delete:
+            return CreateOrDeleteDryrunResult(results)
+        return DryrunResult(results)
 
     def dryrun_and_deploy_all(
         self, run_as_root: bool = False, assert_create_or_delete: bool = False
-    ) -> Dict[str, Dict[Resource, HandlerContext]]:
+    ) -> ResultCollection:
         """
         Runs a dryrun, followed by a deploy and a final dryrun for every resource and asserts the expected behaviour.
         :param run_as_root: run the mock agent as root
         :param assert_create_or_delete: assert that every resource will either be created or deleted.
         """
-        dryrun_result = self.dryrun_all(
-            run_as_root=run_as_root, assert_create_or_delete=assert_create_or_delete
+        dryrun_type = (
+            DryrunType.create_or_delete
+            if assert_create_or_delete
+            else DryrunType.normal
         )
-        deploy_result = self.deploy_all(run_as_root=run_as_root)
-
-        assert not self.dryrun_all(run_as_root=run_as_root)
-        return {"dryrun": dryrun_result, "deploy": deploy_result.results}
+        first_dryrun = self.dryrun_all(run_as_root=run_as_root, dryrun_type=dryrun_type)
+        deploy = self.deploy_all(run_as_root=run_as_root)
+        last_dryrun = self.dryrun_all(
+            run_as_root=run_as_root, dryrun_type=DryrunType.empty
+        )
+        result_collection = ResultCollection([first_dryrun, deploy, last_dryrun])
+        result_collection.assert_expected_behaviour()
+        return result_collection
 
     def io(self, run_as_root: bool = False) -> "IOBase":
         version = 1

@@ -40,7 +40,7 @@ def test_full_deploy(project):
     )
 
     results = project.deploy_all()
-    results.assert_all()
+    results.assert_expected_behaviour()
 
     DATA["r_skip"]["skip"] = True
     DATA["r_fail"]["fail"] = True
