@@ -30,4 +30,4 @@ def test_dryrun(testdir):
 
     result = testdir.runpytest("tests/test_dryrun.py")
 
-    result.assert_outcomes(passed=4)
+    result.assert_outcomes(passed=6)
