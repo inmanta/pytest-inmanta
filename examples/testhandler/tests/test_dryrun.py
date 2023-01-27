@@ -15,8 +15,9 @@
 
     Contact: code@inmanta.com
 """
-from inmanta import const
 import pytest
+
+from inmanta import const
 
 
 def test_dryrun(project):
@@ -83,7 +84,7 @@ def test_failures_in_dryrun_all(project):
     )
     result = project.dryrun_all()
     with pytest.raises(AssertionError, match="has status failed, expected dry"):
-        result.assert_expected_behaviour()
+        result.assert_all(const.ResourceState.dry)
 
 
 def test_dryrun_and_deploy_all(project):

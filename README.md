@@ -71,14 +71,12 @@ And dryrun
     assert changes == {"value": {'current': 'read', 'desired': 'write'}}
     # Or dryrun all resources at once
     result = project.dryrun_all()
-    result.assert_expected_behaviour()
 ```
 
 It is also possible to deploy all resources at once:
 
 ```python
     results = project.deploy_all()
-    results.assert_expected_behaviour()
     assert results.get_context_for("std::ConfigFile", path="/tmp/test").status == ResourceState.deployed
 ```
 
