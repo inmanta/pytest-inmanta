@@ -18,6 +18,7 @@
 from inmanta import const
 import pytest
 
+
 def test_dryrun(project):
     project.compile(
         """
@@ -72,7 +73,7 @@ def test_dryrun_all(project):
 
 def test_failures_in_dryrun_all(project):
     project.compile(
-    """
+        """
     import unittest
 
     unittest::Resource(name="res", desired_value="x")
@@ -83,6 +84,7 @@ def test_failures_in_dryrun_all(project):
     result = project.dryrun_all()
     with pytest.raises(AssertionError, match="has status failed, expected dry"):
         result.assert_expected_behaviour()
+
 
 def test_dryrun_and_deploy_all(project):
     project.compile(
@@ -96,9 +98,10 @@ def test_dryrun_and_deploy_all(project):
     )
     project.dryrun_and_deploy_all(assert_create_or_delete=True)
 
+
 def test_failures_in_dryrun_and_deploy_all(project):
     project.compile(
-    """
+        """
     import unittest
 
     unittest::Resource(name="res", desired_value="x")

@@ -1012,9 +1012,8 @@ class Project:
         :param dryrun_type: determines what type of DryrunResult to create
         """
         results = {
-                r: self.dryrun(r, run_as_root=run_as_root)
-                for r in self.resources.values()
-            }
+            r: self.dryrun(r, run_as_root=run_as_root) for r in self.resources.values()
+        }
         if dryrun_type == DryrunType.empty:
             return EmptyDryrunResult(results)
         if dryrun_type == DryrunType.create_or_delete:
