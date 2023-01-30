@@ -29,6 +29,7 @@ import tempfile
 import typing
 import warnings
 from collections import defaultdict
+from dataclasses import dataclass
 from distutils import dir_util
 from itertools import chain
 from pathlib import Path
@@ -557,7 +558,7 @@ class ProjectLoader:
 
 
 def get_resources_matching(
-    resources: "collections.abc.Set[Resource]",
+    resources: "collections.abc.Iterable[Resource]",
     resource_type: str,
     **filter_args: object,
 ) -> Iterator[Resource]:
@@ -582,7 +583,9 @@ def get_resources_matching(
 
 
 def get_resource(
-    resources, resource_type: str, **filter_args: object
+    resources: "collections.abc.Iterable[Resource]",
+    resource_type: str,
+    **filter_args: object,
 ) -> typing.Optional[Resource]:
     """
     Get a resource of the given type and given filter on the resource attributes. If multiple resource match, the
@@ -608,7 +611,7 @@ class Result:
     def __init__(self, results: Dict[Resource, HandlerContext]) -> None:
         self.results = results
 
-    def assert_all(self, status) -> None:
+    def assert_all(self, status: ResourceState = ResourceState.deployed) -> None:
         for r, ct in self.results.items():
             assert (
                 ct.status == status
@@ -621,6 +624,10 @@ class Result:
             ), f"Resource {r.id} has changes {ct.changes}, expected no changes"
 
     def assert_resources_have_purged(self) -> None:
+        """
+        Asserts that `purged` is in the changes. This is helpful to assert if the
+        resources are to be created (`purged` set to True) or deleted (`purged` set to False)
+        """
         for r, ct in self.results.items():
             assert ct.changes, f"Resource {r.id} has no changes, expected some changes"
             assert "purged" in ct.changes
@@ -659,6 +666,19 @@ class Result:
         :param resource_type: The exact type used in the model (no super types)
         """
         return get_resource(self.results.keys(), resource_type, **filter_args)
+
+
+class DeployResult(Result):
+    """
+    Here for backwards compatibility reasons.
+    """
+
+
+@dataclass
+class ResultCollection:
+    first_dryrun: Result
+    deploy: Result
+    last_dryrun: Result
 
 
 class Project:
@@ -1000,7 +1020,7 @@ class Project:
 
     def dryrun_and_deploy_all(
         self, run_as_root: bool = False, assert_create_or_delete: bool = False
-    ) -> List[Result]:
+    ) -> ResultCollection:
         """
         Runs a dryrun, followed by a deploy and a final dryrun for every resource and asserts the expected behaviour.
         :param run_as_root: run the mock agent as root
@@ -1016,10 +1036,12 @@ class Project:
         deploy.assert_all(const.ResourceState.deployed)
 
         last_dryrun = self.dryrun_all(run_as_root=run_as_root)
-        first_dryrun.assert_all(const.ResourceState.dry)
-        first_dryrun.assert_has_no_changes()
+        last_dryrun.assert_all(const.ResourceState.dry)
+        last_dryrun.assert_has_no_changes()
 
-        return [first_dryrun, deploy, last_dryrun]
+        return ResultCollection(
+            first_dryrun=first_dryrun, deploy=deploy, last_dryrun=last_dryrun
+        )
 
     def io(self, run_as_root: bool = False) -> "IOBase":
         version = 1
