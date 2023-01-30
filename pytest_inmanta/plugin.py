@@ -582,6 +582,29 @@ def get_resources_matching(
         yield resource
 
 
+def get_resource(
+    resources, resource_type: str, **filter_args: object
+) -> typing.Optional[Resource]:
+    """
+    Get a resource of the given type and given filter on the resource attributes. If multiple resource match, the
+    first one is returned. If none match, None is returned.
+
+    :param resource_type: The exact type used in the model (no super types)
+    """
+
+    def check_serialization(resource: Resource) -> Resource:
+        """Check if the resource is serializable"""
+        serialized = json.loads(json_encode(resource.serialize()))
+        return Resource.deserialize(serialized)
+
+    try:
+        resource = next(get_resources_matching(resources, resource_type, **filter_args))
+        resource = check_serialization(resource)
+        return resource
+    except StopIteration:
+        return None
+
+
 class GenericResult:
     def __init__(self, results: Dict[Resource, HandlerContext]):
         self.results = results
@@ -626,6 +649,11 @@ class GenericResult:
                 "Multiple resources match this filter, if this is intentional, use get_contexts_for"
             )
         return self.results[resources[0]]
+
+    def get_resource(
+        self, resource_type: str, **filter_args: object
+    ) -> typing.Optional[Resource]:
+        return get_resource(self.results.keys(), resource_type, **filter_args)
 
 
 class Project:
@@ -785,23 +813,7 @@ class Project:
     def get_resource(
         self, resource_type: str, **filter_args: object
     ) -> typing.Optional[Resource]:
-        """
-        Get a resource of the given type and given filter on the resource attributes. If multiple resource match, the
-        first one is returned. If none match, None is returned.
-
-        :param resource_type: The exact type used in the model (no super types)
-        """
-
-        try:
-            resource = next(
-                get_resources_matching(
-                    self.resources.values(), resource_type, **filter_args
-                )
-            )
-            resource = self.check_serialization(resource)
-            return resource
-        except StopIteration:
-            return None
+        return get_resource(self.resources.values(), resource_type, **filter_args)
 
     def deploy(
         self, resource: Resource, dry_run: bool = False, run_as_root: bool = False

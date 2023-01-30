@@ -62,14 +62,14 @@ def test_dryrun_all(project):
     """
     )
     result = project.dryrun_all()
-    ctx = result.get_context_for("unittest::Resource", name="res")
-    assert ctx.resource.desired_value == "x"
+    resource = result.get_resource("unittest::Resource", name="res")
+    assert resource.desired_value == "x"
 
-    ctx = result.get_context_for("unittest::Resource", name="res2")
-    assert ctx.resource.desired_value == "y"
+    resource = result.get_resource("unittest::Resource", name="res2")
+    assert resource.desired_value == "y"
 
-    ctx = result.get_context_for("unittest::Resource", name="res3")
-    assert ctx.resource.desired_value == "z"
+    resource = result.get_resource("unittest::Resource", name="res3")
+    assert resource.desired_value == "z"
 
 
 def test_failures_in_dryrun_all(project):
