@@ -30,7 +30,6 @@ import typing
 import warnings
 from collections import defaultdict
 from distutils import dir_util
-from enum import Enum
 from itertools import chain
 from pathlib import Path
 from textwrap import dedent
