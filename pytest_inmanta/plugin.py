@@ -604,23 +604,23 @@ def get_resource(
         return None
 
 
-class GenericResult:
-    def __init__(self, results: Dict[Resource, HandlerContext]):
+class Result:
+    def __init__(self, results: Dict[Resource, HandlerContext]) -> None:
         self.results = results
 
-    def assert_all(self, status):
+    def assert_all(self, status) -> None:
         for r, ct in self.results.items():
             assert (
                 ct.status == status
             ), f"Resource {r.id} has status {ct.status}, expected {status}"
 
-    def assert_has_no_changes(self):
+    def assert_has_no_changes(self) -> None:
         for r, ct in self.results.items():
             assert (
                 ct.change is const.Change.nochange
             ), f"Resource {r.id} has changes {ct.changes}, expected no changes"
 
-    def assert_resources_have_purged(self):
+    def assert_resources_have_purged(self) -> None:
         for r, ct in self.results.items():
             assert ct.changes, f"Resource {r.id} has no changes, expected some changes"
             assert "purged" in ct.changes
@@ -652,6 +652,12 @@ class GenericResult:
     def get_resource(
         self, resource_type: str, **filter_args: object
     ) -> typing.Optional[Resource]:
+        """
+        Get a resource of the given type and given filter on the results attributes from a Result object.
+        If multiple resource match, the first one is returned. If none match, None is returned.
+
+        :param resource_type: The exact type used in the model (no super types)
+        """
         return get_resource(self.results.keys(), resource_type, **filter_args)
 
 
@@ -812,6 +818,12 @@ class Project:
     def get_resource(
         self, resource_type: str, **filter_args: object
     ) -> typing.Optional[Resource]:
+        """
+        Get a resource of the given type and given filter on the resource attributes. If multiple resource match, the
+        first one is returned. If none match, None is returned.
+
+        :param resource_type: The exact type used in the model (no super types)
+        """
         return get_resource(self.resources.values(), resource_type, **filter_args)
 
     def deploy(
@@ -835,7 +847,7 @@ class Project:
 
     def deploy_all(
         self, run_as_root: bool = False, exclude_all: List[str] = ["std::AgentConfig"]
-    ) -> GenericResult:
+    ) -> Result:
         """
         Deploy all resources, in the correct order.
 
@@ -900,7 +912,7 @@ class Project:
             self.finalize_context(ctx)
             self.finalize_handler(h)
 
-        return GenericResult({r: ctx for r, _, ctx in all_contexts.values()})
+        return Result({r: ctx for r, _, ctx in all_contexts.values()})
 
     def dryrun(self, resource: Resource, run_as_root: bool = False) -> HandlerContext:
         return self.deploy(resource, True, run_as_root)
@@ -974,12 +986,12 @@ class Project:
         assert ctx.status == status
         return ctx.changes
 
-    def dryrun_all(self, run_as_root: bool = False) -> GenericResult:
+    def dryrun_all(self, run_as_root: bool = False) -> Result:
         """
         Runs a dryrun for every resource.
         :param run_as_root: run the mock agent as root
         """
-        return GenericResult(
+        return Result(
             {
                 r: self.dryrun(r, run_as_root=run_as_root)
                 for r in self.resources.values()
@@ -988,7 +1000,7 @@ class Project:
 
     def dryrun_and_deploy_all(
         self, run_as_root: bool = False, assert_create_or_delete: bool = False
-    ) -> List[GenericResult]:
+    ) -> List[Result]:
         """
         Runs a dryrun, followed by a deploy and a final dryrun for every resource and asserts the expected behaviour.
         :param run_as_root: run the mock agent as root
@@ -1005,7 +1017,7 @@ class Project:
 
         last_dryrun = self.dryrun_all(run_as_root=run_as_root)
         first_dryrun.assert_all(const.ResourceState.dry)
-        first_dryrun.assert_has_no_changes
+        first_dryrun.assert_has_no_changes()
 
         return [first_dryrun, deploy, last_dryrun]
 
