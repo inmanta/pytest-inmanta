@@ -112,3 +112,29 @@ def test_failures_in_dryrun_and_deploy_all(project):
     )
     with pytest.raises(AssertionError, match="has status failed, expected dry"):
         project.dryrun_and_deploy_all(assert_create_or_delete=True)
+
+
+def test_failures_in_deploy_only(project):
+    project.compile(
+        """
+    import unittest
+
+    unittest::Resource(name="res", desired_value="x")
+    unittest::Resource(name="res2", desired_value="y", fail_deploy=true)
+    unittest::Resource(name="res3", desired_value="z")
+    """
+    )
+    with pytest.raises(AssertionError, match="has status failed, expected deployed"):
+        project.dryrun_and_deploy_all(assert_create_or_delete=True)
+
+
+def test_failures_in_last_dryrun(project):
+    project.compile(
+        """
+    import unittest
+
+    unittest::WrongDiffResource(name="res", desired_value="x")
+    """
+    )
+    with pytest.raises(AssertionError, match="expected no changes"):
+        project.dryrun_and_deploy_all(assert_create_or_delete=True)

@@ -619,8 +619,8 @@ class Result:
 
     def assert_has_no_changes(self) -> None:
         for r, ct in self.results.items():
-            assert (
-                ct.change is const.Change.nochange
+            assert not bool(
+                ct.changes
             ), f"Resource {r.id} has changes {ct.changes}, expected no changes"
 
     def assert_resources_have_purged(self) -> None:
@@ -858,7 +858,7 @@ class Project:
 
         assert h is not None
 
-        ctx = handler.HandlerContext(resource)
+        ctx = handler.HandlerContext(resource, dry_run=dry_run)
         h.execute(ctx, resource, dry_run)
         self.finalize_context(ctx)
         self.ctx = ctx

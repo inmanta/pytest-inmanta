@@ -16,6 +16,8 @@
     Contact: code@inmanta.com
 """
 
+import typing
+
 from inmanta import resources
 from inmanta.agent import handler
 from pytest_inmanta.handler import DATA
@@ -25,7 +27,12 @@ KEY_PREFIX = "unittest_"
 
 @resources.resource("unittest::Resource", id_attribute="name", agent="agent")
 class Resource(resources.PurgeableResource):
-    fields = ("name", "desired_value", "skip", "fail")
+    fields = ("name", "desired_value", "skip", "fail", "fail_deploy")
+
+
+@resources.resource("unittest::WrongDiffResource", id_attribute="name", agent="agent")
+class WrongDiffResource(resources.PurgeableResource):
+    fields = ("name", "desired_value", "skip", "fail", "fail_deploy")
 
 
 @handler.provider("unittest::Resource", name="test")
@@ -34,8 +41,9 @@ class ResourceHandler(handler.CRUDHandler):
         self, ctx: handler.HandlerContext, resource: resources.PurgeableResource
     ) -> None:
         ctx.info(
-            "Resource fail %(fail)s skip %(skip)s",
+            "Resource fail %(fail)s fails deploy %(fail_deploy)s skip %(skip)s",
             fail=resource.fail,
+            fail_deploy=resource.fail_deploy,
             skip=resource.skip,
         )
 
@@ -52,6 +60,9 @@ class ResourceHandler(handler.CRUDHandler):
                 raise handler.InvalidOperation()
 
         if resource.fail:
+            raise handler.InvalidOperation()
+
+        if resource.fail_deploy and not ctx.is_dry_run():
             raise handler.InvalidOperation()
 
         if resource.name not in DATA:
@@ -83,6 +94,17 @@ class ResourceHandler(handler.CRUDHandler):
         DATA[resource.name]["desired_value"] = resource.desired_value
 
         ctx.set_updated()
+
+
+@handler.provider("unittest::WrongDiffResource", name="test")
+class WrongDiffResourceHandler(ResourceHandler):
+    def calculate_diff(
+        self,
+        ctx: handler.HandlerContext,
+        current: resources.Resource,
+        desired: resources.Resource,
+    ) -> typing.Dict[str, typing.Dict[str, typing.Any]]:
+        return {"desired_value": {"current": "x", "desired": "y"}}
 
 
 @resources.resource("unittest::IgnoreResource", id_attribute="name", agent="agent")
