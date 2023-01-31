@@ -675,7 +675,7 @@ class DeployResult(Result):
 
 
 @dataclass
-class ResultCollection:
+class DeployResultCollection:
     first_dryrun: Result
     deploy: Result
     last_dryrun: Result
@@ -1020,7 +1020,7 @@ class Project:
 
     def dryrun_and_deploy_all(
         self, run_as_root: bool = False, assert_create_or_delete: bool = False
-    ) -> ResultCollection:
+    ) -> DeployResultCollection:
         """
         Runs a dryrun, followed by a deploy and a final dryrun for every resource and asserts the expected behaviour.
         :param run_as_root: run the mock agent as root
@@ -1039,7 +1039,7 @@ class Project:
         last_dryrun.assert_all(const.ResourceState.dry)
         last_dryrun.assert_has_no_changes()
 
-        return ResultCollection(
+        return DeployResultCollection(
             first_dryrun=first_dryrun, deploy=deploy, last_dryrun=last_dryrun
         )
 

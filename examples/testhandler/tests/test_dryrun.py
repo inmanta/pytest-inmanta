@@ -133,7 +133,7 @@ def test_failures_in_last_dryrun(project):
         """
     import unittest
 
-    unittest::WrongDiffResource(name="res", desired_value="x")
+    unittest::Resource(name="res", desired_value="x", wrong_diff=true)
     """
     )
     with pytest.raises(AssertionError, match="expected no changes"):

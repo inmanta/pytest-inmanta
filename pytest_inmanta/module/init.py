@@ -27,12 +27,7 @@ KEY_PREFIX = "unittest_"
 
 @resources.resource("unittest::Resource", id_attribute="name", agent="agent")
 class Resource(resources.PurgeableResource):
-    fields = ("name", "desired_value", "skip", "fail", "fail_deploy")
-
-
-@resources.resource("unittest::WrongDiffResource", id_attribute="name", agent="agent")
-class WrongDiffResource(resources.PurgeableResource):
-    fields = ("name", "desired_value", "skip", "fail", "fail_deploy")
+    fields = ("name", "desired_value", "skip", "fail", "fail_deploy", "wrong_diff")
 
 
 @handler.provider("unittest::Resource", name="test")
@@ -95,16 +90,15 @@ class ResourceHandler(handler.CRUDHandler):
 
         ctx.set_updated()
 
-
-@handler.provider("unittest::WrongDiffResource", name="test")
-class WrongDiffResourceHandler(ResourceHandler):
     def calculate_diff(
         self,
         ctx: handler.HandlerContext,
         current: resources.Resource,
         desired: resources.Resource,
     ) -> typing.Dict[str, typing.Dict[str, typing.Any]]:
-        return {"desired_value": {"current": "x", "desired": "y"}}
+        if current.wrong_diff:
+            return {"desired_value": {"current": "x", "desired": "y"}}
+        return super().calculate_diff(ctx, current, desired)
 
 
 @resources.resource("unittest::IgnoreResource", id_attribute="name", agent="agent")
