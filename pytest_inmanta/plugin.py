@@ -668,10 +668,10 @@ class Result:
         return get_resource(self.results.keys(), resource_type, **filter_args)
 
 
-class DeployResult(Result):
-    """
-    Here for backwards compatibility reasons.
-    """
+DeployResult = Result
+"""
+Here for backwards compatibility reasons.
+"""
 
 
 @dataclass
