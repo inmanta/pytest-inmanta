@@ -1,3 +1,6 @@
+# v 2.7.0 (?)
+Changes in this release:
+
 # v 2.6.0 (2023-02-02)
 Changes in this release:
 - Add `dryrun_all` method to  the `project` fixture. Does a dryrun on every resource of a project. Also does some sanity checks.
