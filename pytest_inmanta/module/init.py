@@ -16,6 +16,8 @@
     Contact: code@inmanta.com
 """
 
+import typing
+
 from inmanta import resources
 from inmanta.agent import handler
 from pytest_inmanta.handler import DATA
@@ -25,7 +27,7 @@ KEY_PREFIX = "unittest_"
 
 @resources.resource("unittest::Resource", id_attribute="name", agent="agent")
 class Resource(resources.PurgeableResource):
-    fields = ("name", "desired_value", "skip", "fail")
+    fields = ("name", "desired_value", "skip", "fail", "fail_deploy", "wrong_diff")
 
 
 @handler.provider("unittest::Resource", name="test")
@@ -34,8 +36,9 @@ class ResourceHandler(handler.CRUDHandler):
         self, ctx: handler.HandlerContext, resource: resources.PurgeableResource
     ) -> None:
         ctx.info(
-            "Resource fail %(fail)s skip %(skip)s",
+            "Resource fail %(fail)s fails deploy %(fail_deploy)s skip %(skip)s",
             fail=resource.fail,
+            fail_deploy=resource.fail_deploy,
             skip=resource.skip,
         )
 
@@ -52,6 +55,9 @@ class ResourceHandler(handler.CRUDHandler):
                 raise handler.InvalidOperation()
 
         if resource.fail:
+            raise handler.InvalidOperation()
+
+        if resource.fail_deploy and not ctx.is_dry_run():
             raise handler.InvalidOperation()
 
         if resource.name not in DATA:
@@ -83,6 +89,16 @@ class ResourceHandler(handler.CRUDHandler):
         DATA[resource.name]["desired_value"] = resource.desired_value
 
         ctx.set_updated()
+
+    def calculate_diff(
+        self,
+        ctx: handler.HandlerContext,
+        current: resources.Resource,
+        desired: resources.Resource,
+    ) -> typing.Dict[str, typing.Dict[str, typing.Any]]:
+        if current.wrong_diff:
+            return {"desired_value": {"current": "x", "desired": "y"}}
+        return super().calculate_diff(ctx, current, desired)
 
 
 @resources.resource("unittest::IgnoreResource", id_attribute="name", agent="agent")

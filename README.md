@@ -69,15 +69,60 @@ And dryrun
 ```python
     changes = project.dryrun_resource("testmodule::Resource")
     assert changes == {"value": {'current': 'read', 'desired': 'write'}}
+    # Or dryrun all resources at once
+    result = project.dryrun_all()
 ```
 
 It is also possible to deploy all resources at once:
 
 ```python
     results = project.deploy_all()
-    results.assert_all(status=ResourceState.deployed)
     assert results.get_context_for("std::ConfigFile", path="/tmp/test").status == ResourceState.deployed
 ```
+The `dryrun_all` and `deploy_all` functions return a `Result` object with
+some helpful auxiliary functions to assert some sanity checks.
+
+We can check if every resource on the result has the correct state:
+```python
+    results = project.dryrun_all()
+    results.assert_all(ResourceState.dry)
+```
+
+It is possible to determine if every resource has the attribute `purged` in its changes.
+This is helpful to assert if the resources are to be created (`purged` set to True) or deleted (`purged` set to False):
+```python
+    results = project.dryrun_all()
+    results.assert_resources_have_purged()
+```
+
+The same applies to a `deploy_all`:
+```python
+    results = project.deploy_all()
+    results.assert_all(ResourceState.deployed)
+```
+
+To check if a deploy is successful and we achieved the desired state,
+it is possible to do a dryrun after the deploy and check if there are no changes:
+
+```python
+    results = project.deploy_all()
+    results.assert_all(ResourceState.deployed)
+
+    results = project.dryrun_all()
+    results.assert_has_no_changes()
+```
+
+For convenience, it is also possible to dryrun and deploy all resources at once.
+This method also asserts that the dryruns and deploys pass the sanity checks above.
+It returns a `DeployResultCollection` that aggregates the `Results` from the dryruns and the deploy.
+
+```python
+    resutls = project.dryrun_and_deploy_all(assert_create_or_delete=True)
+    results.first_dryrun.assert_all(ResourceState.dry)
+    results.deploy.assert_all(ResourceState.deployed)
+    results.last_dryrun.assert_all(ResourceState.dry)
+```
+
 
 Testing functions and classes defined in a v1 module is also possible
 using the `inmanta_plugins` fixture. The fixture exposes inmanta modules as its attributes
