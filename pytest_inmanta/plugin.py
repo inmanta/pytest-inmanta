@@ -29,6 +29,7 @@ import tempfile
 import typing
 import warnings
 from collections import defaultdict
+from dataclasses import dataclass
 from distutils import dir_util
 from itertools import chain
 from pathlib import Path
@@ -557,7 +558,7 @@ class ProjectLoader:
 
 
 def get_resources_matching(
-    resources: "collections.abc.Set[Resource]",
+    resources: "collections.abc.Iterable[Resource]",
     resource_type: str,
     **filter_args: object,
 ) -> Iterator[Resource]:
@@ -581,15 +582,55 @@ def get_resources_matching(
         yield resource
 
 
-class DeployResult:
-    def __init__(self, results: Dict[Resource, HandlerContext]):
+def get_resource(
+    resources: "collections.abc.Iterable[Resource]",
+    resource_type: str,
+    **filter_args: object,
+) -> typing.Optional[Resource]:
+    """
+    Get a resource of the given type and given filter on the resource attributes. If multiple resource match, the
+    first one is returned. If none match, None is returned.
+
+    :param resource_type: The exact type used in the model (no super types)
+    """
+
+    def check_serialization(resource: Resource) -> Resource:
+        """Check if the resource is serializable"""
+        serialized = json.loads(json_encode(resource.serialize()))
+        return Resource.deserialize(serialized)
+
+    try:
+        resource = next(get_resources_matching(resources, resource_type, **filter_args))
+        resource = check_serialization(resource)
+        return resource
+    except StopIteration:
+        return None
+
+
+class Result:
+    def __init__(self, results: Dict[Resource, HandlerContext]) -> None:
         self.results = results
 
-    def assert_all(self, status: ResourceState = ResourceState.deployed):
+    def assert_all(self, status: ResourceState = ResourceState.deployed) -> None:
         for r, ct in self.results.items():
             assert (
                 ct.status == status
-            ), f"Resource {r.id} has deploy status {ct.status}, expected {status}"
+            ), f"Resource {r.id} has status {ct.status}, expected {status}"
+
+    def assert_has_no_changes(self) -> None:
+        for r, ct in self.results.items():
+            assert not bool(
+                ct.changes
+            ), f"Resource {r.id} has changes {ct.changes}, expected no changes"
+
+    def assert_resources_have_purged(self) -> None:
+        """
+        Asserts that `purged` is in the changes. This is helpful to assert if the
+        resources are to be created (`purged` set to True) or deleted (`purged` set to False)
+        """
+        for r, ct in self.results.items():
+            assert ct.changes, f"Resource {r.id} has no changes, expected some changes"
+            assert "purged" in ct.changes
 
     def get_contexts_for(
         self, resource_type: str, **filter_args: object
@@ -614,6 +655,30 @@ class DeployResult:
                 "Multiple resources match this filter, if this is intentional, use get_contexts_for"
             )
         return self.results[resources[0]]
+
+    def get_resource(
+        self, resource_type: str, **filter_args: object
+    ) -> typing.Optional[Resource]:
+        """
+        Get a resource of the given type and given filter on the results attributes from a Result object.
+        If multiple resource match, the first one is returned. If none match, None is returned.
+
+        :param resource_type: The exact type used in the model (no super types)
+        """
+        return get_resource(self.results.keys(), resource_type, **filter_args)
+
+
+DeployResult = Result
+"""
+Here for backwards compatibility reasons.
+"""
+
+
+@dataclass
+class DeployResultCollection:
+    first_dryrun: Result
+    deploy: Result
+    last_dryrun: Result
 
 
 class Project:
@@ -779,17 +844,7 @@ class Project:
 
         :param resource_type: The exact type used in the model (no super types)
         """
-
-        try:
-            resource = next(
-                get_resources_matching(
-                    self.resources.values(), resource_type, **filter_args
-                )
-            )
-            resource = self.check_serialization(resource)
-            return resource
-        except StopIteration:
-            return None
+        return get_resource(self.resources.values(), resource_type, **filter_args)
 
     def deploy(
         self, resource: Resource, dry_run: bool = False, run_as_root: bool = False
@@ -803,7 +858,7 @@ class Project:
 
         assert h is not None
 
-        ctx = handler.HandlerContext(resource)
+        ctx = handler.HandlerContext(resource, dry_run=dry_run)
         h.execute(ctx, resource, dry_run)
         self.finalize_context(ctx)
         self.ctx = ctx
@@ -812,7 +867,7 @@ class Project:
 
     def deploy_all(
         self, run_as_root: bool = False, exclude_all: List[str] = ["std::AgentConfig"]
-    ) -> DeployResult:
+    ) -> Result:
         """
         Deploy all resources, in the correct order.
 
@@ -877,7 +932,7 @@ class Project:
             self.finalize_context(ctx)
             self.finalize_handler(h)
 
-        return DeployResult({r: ctx for r, _, ctx in all_contexts.values()})
+        return Result({r: ctx for r, _, ctx in all_contexts.values()})
 
     def dryrun(self, resource: Resource, run_as_root: bool = False) -> HandlerContext:
         return self.deploy(resource, True, run_as_root)
@@ -950,6 +1005,43 @@ class Project:
         ctx = self.dryrun(res, run_as_root)
         assert ctx.status == status
         return ctx.changes
+
+    def dryrun_all(self, run_as_root: bool = False) -> Result:
+        """
+        Runs a dryrun for every resource.
+        :param run_as_root: run the mock agent as root
+        """
+        return Result(
+            {
+                r: self.dryrun(r, run_as_root=run_as_root)
+                for r in self.resources.values()
+            }
+        )
+
+    def dryrun_and_deploy_all(
+        self, run_as_root: bool = False, assert_create_or_delete: bool = False
+    ) -> DeployResultCollection:
+        """
+        Runs a dryrun, followed by a deploy and a final dryrun for every resource and asserts the expected behaviour.
+        :param run_as_root: run the mock agent as root
+        :param assert_create_or_delete: assert that every resource will either be created or deleted.
+        """
+        first_dryrun = self.dryrun_all(run_as_root=run_as_root)
+        first_dryrun.assert_all(const.ResourceState.dry)
+
+        if assert_create_or_delete:
+            first_dryrun.assert_resources_have_purged()
+
+        deploy = self.deploy_all(run_as_root=run_as_root)
+        deploy.assert_all(const.ResourceState.deployed)
+
+        last_dryrun = self.dryrun_all(run_as_root=run_as_root)
+        last_dryrun.assert_all(const.ResourceState.dry)
+        last_dryrun.assert_has_no_changes()
+
+        return DeployResultCollection(
+            first_dryrun=first_dryrun, deploy=deploy, last_dryrun=last_dryrun
+        )
 
     def io(self, run_as_root: bool = False) -> "IOBase":
         version = 1

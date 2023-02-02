@@ -21,12 +21,19 @@ entity Resource extends std::PurgeableResource:
         A test resource for unit and integration testing purposes.
 
         :param skip: When set to true the handler will raise a skipresource
-        :param fail: When set to true the handler will raise an exception to mark a failure
+        :param fail: When set to true the handler will raise an exception to mark a failure whenever it performs a CRUD
+            operation.
+        :param fail_deploy: When set to true the handler will raise an exception to mark a failure when it actually performs
+            a deploy operation, i.e. create, update, delete.
+        :param wrong_diff: When set to true the handler will return a wrong diff result.
+            Causes dryrun_and_deploy_all to fail on the last dryrun.
     """
     string name
     string desired_value
     bool skip=false
     bool fail=false
+    bool fail_deploy=false
+    bool wrong_diff=false
     string agent="internal"
 end
 

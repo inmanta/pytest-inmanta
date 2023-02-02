@@ -1,3 +1,7 @@
+# v 2.6.0 (2023-02-02)
+Changes in this release:
+- Add `dryrun_all` method to  the `project` fixture. Does a dryrun on every resource of a project. Also does some sanity checks.
+- Add `dryrun_and_deploy_all` method to the `project` fixture. Dryruns, deploys and does a final dryrun on every resource of a project. Also does some sanity checks.
 # v 2.5.0 (2023-01-20)
 Changes in this release:
 - Fix bug where the temporary directory used to store the Inmanta project is not cleaned up when an exception occurs in the setup stage of the project\_factory fixture.
