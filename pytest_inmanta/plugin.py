@@ -1091,6 +1091,7 @@ license: Test License
         :param export: Whether the model should be exported after the compile
         :param no_dedent: Don't remove additional indentation in the model
         """
+
         # logging model with line numbers
         def enumerate_model(model: str):
             lines = model.split("\n")
