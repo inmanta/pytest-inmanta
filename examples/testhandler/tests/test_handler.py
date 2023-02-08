@@ -105,7 +105,6 @@ def test_resource_fail_skip_data(project):
 
 
 def test_retrieve_logs(project):
-
     project.compile(
         """
     import unittest
