@@ -1,5 +1,6 @@
 # v 2.7.0 (?)
 Changes in this release:
+- Add `--agent-install-dependency-modules` parameter to enable `agent_install_dependency_modules` option in project files.
 
 # v 2.6.0 (2023-02-02)
 Changes in this release:
