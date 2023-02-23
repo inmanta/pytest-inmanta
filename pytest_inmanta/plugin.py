@@ -314,6 +314,8 @@ def project_factory(
             raise
 
     with open(os.path.join(project_dir, "project.yml"), "w+") as fd:
+        # pydantic.BaseModel.dict() doesn't produce data that can be serialized
+        # so we first serialize it as json, then load it and dump it as yaml.
         yaml.safe_dump(json.loads(project_metadata.json()), fd)
 
     ensure_current_module_install(
