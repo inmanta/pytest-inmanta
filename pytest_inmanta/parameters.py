@@ -75,6 +75,18 @@ inm_no_strict_deps_check = BooleanTestParameter(
     group=param_group,
 )
 
+inm_agent_install_dependency_modules = BooleanTestParameter(
+    argument="--agent-install-dependency-modules",
+    environment_variable="INMANTA_AGENT_INSTALL_DEPENDENCY_MODULES",
+    usage=(
+        "Tell pytest-inmanta to set the agent_install_dependency_modules option in the project.yml "
+        "file created for the project being tested.  This is particularly useful when syncing the "
+        "project with a real orchestrator using pytest-inmanta-lsm."
+    ),
+    default=False,
+    group=param_group,
+)
+
 
 # This is the legacy module repo option
 # TODO remove this in next major version bump
