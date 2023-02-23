@@ -70,7 +70,6 @@ if typing.TYPE_CHECKING:
 
 from .handler import DATA
 from .parameters import (
-    inm_agent_install_dependency_modules,
     inm_install_mode,
     inm_mod_in_place,
     inm_mod_repo,
@@ -249,6 +248,9 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
     """
     This fixture returns the metadata object that will be used to create the project used in
     all test cases using the project fixture.
+
+    This fixture can be overwritten in specific modules to modify the project.yml file
+    that should be used there (i.e. set the agent_install_dependency_modules option)
     """
     repo_options = inm_mod_repo.resolve(request.config)
     repos: typing.Sequence[object] = get_project_repos(
@@ -265,7 +267,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
     if in_place:
         modulepath.append(str(Path(CURDIR).parent))
 
-    default_metadata = module.ProjectMetadata(
+    return module.ProjectMetadata(
         name="testcase",
         description="Project for testcase",
         repo=repos,
@@ -273,14 +275,6 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
         downloadpath="libs",
         install_mode=inm_install_mode.resolve(request.config).value,
     )
-
-    if hasattr(default_metadata, "agent_install_dependency_modules"):
-        # Not all version of core accept this value as metadata for a project
-        default_metadata.agent_install_dependency_modules = (
-            inm_agent_install_dependency_modules.resolve(request.config)
-        )
-
-    return default_metadata
 
 
 @pytest.fixture(scope="session")
