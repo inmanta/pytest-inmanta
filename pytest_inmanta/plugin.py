@@ -314,7 +314,7 @@ def project_factory(
             raise
 
     with open(os.path.join(project_dir, "project.yml"), "w+") as fd:
-        yaml.dump(project_metadata.dict(), fd)
+        yaml.safe_dump(json.loads(project_metadata.json()), fd)
 
     ensure_current_module_install(
         os.path.join(project_dir, "libs"),
