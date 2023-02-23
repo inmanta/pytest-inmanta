@@ -70,12 +70,12 @@ if typing.TYPE_CHECKING:
 
 from .handler import DATA
 from .parameters import (
+    inm_agent_install_dependency_modules,
     inm_install_mode,
     inm_mod_in_place,
     inm_mod_repo,
     inm_no_load_plugins,
     inm_no_strict_deps_check,
-    inm_agent_install_dependency_modules,
     inm_venv,
 )
 from .test_parameter import ParameterNotSetException, TestParameterRegistry
@@ -276,7 +276,9 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
 
     if hasattr(default_metadata, "agent_install_dependency_modules"):
         # Not all version of core accept this value as metadata for a project
-        default_metadata.agent_install_dependency_modules = inm_agent_install_dependency_modules.resolve(request.config)
+        default_metadata.agent_install_dependency_modules = (
+            inm_agent_install_dependency_modules.resolve(request.config)
+        )
 
     return default_metadata
 
@@ -314,7 +316,10 @@ def project_factory(
     with open(os.path.join(project_dir, "project.yml"), "w+") as fd:
         yaml.dump(project_metadata.dict(), fd)
 
-    ensure_current_module_install(os.path.join(project_dir, "libs"), inm_mod_in_place.resolve(request.config))
+    ensure_current_module_install(
+        os.path.join(project_dir, "libs"),
+        in_place=inm_mod_in_place.resolve(request.config),
+    )
 
     def create_project(**kwargs: object):
         load_plugins = not inm_no_load_plugins.resolve(request.config)
