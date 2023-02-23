@@ -75,6 +75,7 @@ from .parameters import (
     inm_mod_repo,
     inm_no_load_plugins,
     inm_no_strict_deps_check,
+    inm_agent_install_dependency_modules,
     inm_venv,
 )
 from .test_parameter import ParameterNotSetException, TestParameterRegistry
@@ -244,15 +245,11 @@ def project_dir() -> str:
 
 
 @pytest.fixture(scope="session")
-def project_factory(
-    request: pytest.FixtureRequest, project_dir: str
-) -> typing.Callable[[], "Project"]:
+def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
     """
-    A factory that constructs a single Project.
+    This fixture returns the metadata object that will be used to create the project used in
+    all test cases using the project fixture.
     """
-    _sys_path = sys.path
-    os.mkdir(os.path.join(project_dir, "libs"))
-
     repo_options = inm_mod_repo.resolve(request.config)
     repos: typing.Sequence[object] = get_project_repos(
         chain.from_iterable(
@@ -263,12 +260,38 @@ def project_factory(
         )
     )
 
-    install_mode = inm_install_mode.resolve(request.config)
-
     modulepath = ["libs"]
     in_place = inm_mod_in_place.resolve(request.config)
     if in_place:
         modulepath.append(str(Path(CURDIR).parent))
+
+    default_metadata = module.ProjectMetadata(
+        name="testcase",
+        description="Project for testcase",
+        repo=repos,
+        modulepath=modulepath,
+        downloadpath="libs",
+        install_mode=inm_install_mode.resolve(request.config).value,
+    )
+
+    if hasattr(default_metadata, "agent_install_dependency_modules"):
+        # Not all version of core accept this value as metadata for a project
+        default_metadata.agent_install_dependency_modules = inm_agent_install_dependency_modules.resolve(request.config)
+
+    return default_metadata
+
+
+@pytest.fixture(scope="session")
+def project_factory(
+    request: pytest.FixtureRequest,
+    project_dir: str,
+    project_metadata: module.ProjectMetadata,
+) -> typing.Callable[[], "Project"]:
+    """
+    A factory that constructs a single Project.
+    """
+    _sys_path = sys.path
+    os.mkdir(os.path.join(project_dir, "libs"))
 
     try:
         env_override: Optional[str] = str(inm_venv.resolve(request.config))
@@ -289,17 +312,9 @@ def project_factory(
             raise
 
     with open(os.path.join(project_dir, "project.yml"), "w+") as fd:
-        metadata: typing.Mapping[str, object] = {
-            "name": "testcase",
-            "description": "Project for testcase",
-            "repo": repos,
-            "modulepath": modulepath,
-            "downloadpath": "libs",
-            "install_mode": install_mode.value,
-        }
-        yaml.dump(metadata, fd)
+        yaml.dump(project_metadata.dict(), fd)
 
-    ensure_current_module_install(os.path.join(project_dir, "libs"), in_place)
+    ensure_current_module_install(os.path.join(project_dir, "libs"), inm_mod_in_place.resolve(request.config))
 
     def create_project(**kwargs: object):
         load_plugins = not inm_no_load_plugins.resolve(request.config)
