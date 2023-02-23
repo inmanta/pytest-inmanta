@@ -1,3 +1,7 @@
+# v 2.7.0 (2023-02-23)
+Changes in this release:
+- Introduce `project_metadata` fixture to allow modifying the `project.yml` file for the project created by the project fixture.
+
 # v 2.6.0 (2023-02-02)
 Changes in this release:
 - Add `dryrun_all` method to  the `project` fixture. Does a dryrun on every resource of a project. Also does some sanity checks.
