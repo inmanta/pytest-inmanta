@@ -1,5 +1,6 @@
 # v 2.7.0 (?)
 Changes in this release:
+- Introduce `project_metadata` fixture to allow modifying the `project.yml` file for the project created by the project fixture.
 
 # v 2.6.0 (2023-02-02)
 Changes in this release:

@@ -244,15 +244,14 @@ def project_dir() -> str:
 
 
 @pytest.fixture(scope="session")
-def project_factory(
-    request: pytest.FixtureRequest, project_dir: str
-) -> typing.Callable[[], "Project"]:
+def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
     """
-    A factory that constructs a single Project.
-    """
-    _sys_path = sys.path
-    os.mkdir(os.path.join(project_dir, "libs"))
+    This fixture returns the metadata object that will be used to create the project used in
+    all test cases using the project fixture.
 
+    This fixture can be overwritten in specific modules to modify the project.yml file
+    that should be used there (i.e. set the agent_install_dependency_modules option)
+    """
     repo_options = inm_mod_repo.resolve(request.config)
     repos: typing.Sequence[object] = get_project_repos(
         chain.from_iterable(
@@ -263,12 +262,32 @@ def project_factory(
         )
     )
 
-    install_mode = inm_install_mode.resolve(request.config)
-
     modulepath = ["libs"]
     in_place = inm_mod_in_place.resolve(request.config)
     if in_place:
         modulepath.append(str(Path(CURDIR).parent))
+
+    return module.ProjectMetadata(
+        name="testcase",
+        description="Project for testcase",
+        repo=repos,
+        modulepath=modulepath,
+        downloadpath="libs",
+        install_mode=inm_install_mode.resolve(request.config).value,
+    )
+
+
+@pytest.fixture(scope="session")
+def project_factory(
+    request: pytest.FixtureRequest,
+    project_dir: str,
+    project_metadata: module.ProjectMetadata,
+) -> typing.Callable[[], "Project"]:
+    """
+    A factory that constructs a single Project.
+    """
+    _sys_path = sys.path
+    os.mkdir(os.path.join(project_dir, "libs"))
 
     try:
         env_override: Optional[str] = str(inm_venv.resolve(request.config))
@@ -289,17 +308,14 @@ def project_factory(
             raise
 
     with open(os.path.join(project_dir, "project.yml"), "w+") as fd:
-        metadata: typing.Mapping[str, object] = {
-            "name": "testcase",
-            "description": "Project for testcase",
-            "repo": repos,
-            "modulepath": modulepath,
-            "downloadpath": "libs",
-            "install_mode": install_mode.value,
-        }
-        yaml.dump(metadata, fd)
+        # pydantic.BaseModel.dict() doesn't produce data that can be serialized
+        # so we first serialize it as json, then load it and dump it as yaml.
+        yaml.safe_dump(json.loads(project_metadata.json()), fd)
 
-    ensure_current_module_install(os.path.join(project_dir, "libs"), in_place)
+    ensure_current_module_install(
+        os.path.join(project_dir, "libs"),
+        in_place=inm_mod_in_place.resolve(request.config),
+    )
 
     def create_project(**kwargs: object):
         load_plugins = not inm_no_load_plugins.resolve(request.config)
