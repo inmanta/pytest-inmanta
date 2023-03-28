@@ -737,7 +737,7 @@ class Project:
         self.ctx: typing.Optional[HandlerContext] = None
         self._handlers: typing.Set[ResourceHandler] = set()
 
-        # Save the value of the state dir, as it might have been overwritten by the 
+        # Save the value of the state dir, as it might have been overwritten by the
         # set_inmanta_state_dir fixture
         handler_state_dir = config.state_dir.get()
 
@@ -775,7 +775,7 @@ class Project:
         self._load()
         self._set_sys_executable()
 
-        # Save the value of the state dir, as it might have been overwritten by the 
+        # Save the value of the state dir, as it might have been overwritten by the
         # set_inmanta_state_dir fixture
         handler_state_dir = config.state_dir.get()
 
