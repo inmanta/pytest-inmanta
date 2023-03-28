@@ -774,7 +774,16 @@ class Project:
         self._handlers = set()
         self._load()
         self._set_sys_executable()
+
+        # Save the value of the state dir, as it might have been overwritten by the 
+        # set_inmanta_state_dir fixture
+        handler_state_dir = config.state_dir.get()
+
+        # Load the config from file
         config.Config.load_config()
+
+        # Update the state dir value, to match the one that was set before
+        config.state_dir.set(handler_state_dir)
 
     def _create_project_and_load(self, model: str) -> module.Project:
         """
