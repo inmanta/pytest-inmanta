@@ -736,7 +736,16 @@ class Project:
         self._capsys: typing.Optional["CaptureFixture"] = None
         self.ctx: typing.Optional[HandlerContext] = None
         self._handlers: typing.Set[ResourceHandler] = set()
+
+        # Save the value of the state dir, as it might have been overwritten by the 
+        # set_inmanta_state_dir fixture
+        handler_state_dir = config.state_dir.get()
+
+        # Load the config from file
         config.Config.load_config()
+
+        # Update the state dir value, to match the one that was set before
+        config.state_dir.set(handler_state_dir)
 
     def _set_sys_executable(self) -> None:
         """
