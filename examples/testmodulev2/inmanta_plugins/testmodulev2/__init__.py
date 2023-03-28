@@ -16,11 +16,11 @@ def myplugin(x: "int") -> "int":
     return x
 
 
-@inmanta.resources.resource("testmodulev2::Print", "file", "agent.agentname")
+@inmanta.resources.resource("testmodulev2::Print", "file", "agent_name")
 class PrintResource(inmanta.resources.PurgeableResource):
     fields = (
         "file",
-        "value",
+        "content",
     )
 
 
@@ -40,7 +40,7 @@ class PrintProvider(inmanta.agent.handler.CRUDHandler):
         if not self.path(resource).exists():
             raise inmanta.agent.handler.ResourcePurged()
 
-        resource.value = self.path(resource).read_text()
+        resource.content = self.path(resource).read_text()
 
     def create_resource(
         self,
@@ -48,7 +48,7 @@ class PrintProvider(inmanta.agent.handler.CRUDHandler):
         resource: inmanta.resources.PurgeableResource,
     ) -> None:
         self.path(resource).parent.mkdir(parents=True, exist_ok=True)
-        self.path(resource).write_text(resource.value)
+        self.path(resource).write_text(resource.content)
 
     def update_resource(
         self,
@@ -56,7 +56,7 @@ class PrintProvider(inmanta.agent.handler.CRUDHandler):
         changes: dict[str, dict[str, object]],
         resource: inmanta.resources.PurgeableResource,
     ) -> None:
-        self.path(resource).write_text(resource.value)
+        self.path(resource).write_text(resource.content)
 
     def delete_resource(
         self,

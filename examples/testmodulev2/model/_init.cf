@@ -1,6 +1,7 @@
 entity Print extends std::PurgeableResource:
     string file
-    string value
+    string content
+    string agent_name = "default"
 end
 
 index Print(file)

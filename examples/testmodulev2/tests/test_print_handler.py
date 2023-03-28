@@ -28,8 +28,8 @@ def test_compile(
     )
 
     project.compile(model, no_dedent=False)
-    assert project.dryrun("testmodulev2::Print")
+    assert project.dryrun_resource("testmodulev2::Print")
     assert project.deploy_resource("testmodulev2::Print")
-    assert not project.dryrun("testmodulev2::Print")
+    assert not project.dryrun_resource("testmodulev2::Print")
 
     assert pathlib.Path(inmanta_state_dir, "test.txt").read_text() == "aha"
