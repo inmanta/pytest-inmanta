@@ -500,6 +500,17 @@ class ProjectLoader:
         # complete the set of registered plugins from the previously registered ones
         cls._register_plugins(project)
 
+        # Save the value of the state dir, as it might have been overwritten by the
+        # set_inmanta_state_dir fixture
+        # Better mechanism should come with https://github.com/inmanta/pytest-inmanta/issues/377
+        handler_state_dir = config.state_dir.get()
+
+        # Load the config from file
+        config.Config.load_config()
+
+        # Update the state dir value, to match the one that was set before
+        config.state_dir.set(handler_state_dir)
+
     @classmethod
     def _refresh_registered_plugins(cls) -> None:
         """
@@ -737,16 +748,6 @@ class Project:
         self.ctx: typing.Optional[HandlerContext] = None
         self._handlers: typing.Set[ResourceHandler] = set()
 
-        # Save the value of the state dir, as it might have been overwritten by the
-        # set_inmanta_state_dir fixture
-        handler_state_dir = config.state_dir.get()
-
-        # Load the config from file
-        config.Config.load_config()
-
-        # Update the state dir value, to match the one that was set before
-        config.state_dir.set(handler_state_dir)
-
     def _set_sys_executable(self) -> None:
         """
         Store the python interpreter used by the compiler in sys.executable
@@ -774,16 +775,6 @@ class Project:
         self._handlers = set()
         self._load()
         self._set_sys_executable()
-
-        # Save the value of the state dir, as it might have been overwritten by the
-        # set_inmanta_state_dir fixture
-        handler_state_dir = config.state_dir.get()
-
-        # Load the config from file
-        config.Config.load_config()
-
-        # Update the state dir value, to match the one that was set before
-        config.state_dir.set(handler_state_dir)
 
     def _create_project_and_load(self, model: str) -> module.Project:
         """
