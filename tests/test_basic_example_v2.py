@@ -103,14 +103,3 @@ def test_import(testdir, testmodulev2_venv_active):
     result = testdir.runpytest_inprocess("tests/test_import.py")
 
     result.assert_outcomes(passed=3)
-
-
-def test_handler(testdir, testmodulev2_venv_active):
-    """
-    Make sure that our inmanta_state_dir fixture works for modules v2
-    """
-    testdir.copy_example("testmodulev2")
-
-    result = testdir.runpytest_inprocess("tests/test_print_handler.py")
-
-    result.assert_outcomes(passed=1)

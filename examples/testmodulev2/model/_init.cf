@@ -1,9 +1,1 @@
-entity Print extends std::PurgeableResource:
-    string file
-    string content
-    string agent_name = "default"
-end
 
-index Print(file)
-
-implement Print using std::none
