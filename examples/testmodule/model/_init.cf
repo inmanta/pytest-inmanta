@@ -20,3 +20,15 @@ end
 index BadLog(agent, name)
 
 implement BadLog using std::none
+
+entity Resource_bad_id_attribute extends std::PurgeableResource:
+    string name
+    string agent
+    string key
+    string value
+    string id
+end
+
+index Resource_bad_id_attribute(agent, name)
+
+implement Resource_bad_id_attribute using std::none

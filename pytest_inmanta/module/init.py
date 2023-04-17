@@ -25,18 +25,9 @@ from pytest_inmanta.handler import DATA
 KEY_PREFIX = "unittest_"
 
 
-# @resources.resource("unittest::Resource", id_attribute="name", agent="agent")
-# class Resource(resources.PurgeableResource):
-#     fields = ("name", "desired_value", "skip", "fail", "fail_deploy", "wrong_diff")
-#
-#     @classmethod
-#     def validate(cls) -> None:
-#         super(Resource, cls).validate()
-#         warnings.warn(
-#             "Testwarning123",
-#             category=DeprecationWarning,
-#         )
-#         #add additional valiidation on id_attribute here
+@resources.resource("unittest::Resource", id_attribute="name", agent="agent")
+class Resource(resources.PurgeableResource):
+    fields = ("name", "desired_value", "skip", "fail", "fail_deploy", "wrong_diff")
 
 
 @handler.provider("unittest::Resource", name="test")

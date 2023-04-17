@@ -86,6 +86,21 @@ def test_badlog(testdir):
     result.assert_outcomes(xfailed=1)
 
 
+def test_Resource_bad_id_attribute(testdir):
+    """Make sure a deprecation warning is shown if an id_attribute called 'id' is found."""
+
+    testdir.copy_example("testmodule")
+
+    result = testdir.runpytest("tests/test_Resource_bad_id_attribute.py")
+
+    result.assert_outcomes(passed=1)
+    assert (
+        "DeprecationWarning: In the next release it will "
+        "not be possible anymore to use an id_attribute called "
+        "id for testmodule::Resource_bad_id_attribute"
+    ) in result.stdout.str()
+
+
 def test_release_mode_validation(testdir):
     """Set invalid release mode"""
 

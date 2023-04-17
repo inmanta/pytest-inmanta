@@ -1137,6 +1137,15 @@ license: Test License
         for key, blob in exporter._file_store.items():
             self.add_blob(key, blob)
 
+        res = inmanta.resources.resource._resources
+        for key, value in res.items():
+            name_value = value[1].get("name")
+            if name_value == "id":
+                warnings.warn(
+                    f"In the next release it will not be possible anymore to use an id_attribute called id for {key}",
+                    DeprecationWarning,
+                )
+
         self._root_scope = scopes
         self.version = version
         self.resources = resources
