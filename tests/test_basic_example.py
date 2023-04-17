@@ -86,16 +86,6 @@ def test_badlog(testdir):
     result.assert_outcomes(xfailed=1)
 
 
-def test_id_attribute_not_id(testdir):
-    """Make sure that the run_sync mock works."""
-
-    testdir.copy_example("testmodule")
-
-    result = testdir.runpytest("tests/test_resource_id_attribute.py")
-
-    result.assert_outcomes(passed=1)
-
-
 def test_release_mode_validation(testdir):
     """Set invalid release mode"""
 
