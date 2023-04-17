@@ -18,16 +18,25 @@
 
 import typing
 
-from inmanta import resources
+from inmanta import resources, warnings
 from inmanta.agent import handler
 from pytest_inmanta.handler import DATA
 
 KEY_PREFIX = "unittest_"
 
 
-@resources.resource("unittest::Resource", id_attribute="name", agent="agent")
-class Resource(resources.PurgeableResource):
-    fields = ("name", "desired_value", "skip", "fail", "fail_deploy", "wrong_diff")
+# @resources.resource("unittest::Resource", id_attribute="name", agent="agent")
+# class Resource(resources.PurgeableResource):
+#     fields = ("name", "desired_value", "skip", "fail", "fail_deploy", "wrong_diff")
+#
+#     @classmethod
+#     def validate(cls) -> None:
+#         super(Resource, cls).validate()
+#         warnings.warn(
+#             "Testwarning123",
+#             category=DeprecationWarning,
+#         )
+#         #add additional valiidation on id_attribute here
 
 
 @handler.provider("unittest::Resource", name="test")
