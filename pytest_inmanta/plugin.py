@@ -1141,7 +1141,8 @@ license: Test License
             name_id_attribute = value[1]["name"]
             if name_id_attribute == "id":
                 warnings.warn(
-                    f"In one of the next major releases of inmanta-core it will not be possible anymore to use an id_attribute called id for {key}",
+                    "In one of the next major releases of inmanta-core it will not be possible "
+                    f"anymore to use an id_attribute called id for {cls_name}",
                     DeprecationWarning,
                 )
 

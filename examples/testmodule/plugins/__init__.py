@@ -20,7 +20,7 @@ std.pytest_inmanta_side_effect_count += 1
 
 @resource("testmodule::Resource", agent="agent", id_attribute="name")
 @resource("testmodule::BadLog", agent="agent", id_attribute="name")
-@resource("testmodule::Resource_bad_id_attribute", agent="agent", id_attribute="id")
+@resource("testmodule::ResourceBadIdAttribute", agent="agent", id_attribute="id")
 class ResourceResource(PurgeableResource):
     fields = ("name", "agent", "key", "value")
 

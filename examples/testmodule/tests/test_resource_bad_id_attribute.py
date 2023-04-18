@@ -9,6 +9,6 @@ def test_bad_id_attribute(project, caplog):
     basemodel = """
     import testmodule
 
-    r = testmodule::Resource_bad_id_attribute(agent="a", name="IT", key="k", value="write", id="test")
+    r = testmodule::ResourceBadIdAttribute(agent="a", name="IT", key="k", value="write", id="test")
     """
     project.compile(basemodel)

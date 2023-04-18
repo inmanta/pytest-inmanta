@@ -95,9 +95,8 @@ def test_resource_bad_id_attribute(testdir):
 
     result.assert_outcomes(passed=1)
     assert (
-        "DeprecationWarning: In the next release it will "
-        "not be possible anymore to use an id_attribute called "
-        "id for testmodule::Resource_bad_id_attribute"
+        "In one of the next major releases of inmanta-core it will not be possible anymore "
+        "to use an id_attribute called id for testmodule::ResourceBadIdAttribute"
     ) in result.stdout.str()
 
 
