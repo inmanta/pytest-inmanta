@@ -1137,9 +1137,9 @@ license: Test License
         for key, blob in exporter._file_store.items():
             self.add_blob(key, blob)
 
-        for key, value in inmanta.resources.resource._resources.items():
-            name_value = value[1].get("name")
-            if name_value == "id":
+        for cls_name, value in inmanta.resources.resource._resources.items():
+            name_id_attribute = value[1]["name"]
+            if name_id_attribute == "id":
                 warnings.warn(
                     f"In one of the next major releases of inmanta-core it will not be possible anymore to use an id_attribute called id for {key}",
                     DeprecationWarning,
