@@ -86,7 +86,7 @@ def test_badlog(testdir):
     result.assert_outcomes(xfailed=1)
 
 
-def test_Resource_bad_id_attribute(testdir):
+def test_resource_bad_id_attribute(testdir):
     """Make sure a deprecation warning is shown if an id_attribute called 'id' is found."""
 
     testdir.copy_example("testmodule")
