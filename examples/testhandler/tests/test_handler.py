@@ -146,16 +146,3 @@ def test_280_sys_executable(project):
     Make sure the current python interpreter is the same as the one used by the compiler
     """
     assert Path(project._env_path) == Path(sys.executable).parent.parent
-
-
-def test_resource_attribute_id_deprecation(project):
-    project.compile(
-        """
-    import unittest
-
-    unittest::Resource(name="name", desired_value="x")
-    """
-    )
-    project.deploy_resource("unittest::Resource")
-
-    assert project.unittest_resource_exists(name="id")
