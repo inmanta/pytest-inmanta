@@ -91,7 +91,7 @@ def test_Resource_bad_id_attribute(testdir):
 
     testdir.copy_example("testmodule")
 
-    result = testdir.runpytest("tests/test_Resource_bad_id_attribute.py")
+    result = testdir.runpytest("tests/test_resource_bad_id_attribute.py")
 
     result.assert_outcomes(passed=1)
     assert (
