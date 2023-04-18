@@ -18,7 +18,7 @@
 
 import typing
 
-from inmanta import resources, warnings
+from inmanta import resources
 from inmanta.agent import handler
 from pytest_inmanta.handler import DATA
 
