@@ -86,6 +86,20 @@ def test_badlog(testdir):
     result.assert_outcomes(xfailed=1)
 
 
+def test_resource_bad_id_attribute(testdir):
+    """Make sure a deprecation warning is shown if an id_attribute called 'id' is found."""
+
+    testdir.copy_example("testmodule")
+
+    result = testdir.runpytest("tests/test_resource_bad_id_attribute.py")
+
+    result.assert_outcomes(passed=1)
+    assert (
+        "In one of the next major releases of inmanta-core it will not be possible anymore "
+        "to use an id_attribute called id for testmodule::ResourceBadIdAttribute"
+    ) in result.stdout.str()
+
+
 def test_release_mode_validation(testdir):
     """Set invalid release mode"""
 
