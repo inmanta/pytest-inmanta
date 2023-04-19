@@ -1,6 +1,6 @@
 # v 2.8.0 (?)
 Changes in this release:
-- Logs a warning when the id_attribute of a resource is called id
+- Log a warning when the id_attribute of a resource is called id.
 
 # v 2.7.0 (2023-02-23)
 Changes in this release:
