@@ -76,7 +76,7 @@ def test_basic_example(
     caplog: pytest.LogCaptureFixture,
     testmodulev2_venv_active: env.VirtualEnv,
     testmodulev2_editable_install: bool,
-):
+) -> None:
     """
     Make sure that our plugin works for v2 modules.
     """
@@ -96,7 +96,7 @@ def test_basic_example(
             )
 
 
-def test_basic_example_no_install(testdir: pytest.Testdir):
+def test_basic_example_no_install(testdir: pytest.Testdir) -> None:
     """
     Make sure that the plugin reports an informative error if the module under test is not installed.
     """
@@ -114,7 +114,9 @@ def test_basic_example_no_install(testdir: pytest.Testdir):
 
 
 @pytest.mark.parametrize("testmodulev2_editable_install", [True])
-def test_import(testdir: pytest.Testdir, testmodulev2_venv_active: env.VirtualEnv):
+def test_import(
+    testdir: pytest.Testdir, testmodulev2_venv_active: env.VirtualEnv
+) -> None:
     """
     Make sure that our plugin works for v2 modules.
     """
