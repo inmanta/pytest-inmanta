@@ -34,13 +34,26 @@ if not core.SUPPORTS_MODULES_V2:
     )
 
 
-@pytest.fixture(scope="session")
-def testmodulev2_venv(pytestconfig) -> Iterator[env.VirtualEnv]:
+@pytest.fixture(scope="function")
+def testmodulev2_editable_install() -> bool:
+    raise NotImplementedError(
+        "Tests using the testmodulev2 should have a marker specifying whether the module "
+        "should be installed in editable mode or not."
+    )
+
+
+@pytest.fixture(scope="function")
+def testmodulev2_venv(
+    testdir: pytest.Testdir,
+    pytestconfig: pytest.Config,
+    testmodulev2_editable_install: bool,
+) -> Iterator[env.VirtualEnv]:
     """
     Yields a Python environment with testmodulev2 installed in it.
     """
+    module_dir = testdir.copy_example("testmodulev2")
     with utils.module_v2_venv(
-        pytestconfig.rootpath / "examples" / "testmodulev2"
+        module_dir, editable_install=testmodulev2_editable_install
     ) as venv:
         yield venv
 
@@ -57,27 +70,33 @@ def testmodulev2_venv_active(
         yield venv
 
 
-def test_basic_example(testdir, caplog, testmodulev2_venv_active):
+@pytest.mark.parametrize("testmodulev2_editable_install", [False, True])
+def test_basic_example(
+    testdir: pytest.Testdir,
+    caplog: pytest.LogCaptureFixture,
+    testmodulev2_venv_active: env.VirtualEnv,
+    testmodulev2_editable_install: bool,
+):
     """
     Make sure that our plugin works for v2 modules.
     """
-    testdir.copy_example("testmodulev2")
-
     caplog.clear()
     with caplog.at_level(logging.WARNING):
         result = testdir.runpytest_inprocess("tests/test_basics.py")
         result.assert_outcomes(passed=1)
-        # The testmodulev2_venv_active fixture does not install the module in editable mode. For pytest-inmanta tests this is
-        # fine but for module testing this is likely a mistake. Verify that the plugin raises an appropriate warning.
-        assert (
-            "The module being tested is not installed in editable mode."
-            " As a result the tests will not pick up any changes to the local source files."
-            " To install it in editable mode, run `inmanta module install -e .`."
-            in caplog.messages
-        )
+
+        if not testmodulev2_editable_install:
+            # The testmodulev2_venv_active fixture does not install the module in editable mode. For pytest-inmanta tests this is
+            # fine but for module testing this is likely a mistake. Verify that the plugin raises an appropriate warning.
+            assert (
+                "The module being tested is not installed in editable mode."
+                " As a result the tests will not pick up any changes to the local source files."
+                " To install it in editable mode, run `inmanta module install -e .`."
+                in caplog.messages
+            )
 
 
-def test_basic_example_no_install(testdir):
+def test_basic_example_no_install(testdir: pytest.Testdir):
     """
     Make sure that the plugin reports an informative error if the module under test is not installed.
     """
@@ -94,12 +113,11 @@ def test_basic_example_no_install(testdir):
     )
 
 
-def test_import(testdir, testmodulev2_venv_active):
+@pytest.mark.parametrize("testmodulev2_editable_install", [True])
+def test_import(testdir: pytest.Testdir, testmodulev2_venv_active: env.VirtualEnv):
     """
     Make sure that our plugin works for v2 modules.
     """
-    testdir.copy_example("testmodulev2")
-
     result = testdir.runpytest_inprocess("tests/test_import.py")
 
     result.assert_outcomes(passed=3)

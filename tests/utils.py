@@ -30,7 +30,9 @@ from inmanta import env
 
 
 @contextlib.contextmanager
-def module_v2_venv(module_path: str) -> Iterator[env.VirtualEnv]:
+def module_v2_venv(
+    module_path: str, *, editable_install: bool = False
+) -> Iterator[env.VirtualEnv]:
     """
     Yields a Python environment with the given module installed in it.
     """
@@ -40,17 +42,25 @@ def module_v2_venv(module_path: str) -> Iterator[env.VirtualEnv]:
         venv.init_env()
         venv_unset_python_path(venv)
         # install test module into environment
-        subprocess.check_call(
-            [
-                venv.python_path,
-                "-m",
-                "inmanta.app",
-                "-X",
-                "module",
-                "install",
-                module_path,
-            ],
-        )
+
+        # Base command to run the installation of a module
+        install_command = [
+            venv.python_path,
+            "-m",
+            "inmanta.app",
+            "-X",
+            "module",
+            "install",
+        ]
+
+        if editable_install:
+            # Editable install, add editable option
+            install_command.append("-e")
+
+        install_command.append(module_path)
+
+        # Run the install command
+        subprocess.check_call(install_command)
         yield venv
 
 
