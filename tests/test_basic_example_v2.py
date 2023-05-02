@@ -86,8 +86,9 @@ def test_basic_example(
         result.assert_outcomes(passed=1)
 
         if not testmodulev2_editable_install:
-            # The testmodulev2_venv_active fixture does not install the module in editable mode. For pytest-inmanta tests this is
-            # fine but for module testing this is likely a mistake. Verify that the plugin raises an appropriate warning.
+            # The testmodulev2_venv_active fixture does not install the module in editable mode. For pytest-inmanta tests
+            # this is fine but for module testing this is likely a mistake. Verify that the plugin raises an appropriate
+            # warning.
             assert (
                 "The module being tested is not installed in editable mode."
                 " As a result the tests will not pick up any changes to the local source files."
