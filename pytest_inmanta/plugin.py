@@ -30,7 +30,6 @@ import typing
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
-from distutils import dir_util
 from itertools import chain
 from pathlib import Path
 from textwrap import dedent
@@ -353,7 +352,11 @@ def ensure_current_module_install(v1_modules_dir: str, in_place: bool = False) -
     mod, path = get_module()
     if not hasattr(module, "ModuleV2") or isinstance(mod, module.ModuleV1):
         if not in_place:
-            dir_util.copy_tree(path, os.path.join(v1_modules_dir, mod.name))
+            shutil.copytree(
+                path,
+                os.path.join(v1_modules_dir, mod.name),
+                ignore=shutil.ignore_patterns("__pycache__"),
+            )
     else:
         installed: typing.Optional[module.ModuleV2] = module.ModuleV2Source(
             urls=[]
