@@ -53,6 +53,7 @@ from inmanta.data import LogLine
 from inmanta.data.model import AttributeStateChange, ResourceIdStr
 from inmanta.execute.proxy import DynamicProxy
 from inmanta.export import Exporter, ResourceDict, cfg_env
+from inmanta.module import ProjectPipConfig
 from inmanta.protocol import json_encode
 from inmanta.resources import Resource
 
@@ -75,6 +76,7 @@ from .parameters import (
     inm_no_load_plugins,
     inm_no_strict_deps_check,
     inm_venv,
+    pip_index_url,
 )
 from .test_parameter import ParameterNotSetException, TestParameterRegistry
 
@@ -261,10 +263,26 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
         )
     )
 
+    pip_index_urls: str = pip_index_url.resolve(request.config)
+    # print("pip_index_urls")
+    # print(pip_index_urls)
+    # print("pip_index_urls")
+    # pip_index: typing.Sequence[str] = chain.from_iterable(
+    #     pip_index_url.split(" ")
+    #     for pip_index_url in (
+    #         pip_index_urls if isinstance(pip_index_urls, list) else [pip_index_urls]
+    #     )
+    # )
+    # print("pip_index")
+    # print(pip_index)
+    # print("pip_index")
+
     modulepath = ["libs"]
     in_place = inm_mod_in_place.resolve(request.config)
     if in_place:
         modulepath.append(str(Path(CURDIR).parent))
+
+    pip_config: ProjectPipConfig = ProjectPipConfig(index_url=pip_index_urls)
 
     return module.ProjectMetadata(
         name="testcase",
@@ -273,6 +291,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
         modulepath=modulepath,
         downloadpath="libs",
         install_mode=inm_install_mode.resolve(request.config).value,
+        pip=pip_config,
     )
 
 
