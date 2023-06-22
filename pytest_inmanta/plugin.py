@@ -34,7 +34,7 @@ from itertools import chain
 from pathlib import Path
 from textwrap import dedent
 from types import FunctionType, ModuleType
-from typing import Dict, Iterator, List, Optional, Set, Tuple
+from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple
 
 import pydantic
 import pytest
@@ -263,26 +263,14 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
         )
     )
 
-    pip_index_urls: str = pip_index_url.resolve(request.config)
-    # print("pip_index_urls")
-    # print(pip_index_urls)
-    # print("pip_index_urls")
-    # pip_index: typing.Sequence[str] = chain.from_iterable(
-    #     pip_index_url.split(" ")
-    #     for pip_index_url in (
-    #         pip_index_urls if isinstance(pip_index_urls, list) else [pip_index_urls]
-    #     )
-    # )
-    # print("pip_index")
-    # print(pip_index)
-    # print("pip_index")
+    pip_index_urls: Sequence[str] = pip_index_url.resolve(request.config)
 
     modulepath = ["libs"]
     in_place = inm_mod_in_place.resolve(request.config)
     if in_place:
         modulepath.append(str(Path(CURDIR).parent))
 
-    pip_config: ProjectPipConfig = ProjectPipConfig(index_url=pip_index_urls)
+    pip_config: ProjectPipConfig = ProjectPipConfig(index_url=list(pip_index_urls))
 
     return module.ProjectMetadata(
         name="testcase",
