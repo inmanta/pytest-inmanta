@@ -53,9 +53,10 @@ from inmanta.data import LogLine
 from inmanta.data.model import AttributeStateChange, ResourceIdStr
 from inmanta.execute.proxy import DynamicProxy
 from inmanta.export import Exporter, ResourceDict, cfg_env
-from inmanta.module import ProjectPipConfig
 from inmanta.protocol import json_encode
 from inmanta.resources import Resource
+
+from . import SUPPORTS_PROJECT_PIP_INDEX
 
 if typing.TYPE_CHECKING:
     # Local type stub for mypy that works with both pytest < 7 and pytest >=7
@@ -66,6 +67,10 @@ if typing.TYPE_CHECKING:
     class TempdirFactory:
         def mktemp(self, path: str) -> py.path.local:
             ...
+
+
+if SUPPORTS_PROJECT_PIP_INDEX:
+    from inmanta.module import ProjectPipConfig
 
 
 from .handler import DATA
@@ -263,24 +268,35 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
         )
     )
 
-    pip_index_urls: Sequence[str] = pip_index_url.resolve(request.config)
-
     modulepath = ["libs"]
     in_place = inm_mod_in_place.resolve(request.config)
     if in_place:
         modulepath.append(str(Path(CURDIR).parent))
 
-    pip_config: ProjectPipConfig = ProjectPipConfig(index_url=list(pip_index_urls))
+    if SUPPORTS_PROJECT_PIP_INDEX:
+        # On newer versions of core we set the pip.index_url of the project.yml file
+        pip_index_urls: Sequence[str] = pip_index_url.resolve(request.config)
+        pip_config: ProjectPipConfig = ProjectPipConfig(index_url=list(pip_index_urls))
 
-    return module.ProjectMetadata(
-        name="testcase",
-        description="Project for testcase",
-        repo=repos,
-        modulepath=modulepath,
-        downloadpath="libs",
-        install_mode=inm_install_mode.resolve(request.config).value,
-        pip=pip_config,
-    )
+        return module.ProjectMetadata(
+            name="testcase",
+            description="Project for testcase",
+            repo=repos,
+            modulepath=modulepath,
+            downloadpath="libs",
+            install_mode=inm_install_mode.resolve(request.config).value,
+            pip=pip_config,
+        )
+    else:
+
+        return module.ProjectMetadata(
+            name="testcase",
+            description="Project for testcase",
+            repo=repos,
+            modulepath=modulepath,
+            downloadpath="libs",
+            install_mode=inm_install_mode.resolve(request.config).value,
+        )
 
 
 @pytest.fixture(scope="session")

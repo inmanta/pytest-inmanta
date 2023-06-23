@@ -106,3 +106,35 @@ def test_conflicing_dependencies(
             assert error_msg in "\n".join(result.outlines)
         finally:
             utils.unload_modules_for_path(venv.site_packages_dir)
+
+
+
+def test_transitive_v2_dependencies_legacy_warning(examples_v2_package_index, pytestconfig, testdir):
+    # set working directory to allow in-place with all example modules
+    pytest_inmanta.plugin.CURDIR = str(
+        pytestconfig.rootpath / "examples" / "test_dependencies_head"
+    )
+
+    testdir.copy_example("test_dependencies_head")
+
+    with tempfile.TemporaryDirectory() as venv_dir:
+        # set up environment
+        venv: env.VirtualEnv = env.VirtualEnv(env_path=venv_dir)
+        try:
+            venv.use_virtual_env()
+
+            # run tests
+            result = testdir.runpytest_inprocess(
+                "tests/test_basics.py",
+                "--use-module-in-place",
+                # add pip index containing examples packages as module repo
+                "--module_repo",
+                f"package:{examples_v2_package_index}",
+                # include configured pip index for inmanta-module-std
+                "--module_repo",
+                "package:"
+                + os.environ.get("PIP_INDEX_URL", "package:https://pypi.org/simple"),
+            )
+            result.assert_outcomes(passed=1)
+        finally:
+            utils.unload_modules_for_path(venv.site_packages_dir)
