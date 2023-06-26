@@ -18,8 +18,9 @@
 from typing import Optional
 
 import pkg_resources
-from packaging import version
 from pkg_resources import DistributionNotFound
+
+from packaging import version
 
 CORE_VERSION: Optional[version.Version]
 """

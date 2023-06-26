@@ -108,8 +108,9 @@ def test_conflicing_dependencies(
             utils.unload_modules_for_path(venv.site_packages_dir)
 
 
-
-def test_transitive_v2_dependencies_legacy_warning(examples_v2_package_index, pytestconfig, testdir):
+def test_transitive_v2_dependencies_legacy_warning(
+    examples_v2_package_index, pytestconfig, testdir
+):
     # set working directory to allow in-place with all example modules
     pytest_inmanta.plugin.CURDIR = str(
         pytestconfig.rootpath / "examples" / "test_dependencies_head"
