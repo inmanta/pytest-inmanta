@@ -22,12 +22,13 @@ from typing import Iterator
 
 import pytest
 
-# be careful not to import any core>=6 objects directly
-import core
 import utils
 from inmanta import env
 
-if not core.SUPPORTS_MODULES_V2:
+# be careful not to import any core>=6 objects directly
+from pytest_inmanta.core import SUPPORTS_MODULES_V2
+
+if not SUPPORTS_MODULES_V2:
     pytest.skip(
         "Skipping modules v2 tests for inmanta-core<6 (pre modules v2).",
         allow_module_level=True,

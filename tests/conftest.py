@@ -26,12 +26,13 @@ from typing import Iterator, Optional
 import pkg_resources
 import pytest
 
-# be careful not to import any core>=6 objects directly
-import core
 import pytest_inmanta.plugin
 from inmanta import env, loader, plugins
 from inmanta.loader import PluginModuleFinder
 from libpip2pi.commands import dir2pi
+
+# be careful not to import any core>=6 objects directly
+from pytest_inmanta.core import SUPPORTS_MODULES_V2
 
 pytest_plugins = ["pytester"]
 
@@ -106,7 +107,7 @@ def examples_v2_package_index(pytestconfig) -> Iterator[str]:
 
     :return: The path to the index
     """
-    if not core.SUPPORTS_MODULES_V2:
+    if not SUPPORTS_MODULES_V2:
         pytest.skip(
             "Skipping modules v2 related tests for inmanta-core<6 (pre modules v2).",
         )
