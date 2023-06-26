@@ -56,7 +56,7 @@ from inmanta.export import Exporter, ResourceDict, cfg_env
 from inmanta.protocol import json_encode
 from inmanta.resources import Resource
 
-from . import SUPPORTS_PROJECT_PIP_INDEX
+from pytest_inmanta.core import SUPPORTS_PROJECT_PIP_INDEX
 
 if typing.TYPE_CHECKING:
     # Local type stub for mypy that works with both pytest < 7 and pytest >=7
@@ -282,7 +282,8 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
 
     if SUPPORTS_PROJECT_PIP_INDEX:
         # On newer versions of core we set the pip.index_url of the project.yml file
-        pip_config: ProjectPipConfig = ProjectPipConfig(index_url=list(pip_index_urls))
+        repos_urls: List[str] = [repo["url"] for repo in repos if repo["type"] == module.ModuleRepoType.package]
+        pip_config: ProjectPipConfig = ProjectPipConfig(index_url=list(pip_index_urls)+repos_urls)
         return module.ProjectMetadata(
             name="testcase",
             description="Project for testcase",
