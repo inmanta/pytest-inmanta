@@ -37,5 +37,5 @@ except DistributionNotFound:
 
 
 SUPPORTS_PROJECT_PIP_INDEX: bool = (
-    CORE_VERSION is not None and CORE_VERSION >= version.Version("9.2.0.dev")
+    CORE_VERSION is not None and CORE_VERSION >= version.Version("9.3.0.dev")
 )
