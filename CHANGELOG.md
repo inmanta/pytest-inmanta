@@ -2,7 +2,7 @@
 Changes in this release:
 - Log a warning when the id_attribute of a resource is called id.
 - Ignore `__pycache__` dirs when copying the current module to the test project dir
-- Use the `pip -> index_url` config option instead of the now deprecated `repo -> url` with type `package`.
+- Deprecate setting pip indexes through `--module-repo` option with type `package` in favour of newly introduced `--pip-index-url` option.
 
 # v 2.7.0 (2023-02-23)
 Changes in this release:
