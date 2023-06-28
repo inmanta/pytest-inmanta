@@ -35,7 +35,7 @@ from itertools import chain
 from pathlib import Path
 from textwrap import dedent
 from types import FunctionType, ModuleType
-from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple
+from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple, cast
 
 import pydantic
 import pytest
@@ -281,6 +281,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
 
     if SUPPORTS_PROJECT_PIP_INDEX:
         # On newer versions of core we set the pip.index_url of the project.yml file
+        repos = cast(List[module.ModuleRepoInfo],repos)
         repos_urls: List[str] = [
             repo["url"]
             for repo in repos
@@ -289,7 +290,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
         pip_config: ProjectPipConfig = ProjectPipConfig(
             # This ensures no duplicates are returned and insertion order is preserved.
             # i.e. the left-most index will be passed to pip as --index-url and the others as --extra-index-url
-            index_url=list(
+            index_urls=list(
                 {value: None for value in itertools.chain(index_urls, repos_urls)}
             )
         )
