@@ -281,7 +281,6 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
 
     if SUPPORTS_PROJECT_PIP_INDEX:
         # On newer versions of core we set the pip.index_url of the project.yml file
-        repos = cast(List[module.ModuleRepoInfo], repos)
         repos_urls: List[str] = [
             repo["url"]
             for repo in repos
