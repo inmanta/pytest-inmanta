@@ -25,6 +25,7 @@ import pytest
 import pytest_inmanta.plugin
 import utils
 from inmanta import env
+from pytest_inmanta.core import SUPPORTS_PROJECT_PIP_INDEX
 
 
 def test_transitive_v2_dependencies(examples_v2_package_index, pytestconfig, testdir):
@@ -46,10 +47,10 @@ def test_transitive_v2_dependencies(examples_v2_package_index, pytestconfig, tes
                 "tests/test_basics.py",
                 "--use-module-in-place",
                 # add pip index containing examples packages as module repo
-                "--pip-index-url",
+                "--pip-index-urls",
                 f"{examples_v2_package_index}",
                 # include configured pip index for inmanta-module-std
-                "--pip-index-url",
+                "--pip-index-urls",
                 f'{os.environ.get("PIP_INDEX_URL", "https://pypi.org/simple")}',
             )
             result.assert_outcomes(passed=1)
@@ -96,10 +97,10 @@ def test_conflicing_dependencies(
                 *(["--no-strict-deps-check"] if no_strict_deps_check else []),
                 "--use-module-in-place",
                 # add pip index containing examples packages as module repo
-                "--pip-index-url",
+                "--pip-index-urls",
                 f"{examples_v2_package_index}",
                 # include configured pip index for inmanta-module-std and lorem
-                "--pip-index-url",
+                "--pip-index-urls",
                 f'{os.environ.get("PIP_INDEX_URL", "https://pypi.org/simple")}',
             )
             result.assert_outcomes(errors=1)
@@ -137,5 +138,11 @@ def test_transitive_v2_dependencies_legacy_warning(
                 + os.environ.get("PIP_INDEX_URL", "package:https://pypi.org/simple"),
             )
             result.assert_outcomes(passed=1)
+            if SUPPORTS_PROJECT_PIP_INDEX:
+                warning_msg: str = (
+                    "Setting a package source through the --module-repo <index_url> with type `package` "
+                    "is now deprecated in favour of the --pip-index-url <index_url> option.`"
+                )
+                assert warning_msg in "\n".join(result.outlines)
         finally:
             utils.unload_modules_for_path(venv.site_packages_dir)

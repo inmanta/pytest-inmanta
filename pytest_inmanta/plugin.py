@@ -79,7 +79,7 @@ from .parameters import (
     inm_no_load_plugins,
     inm_no_strict_deps_check,
     inm_venv,
-    pip_index_url,
+    pip_index_urls,
 )
 from .test_parameter import ParameterNotSetException, TestParameterRegistry
 
@@ -227,7 +227,7 @@ def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[obj
                 if repo_info.type == module.ModuleRepoType.package:
                     LOGGER.warning(
                         "Setting a package source through the --module-repo <index_url> with type `package` "
-                        "is now deprecated in favour of the --pip-index-url <index_url> option.`"
+                        "is now deprecated in favour of the --pip-index-urls <index_url> option.`"
                     )
             return json.loads(repo_info.json())
 
@@ -272,7 +272,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
         )
     )
 
-    pip_index_urls: Sequence[str] = pip_index_url.resolve(request.config)
+    index_urls: Sequence[str] = pip_index_urls.resolve(request.config)
     modulepath = ["libs"]
     in_place = inm_mod_in_place.resolve(request.config)
     if in_place:
@@ -286,7 +286,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
             if repo["type"] == module.ModuleRepoType.package
         ]
         pip_config: ProjectPipConfig = ProjectPipConfig(
-            index_url=list(pip_index_urls) + repos_urls
+            index_url=list(set(list(index_urls) + repos_urls))
         )
         return module.ProjectMetadata(
             name="testcase",
@@ -299,7 +299,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
         )
     else:
         v2_source_repos = [
-            {"url": index_url, "type": "package"} for index_url in pip_index_urls
+            {"url": index_url, "type": "package"} for index_url in index_urls
         ]
         return module.ProjectMetadata(
             name="testcase",

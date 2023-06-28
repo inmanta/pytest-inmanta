@@ -96,8 +96,8 @@ inm_mod_repo = ListTestParameter(
     legacy=inm_mod_repo_legacy,
 )
 
-pip_index_url = ListTestParameter(
-    argument="--pip-index-url",
+pip_index_urls = ListTestParameter(
+    argument="--pip-index-urls",
     environment_variable="INMANTA_PIP_INDEX_URL",
     usage="List of project-wide pip indexes",
     group=param_group,
