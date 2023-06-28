@@ -35,7 +35,7 @@ from itertools import chain
 from pathlib import Path
 from textwrap import dedent
 from types import FunctionType, ModuleType
-from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple, cast
+from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple
 
 import pydantic
 import pytest
