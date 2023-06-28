@@ -18,6 +18,7 @@
 import collections
 import importlib
 import inspect
+import itertools
 import json
 import logging
 import math
@@ -286,7 +287,11 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
             if repo["type"] == module.ModuleRepoType.package
         ]
         pip_config: ProjectPipConfig = ProjectPipConfig(
-            index_url=list(set(list(index_urls) + repos_urls))
+            # This ensures no duplicates are returned and insertion order is preserved.
+            # i.e. the left-most index will be passed to pip as --index-url and the others as --extra-index-url
+            index_url=list(
+                {value: None for value in itertools.chain(index_urls, repos_urls)}
+            )
         )
         return module.ProjectMetadata(
             name="testcase",
