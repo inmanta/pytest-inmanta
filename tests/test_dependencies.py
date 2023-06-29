@@ -47,10 +47,10 @@ def test_transitive_v2_dependencies(examples_v2_package_index, pytestconfig, tes
                 "tests/test_basics.py",
                 "--use-module-in-place",
                 # add pip index containing examples packages as module repo
-                "--pip-index-urls" if SUPPORTS_PROJECT_PIP_INDEX else "--module_repo",
+                "--pip-index-urls",
                 f"{examples_v2_package_index}",
                 # include configured pip index for inmanta-module-std
-                "--pip-index-urls" if SUPPORTS_PROJECT_PIP_INDEX else "--module_repo",
+                "--pip-index-urls",
                 f'{os.environ.get("PIP_INDEX_URL", "https://pypi.org/simple")}',
             )
             result.assert_outcomes(passed=1)
@@ -97,10 +97,10 @@ def test_conflicing_dependencies(
                 *(["--no-strict-deps-check"] if no_strict_deps_check else []),
                 "--use-module-in-place",
                 # add pip index containing examples packages as module repo
-                "--pip-index-urls" if SUPPORTS_PROJECT_PIP_INDEX else "--module_repo",
+                "--pip-index-urls",
                 f"{examples_v2_package_index}",
                 # include configured pip index for inmanta-module-std and lorem
-                "--pip-index-urls" if SUPPORTS_PROJECT_PIP_INDEX else "--module_repo",
+                "--pip-index-urls",
                 f'{os.environ.get("PIP_INDEX_URL", "https://pypi.org/simple")}',
             )
             result.assert_outcomes(errors=1)
