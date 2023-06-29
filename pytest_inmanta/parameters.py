@@ -96,6 +96,14 @@ inm_mod_repo = ListTestParameter(
     legacy=inm_mod_repo_legacy,
 )
 
+pip_index_urls = ListTestParameter(
+    argument="--pip-index-urls",
+    environment_variable="INMANTA_PIP_INDEX_URL",
+    usage="List of project-wide pip indexes",
+    group=param_group,
+    default=[],
+)
+
 
 # This is the legacy install mode option
 # TODO remove this in next major version bump
