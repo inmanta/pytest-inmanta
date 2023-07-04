@@ -35,9 +35,11 @@ try:
 except DistributionNotFound:
     CORE_VERSION = None
 
-
+"""
+--pip-index-url is only supported for iso7+
+"""
 SUPPORTS_PROJECT_PIP_INDEX: bool = (
-    CORE_VERSION is not None and CORE_VERSION >= version.Version("9.2.0.dev")
+    CORE_VERSION is not None and CORE_VERSION >= version.Version("10.0.0.dev")
 )
 
 SUPPORTS_MODULES_V2: bool = (

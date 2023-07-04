@@ -303,6 +303,11 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
             pip=pip_config,
         )
     else:
+        if index_urls:
+            LOGGER.warning(
+                "Setting a project-wide pip index is not supported on this version of inmanta-core. "
+                "The provided index will be used as a v2 package source"
+            )
         v2_source_repos = [
             {"url": index_url, "type": "package"} for index_url in index_urls
         ]
