@@ -35,9 +35,7 @@ try:
 except DistributionNotFound:
     CORE_VERSION = None
 
-"""
---pip-index-url is only supported for iso7+
-"""
+# Setting a project-wide pip index is only supported for iso7+
 SUPPORTS_PROJECT_PIP_INDEX: bool = (
     CORE_VERSION is not None and CORE_VERSION >= version.Version("10.0.0.dev")
 )
