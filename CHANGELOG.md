@@ -3,6 +3,7 @@ Changes in this release:
 - Log a warning when the id_attribute of a resource is called id.
 - Ignore `__pycache__` dirs when copying the current module to the test project dir
 - Introduce `--pip-index-url` option to set corresponding project config section for inmanta-core 9.0.
+- Dropped nonexistent option from the README
 
 # v 2.7.0 (2023-02-23)
 Changes in this release:
