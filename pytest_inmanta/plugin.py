@@ -57,6 +57,7 @@ from inmanta.export import Exporter, ResourceDict, cfg_env
 from inmanta.protocol import json_encode
 from inmanta.resources import Resource
 from pytest_inmanta.core import SUPPORTS_PROJECT_PIP_INDEX
+from .test_parameter.parameter import ValueSetBy
 
 if typing.TYPE_CHECKING:
     # Local type stub for mypy that works with both pytest < 7 and pytest >=7
@@ -80,7 +81,7 @@ from .parameters import (
     inm_no_load_plugins,
     inm_no_strict_deps_check,
     inm_venv,
-    pip_index_urls,
+    pip_index_url,
 )
 from .test_parameter import ParameterNotSetException, TestParameterRegistry
 
@@ -226,10 +227,24 @@ def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[obj
                 repo_info = module.ModuleRepoInfo(url=repo_str)
             if SUPPORTS_PROJECT_PIP_INDEX:
                 if repo_info.type == module.ModuleRepoType.package:
-                    LOGGER.warning(
-                        "Setting a package source through the --module-repo <index_url> with type `package` "
-                        "is now deprecated in favour of the --pip-index-urls <index_url> option.`"
+                    alternative_text: str = (
+                        "is now deprecated and will raise a warning during compilation."
+                        " Use the --pip-index-url <index_url> pytest option instead or set"
+                        "the %s environment variable to address these warnings. "
                     )
+                    if inm_mod_repo._value_set_using == ValueSetBy.ENV_VARIABLE:
+                        LOGGER.warning(
+                            "Setting a package source through the %s environment variable "
+                            + alternative_text,
+                            inm_mod_repo.environment_variable,
+                            pip_index_url.environment_variable,
+                        )
+                    elif inm_mod_repo._value_set_using == ValueSetBy.CLI:
+                        LOGGER.warning(
+                            "Setting a package source through the --module-repo <index_url> with type `package` "
+                            + alternative_text,
+                            pip_index_url.environment_variable,
+                        )
             return json.loads(repo_info.json())
 
     return [parse_repo(repo) for repo in repo_options]
@@ -273,7 +288,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
         )
     )
 
-    index_urls: Sequence[str] = pip_index_urls.resolve(request.config)
+    index_urls: Sequence[str] = pip_index_url.resolve(request.config)
     modulepath = ["libs"]
     in_place = inm_mod_in_place.resolve(request.config)
     if in_place:

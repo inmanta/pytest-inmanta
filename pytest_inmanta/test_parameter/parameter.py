@@ -20,6 +20,7 @@ import os
 import uuid
 from abc import abstractmethod
 from collections import defaultdict
+from enum import Enum
 from typing import Container, Dict, Generic, List, Optional, Set, TypeVar, Union
 
 try:
@@ -164,6 +165,15 @@ class TestParameterRegistry:
             for param in parameters:
                 TestParameterRegistry.add_option(parser, group_name, param)
 
+class ValueSetBy(Enum):
+    """
+    This class is used to record how the value was provided for a test parameter.
+    """
+
+    DEFAULT_VALUE: str = "DEFAULT_VALUE"
+    CLI: str = "CLI"
+    ENV_VARIABLE: str = "ENV_VARIABLE"
+    UNSET: str = "UNSET"
 
 class TestParameter(Generic[ParameterType]):
     """
@@ -204,6 +214,8 @@ class TestParameter(Generic[ParameterType]):
         self.usage = usage
         self.default = default
         self.legacy = legacy
+        # Track how the value was set when it is being resolved:
+        self._value_set_using: Optional[str] = None
 
         TestParameterRegistry.register(key, self, group)
 
