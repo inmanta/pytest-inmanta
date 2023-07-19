@@ -87,28 +87,23 @@ class ListTestParameter(TestParameter[Sequence[str]]):
 
     def resolve(self, config: "Config") -> Sequence[str]:
         option = config.getoption(self.argument, default=self.default)
-        value_set_using: Optional[str] = None
 
-        try:
-            if option is not None and option is not self.default:
-                # A value is set, and it is not the default one
-                value_set_using = ValueSetBy.CLI
-                if isinstance(option, collections.abc.Sequence):
-                    return self.validate(option)
-                else:
-                    return self.validate([option])
+        if option is not None and option is not self.default:
+            # A value is set, and it is not the default one
+            self._value_set_using = ValueSetBy.CLI
+            if isinstance(option, collections.abc.Sequence):
+                return self.validate(option)
+            else:
+                return self.validate([option])
 
-            env_var = os.getenv(self.environment_variable)
-            if env_var is not None:
-                # A value is set
-                value_set_using = ValueSetBy.ENV_VARIABLE
-                return self.validate(env_var.split(" "))
+        env_var = os.getenv(self.environment_variable)
+        if env_var is not None:
+            # A value is set
+            self._value_set_using = ValueSetBy.ENV_VARIABLE
+            return self.validate(env_var.split(" "))
 
-            if self.default is not None:
-                value_set_using = ValueSetBy.DEFAULT_VALUE
-                return self.default
+        if self.default is not None:
+            self._value_set_using = ValueSetBy.DEFAULT_VALUE
+            return self.default
 
-            raise ParameterNotSetException(self)
-
-        finally:
-            self._value_set_using = value_set_using
+        raise ParameterNotSetException(self)

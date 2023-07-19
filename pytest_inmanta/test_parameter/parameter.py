@@ -165,6 +165,7 @@ class TestParameterRegistry:
             for param in parameters:
                 TestParameterRegistry.add_option(parser, group_name, param)
 
+
 class ValueSetBy(Enum):
     """
     This class is used to record how the value was provided for a test parameter.
@@ -173,7 +174,7 @@ class ValueSetBy(Enum):
     DEFAULT_VALUE: str = "DEFAULT_VALUE"
     CLI: str = "CLI"
     ENV_VARIABLE: str = "ENV_VARIABLE"
-    UNSET: str = "UNSET"
+
 
 class TestParameter(Generic[ParameterType]):
     """

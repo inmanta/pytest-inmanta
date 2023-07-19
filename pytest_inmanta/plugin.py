@@ -57,6 +57,7 @@ from inmanta.export import Exporter, ResourceDict, cfg_env
 from inmanta.protocol import json_encode
 from inmanta.resources import Resource
 from pytest_inmanta.core import SUPPORTS_PROJECT_PIP_INDEX
+
 from .test_parameter.parameter import ValueSetBy
 
 if typing.TYPE_CHECKING:
