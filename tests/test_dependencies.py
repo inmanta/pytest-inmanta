@@ -157,9 +157,9 @@ def test_transitive_v2_dependencies_legacy_warning(
 
         if SUPPORTS_PROJECT_PIP_INDEX:
             warning_msg: str = (
-                "Setting a package source through the --module-repo <index_url> with type `package` "
+                "Setting a package source through the --module-repo <index_url> cli option with type `package` "
                 "is now deprecated and will raise a warning during compilation."
                 " Use the --pip-index-url <index_url> pytest option instead or set"
-                f"the {pip_index_url.environment_variable} environment variable to address these warnings. "
+                f" the {pip_index_url.environment_variable} environment variable to address these warnings. "
             )
             assert warning_msg in caplog.text
