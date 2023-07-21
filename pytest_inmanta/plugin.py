@@ -231,7 +231,7 @@ def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[obj
                     alternative_text: str = (
                         "is now deprecated and will raise a warning during compilation."
                         " Use the --pip-index-url <index_url> pytest option instead or set"
-                        "the %s environment variable to address these warnings. "
+                        " the %s environment variable to address these warnings. "
                     )
                     if inm_mod_repo._value_set_using == ValueSetBy.ENV_VARIABLE:
                         LOGGER.warning(
