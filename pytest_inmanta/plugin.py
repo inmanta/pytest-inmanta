@@ -242,7 +242,7 @@ def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[obj
                         )
                     elif inm_mod_repo._value_set_using == ValueSetBy.CLI:
                         LOGGER.warning(
-                            "Setting a package source through the --module-repo <index_url> with type `package` "
+                            "Setting a package source through the --module-repo <index_url> cli option with type `package` "
                             + alternative_text,
                             pip_index_url.environment_variable,
                         )
