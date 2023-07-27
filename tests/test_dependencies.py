@@ -26,6 +26,7 @@ import pytest_inmanta.plugin
 import utils
 from inmanta import env
 from pytest_inmanta.core import SUPPORTS_PROJECT_PIP_INDEX
+from pytest_inmanta.parameters import pip_index_url
 
 
 def test_transitive_v2_dependencies(
@@ -50,10 +51,10 @@ def test_transitive_v2_dependencies(
                     "tests/test_basics.py",
                     "--use-module-in-place",
                     # add pip index containing examples packages as module repo
-                    "--pip-index-urls",
+                    "--pip-index-url",
                     f"{examples_v2_package_index}",
                     # include configured pip index for inmanta-module-std
-                    "--pip-index-urls",
+                    "--pip-index-url",
                     f'{os.environ.get("PIP_INDEX_URL", "https://pypi.org/simple")}',
                 )
                 result.assert_outcomes(passed=1)
@@ -107,10 +108,10 @@ def test_conflicing_dependencies(
                 *(["--no-strict-deps-check"] if no_strict_deps_check else []),
                 "--use-module-in-place",
                 # add pip index containing examples packages as module repo
-                "--pip-index-urls",
+                "--pip-index-url",
                 f"{examples_v2_package_index}",
                 # include configured pip index for inmanta-module-std and lorem
-                "--pip-index-urls",
+                "--pip-index-url",
                 f'{os.environ.get("PIP_INDEX_URL", "https://pypi.org/simple")}',
             )
             result.assert_outcomes(errors=1)
@@ -156,7 +157,9 @@ def test_transitive_v2_dependencies_legacy_warning(
 
         if SUPPORTS_PROJECT_PIP_INDEX:
             warning_msg: str = (
-                "Setting a package source through the --module-repo <index_url> with type `package` "
-                "is now deprecated in favour of the --pip-index-urls <index_url> option.`"
+                "Setting a package source through the --module-repo <index_url> cli option with type `package` "
+                "is now deprecated and will raise a warning during compilation."
+                " Use the --pip-index-url <index_url> pytest option instead or set"
+                f" the {pip_index_url.environment_variable} environment variable to address these warnings. "
             )
             assert warning_msg in caplog.text
