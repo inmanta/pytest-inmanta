@@ -1,4 +1,4 @@
-# v 2.8.0 (?)
+# v 2.8.0 (2023-08-03)
 Changes in this release:
 - Log a warning when the id_attribute of a resource is called id.
 - Ignore `__pycache__` dirs when copying the current module to the test project dir
