@@ -18,6 +18,7 @@
 import collections
 import importlib
 import inspect
+import itertools
 import json
 import logging
 import math
@@ -30,12 +31,11 @@ import typing
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
-from distutils import dir_util
 from itertools import chain
 from pathlib import Path
 from textwrap import dedent
 from types import FunctionType, ModuleType
-from typing import Dict, Iterator, List, Optional, Set, Tuple
+from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple
 
 import pydantic
 import pytest
@@ -56,6 +56,9 @@ from inmanta.execute.proxy import DynamicProxy
 from inmanta.export import Exporter, ResourceDict, cfg_env
 from inmanta.protocol import json_encode
 from inmanta.resources import Resource
+from pytest_inmanta.core import SUPPORTS_PROJECT_PIP_INDEX
+
+from .test_parameter.parameter import ValueSetBy
 
 if typing.TYPE_CHECKING:
     # Local type stub for mypy that works with both pytest < 7 and pytest >=7
@@ -68,6 +71,9 @@ if typing.TYPE_CHECKING:
             ...
 
 
+if SUPPORTS_PROJECT_PIP_INDEX:
+    from inmanta.module import ProjectPipConfig
+
 from .handler import DATA
 from .parameters import (
     inm_install_mode,
@@ -76,6 +82,7 @@ from .parameters import (
     inm_no_load_plugins,
     inm_no_strict_deps_check,
     inm_venv,
+    pip_index_url,
 )
 from .test_parameter import ParameterNotSetException, TestParameterRegistry
 
@@ -219,6 +226,26 @@ def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[obj
             # there might be only one part or part might be just "https"
             except (IndexError, pydantic.ValidationError):
                 repo_info = module.ModuleRepoInfo(url=repo_str)
+            if SUPPORTS_PROJECT_PIP_INDEX:
+                if repo_info.type == module.ModuleRepoType.package:
+                    alternative_text: str = (
+                        "is now deprecated and will raise a warning during compilation."
+                        " Use the --pip-index-url <index_url> pytest option instead or set"
+                        " the %s environment variable to address these warnings. "
+                    )
+                    if inm_mod_repo._value_set_using == ValueSetBy.ENV_VARIABLE:
+                        LOGGER.warning(
+                            "Setting a package source through the %s environment variable "
+                            + alternative_text,
+                            inm_mod_repo.environment_variable,
+                            pip_index_url.environment_variable,
+                        )
+                    elif inm_mod_repo._value_set_using == ValueSetBy.CLI:
+                        LOGGER.warning(
+                            "Setting a package source through the --module-repo <index_url> cli option with type `package` "
+                            + alternative_text,
+                            pip_index_url.environment_variable,
+                        )
             return json.loads(repo_info.json())
 
     return [parse_repo(repo) for repo in repo_options]
@@ -262,19 +289,52 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
         )
     )
 
+    index_urls: Sequence[str] = pip_index_url.resolve(request.config)
     modulepath = ["libs"]
     in_place = inm_mod_in_place.resolve(request.config)
     if in_place:
         modulepath.append(str(Path(CURDIR).parent))
 
-    return module.ProjectMetadata(
-        name="testcase",
-        description="Project for testcase",
-        repo=repos,
-        modulepath=modulepath,
-        downloadpath="libs",
-        install_mode=inm_install_mode.resolve(request.config).value,
-    )
+    if SUPPORTS_PROJECT_PIP_INDEX:
+        # On newer versions of core we set the pip.index_url of the project.yml file
+        repos_urls: List[str] = [
+            repo["url"]
+            for repo in repos
+            if repo["type"] == module.ModuleRepoType.package
+        ]
+        pip_config: ProjectPipConfig = ProjectPipConfig(
+            # This ensures no duplicates are returned and insertion order is preserved.
+            # i.e. the left-most index will be passed to pip as --index-url and the others as --extra-index-url
+            index_urls=list(
+                {value: None for value in itertools.chain(index_urls, repos_urls)}
+            )
+        )
+        return module.ProjectMetadata(
+            name="testcase",
+            description="Project for testcase",
+            repo=repos,
+            modulepath=modulepath,
+            downloadpath="libs",
+            install_mode=inm_install_mode.resolve(request.config).value,
+            pip=pip_config,
+        )
+    else:
+        if index_urls:
+            LOGGER.warning(
+                "Setting a project-wide pip index is not supported on this version of inmanta-core. "
+                "The provided index will be used as a v2 package source"
+            )
+        v2_source_repos = [
+            {"url": index_url, "type": "package"} for index_url in index_urls
+        ]
+        return module.ProjectMetadata(
+            name="testcase",
+            description="Project for testcase",
+            repo=list(repos) + v2_source_repos,
+            modulepath=modulepath,
+            downloadpath="libs",
+            install_mode=inm_install_mode.resolve(request.config).value,
+        )
 
 
 @pytest.fixture(scope="session")
@@ -353,7 +413,11 @@ def ensure_current_module_install(v1_modules_dir: str, in_place: bool = False) -
     mod, path = get_module()
     if not hasattr(module, "ModuleV2") or isinstance(mod, module.ModuleV1):
         if not in_place:
-            dir_util.copy_tree(path, os.path.join(v1_modules_dir, mod.name))
+            shutil.copytree(
+                path,
+                os.path.join(v1_modules_dir, mod.name),
+                ignore=shutil.ignore_patterns("__pycache__"),
+            )
     else:
         installed: typing.Optional[module.ModuleV2] = module.ModuleV2Source(
             urls=[]
@@ -1136,6 +1200,15 @@ license: Test License
 
         for key, blob in exporter._file_store.items():
             self.add_blob(key, blob)
+
+        for cls_name, value in inmanta.resources.resource._resources.items():
+            name_id_attribute = value[1]["name"]
+            if name_id_attribute == "id":
+                warnings.warn(
+                    "In one of the next major releases of inmanta-core it will not be possible "
+                    f"anymore to use an id_attribute called id for {cls_name}",
+                    DeprecationWarning,
+                )
 
         self._root_scope = scopes
         self.version = version

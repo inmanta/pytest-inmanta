@@ -28,7 +28,7 @@ try:
 except ImportError:
     pass
 
-from .parameter import ParameterNotSetException, TestParameter
+from .parameter import ParameterNotSetException, TestParameter, ValueSetBy
 
 
 class ListTestParameter(TestParameter[Sequence[str]]):
@@ -87,8 +87,10 @@ class ListTestParameter(TestParameter[Sequence[str]]):
 
     def resolve(self, config: "Config") -> Sequence[str]:
         option = config.getoption(self.argument, default=self.default)
+
         if option is not None and option is not self.default:
             # A value is set, and it is not the default one
+            self._value_set_using = ValueSetBy.CLI
             if isinstance(option, collections.abc.Sequence):
                 return self.validate(option)
             else:
@@ -97,9 +99,11 @@ class ListTestParameter(TestParameter[Sequence[str]]):
         env_var = os.getenv(self.environment_variable)
         if env_var is not None:
             # A value is set
+            self._value_set_using = ValueSetBy.ENV_VARIABLE
             return self.validate(env_var.split(" "))
 
         if self.default is not None:
+            self._value_set_using = ValueSetBy.DEFAULT_VALUE
             return self.default
 
         raise ParameterNotSetException(self)

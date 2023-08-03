@@ -1,5 +1,5 @@
 """
-    Copyright 2021 Inmanta
+    Copyright 2023 Inmanta
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ from typing import Optional
 import pkg_resources
 from pkg_resources import DistributionNotFound
 
-# be careful not to import any core>=6 objects directly
 from packaging import version
 
 CORE_VERSION: Optional[version.Version]
@@ -36,6 +35,10 @@ try:
 except DistributionNotFound:
     CORE_VERSION = None
 
+# Setting a project-wide pip index is only supported for iso7+
+SUPPORTS_PROJECT_PIP_INDEX: bool = (
+    CORE_VERSION is not None and CORE_VERSION >= version.Version("9.0.0.dev")
+)
 
 SUPPORTS_MODULES_V2: bool = (
     CORE_VERSION is not None and CORE_VERSION >= version.Version("6.dev")

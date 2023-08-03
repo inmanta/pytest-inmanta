@@ -16,7 +16,7 @@
     Contact: code@inmanta.com
 """
 # Note: These tests only function when the pytest output is not modified by plugins such as pytest-sugar!
-
+import logging
 import os
 import tempfile
 
@@ -25,9 +25,13 @@ import pytest
 import pytest_inmanta.plugin
 import utils
 from inmanta import env
+from pytest_inmanta.core import SUPPORTS_PROJECT_PIP_INDEX
+from pytest_inmanta.parameters import pip_index_url
 
 
-def test_transitive_v2_dependencies(examples_v2_package_index, pytestconfig, testdir):
+def test_transitive_v2_dependencies(
+    examples_v2_package_index, pytestconfig, testdir, caplog
+):
     # set working directory to allow in-place with all example modules
     pytest_inmanta.plugin.CURDIR = str(
         pytestconfig.rootpath / "examples" / "test_dependencies_head"
@@ -35,27 +39,34 @@ def test_transitive_v2_dependencies(examples_v2_package_index, pytestconfig, tes
 
     testdir.copy_example("test_dependencies_head")
 
-    with tempfile.TemporaryDirectory() as venv_dir:
-        # set up environment
-        venv: env.VirtualEnv = env.VirtualEnv(env_path=venv_dir)
-        try:
-            venv.use_virtual_env()
+    with caplog.at_level(logging.WARNING):
+        with tempfile.TemporaryDirectory() as venv_dir:
+            # set up environment
+            venv: env.VirtualEnv = env.VirtualEnv(env_path=venv_dir)
+            try:
+                venv.use_virtual_env()
 
-            # run tests
-            result = testdir.runpytest_inprocess(
-                "tests/test_basics.py",
-                "--use-module-in-place",
-                # add pip index containing examples packages as module repo
-                "--module_repo",
-                f"package:{examples_v2_package_index}",
-                # include configured pip index for inmanta-module-std
-                "--module_repo",
-                "package:"
-                + os.environ.get("PIP_INDEX_URL", "package:https://pypi.org/simple"),
+                # run tests
+                result = testdir.runpytest_inprocess(
+                    "tests/test_basics.py",
+                    "--use-module-in-place",
+                    # add pip index containing examples packages as module repo
+                    "--pip-index-url",
+                    f"{examples_v2_package_index}",
+                    # include configured pip index for inmanta-module-std
+                    "--pip-index-url",
+                    f'{os.environ.get("PIP_INDEX_URL", "https://pypi.org/simple")}',
+                )
+                result.assert_outcomes(passed=1)
+            finally:
+                utils.unload_modules_for_path(venv.site_packages_dir)
+
+        if not SUPPORTS_PROJECT_PIP_INDEX:
+            warning_msg: str = (
+                "Setting a project-wide pip index is not supported on this version of inmanta-core. "
+                "The provided index will be used as a v2 package source"
             )
-            result.assert_outcomes(passed=1)
-        finally:
-            utils.unload_modules_for_path(venv.site_packages_dir)
+            assert warning_msg in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -97,14 +108,58 @@ def test_conflicing_dependencies(
                 *(["--no-strict-deps-check"] if no_strict_deps_check else []),
                 "--use-module-in-place",
                 # add pip index containing examples packages as module repo
-                "--module_repo",
-                f"package:{examples_v2_package_index}",
+                "--pip-index-url",
+                f"{examples_v2_package_index}",
                 # include configured pip index for inmanta-module-std and lorem
-                "--module_repo",
-                "package:"
-                + os.environ.get("PIP_INDEX_URL", "package:https://pypi.org/simple"),
+                "--pip-index-url",
+                f'{os.environ.get("PIP_INDEX_URL", "https://pypi.org/simple")}',
             )
             result.assert_outcomes(errors=1)
             assert error_msg in "\n".join(result.outlines)
         finally:
             utils.unload_modules_for_path(venv.site_packages_dir)
+
+
+def test_transitive_v2_dependencies_legacy_warning(
+    examples_v2_package_index, pytestconfig, testdir, caplog
+):
+    # set working directory to allow in-place with all example modules
+    pytest_inmanta.plugin.CURDIR = str(
+        pytestconfig.rootpath / "examples" / "test_dependencies_head"
+    )
+
+    testdir.copy_example("test_dependencies_head")
+
+    with caplog.at_level(logging.WARNING):
+        with tempfile.TemporaryDirectory() as venv_dir:
+            # set up environment
+            venv: env.VirtualEnv = env.VirtualEnv(env_path=venv_dir)
+            try:
+                venv.use_virtual_env()
+
+                # run tests
+                result = testdir.runpytest_inprocess(
+                    "tests/test_basics.py",
+                    "--use-module-in-place",
+                    # add pip index containing examples packages as module repo
+                    "--module_repo",
+                    f"package:{examples_v2_package_index}",
+                    # include configured pip index for inmanta-module-std
+                    "--module_repo",
+                    "package:"
+                    + os.environ.get(
+                        "PIP_INDEX_URL", "package:https://pypi.org/simple"
+                    ),
+                )
+                result.assert_outcomes(passed=1)
+            finally:
+                utils.unload_modules_for_path(venv.site_packages_dir)
+
+        if SUPPORTS_PROJECT_PIP_INDEX:
+            warning_msg: str = (
+                "Setting a package source through the --module-repo <index_url> cli option with type `package` "
+                "is now deprecated and will raise a warning during compilation."
+                " Use the --pip-index-url <index_url> pytest option instead or set"
+                f" the {pip_index_url.environment_variable} environment variable to address these warnings. "
+            )
+            assert warning_msg in caplog.text
