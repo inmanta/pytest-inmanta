@@ -50,7 +50,7 @@ from inmanta.agent import handler
 from inmanta.agent import io as agent_io
 from inmanta.agent.handler import HandlerContext, ResourceHandler
 from inmanta.const import ResourceState
-from inmanta.data import DiscoveredResource, LogLine
+from inmanta.data import LogLine
 from inmanta.data.model import AttributeStateChange, ResourceIdStr
 from inmanta.execute.proxy import DynamicProxy
 from inmanta.export import Exporter, ResourceDict, cfg_env
@@ -462,10 +462,10 @@ class MockAgent(object):
 class MockClient(object):
     def __init__(self):
         self.facts = []
-        self.discovered_resources: List[DiscoveredResource] = []
+        self.discovered_resources: List[object] = []
 
     async def discovered_resource_create_batch(
-        self, tid, discovered_resources: collections.abc.Sequence[DiscoveredResource]
+        self, tid, discovered_resources: collections.abc.Sequence[object]
     ) -> Result:
         self.discovered_resources.extend(discovered_resources)
         return inmanta.protocol.common.Result(200)
@@ -1443,7 +1443,7 @@ class DeployResultV2:
         if change is not None:
             assert ctx._change == change
 
-    def discovered_resources(self) -> List[DiscoveredResource]:
+    def discovered_resources(self) -> List[object]:
         return self.handler._client.discovered_resources
 
 
