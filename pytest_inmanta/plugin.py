@@ -1381,14 +1381,17 @@ license: Test License
         resource_type: str,
         run_as_root: bool = False,
         dry_run: bool = False,
+        status: Optional[const.ResourceState] = const.ResourceState.deployed,
         **filter_args: object,
-    ) -> "DeployResult":
+    ) -> "DeployResultV2":
         """
         Deploy a resource of the given type, that matches the filter and assert the outcome
 
         :param resource_type: the type of resource to deploy
         :param filter_args: a set of kwargs, the resource must have all matching attributes set to the given values
         :param run_as_root: run the handler as root or not
+        :param dry_run: only perform dryrun
+        :param status: expected status after deploy, set to None to not check
         """
         resource = self.get_resource(resource_type, **filter_args)
         assert resource is not None, "No resource found of given type and filter args"
@@ -1401,13 +1404,18 @@ license: Test License
         self.finalize_context(ctx)
         self.finalize_handler(h)
 
-        return DeployResult(ctx=ctx, handler=h)
+        out = DeployResultV2(resource=resource, ctx=ctx, handler=h)
+        if status is not None:
+            out.assert_status(status)
+
+        return out
 
 
 @dataclass
-class DeployResult:
+class DeployResultV2:
     ctx: HandlerContext
     handler: ResourceHandler
+    resource: Resource
 
     def assert_status(
         self,
