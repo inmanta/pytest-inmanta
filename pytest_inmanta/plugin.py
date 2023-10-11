@@ -50,11 +50,11 @@ from inmanta.agent import handler
 from inmanta.agent import io as agent_io
 from inmanta.agent.handler import HandlerContext, ResourceHandler
 from inmanta.const import ResourceState
-from inmanta.data import LogLine
+from inmanta.data import DiscoveredResource, LogLine
 from inmanta.data.model import AttributeStateChange, ResourceIdStr
 from inmanta.execute.proxy import DynamicProxy
 from inmanta.export import Exporter, ResourceDict, cfg_env
-from inmanta.protocol import json_encode
+from inmanta.protocol import Result, json_encode
 from inmanta.resources import Resource
 from pytest_inmanta.core import SUPPORTS_PROJECT_PIP_INDEX
 
@@ -74,8 +74,8 @@ if typing.TYPE_CHECKING:
 if SUPPORTS_PROJECT_PIP_INDEX:
     from inmanta.module import ProjectPipConfig
 
-from .handler import DATA
-from .parameters import (
+from pytest_inmanta.handler import DATA
+from pytest_inmanta.parameters import (
     inm_install_mode,
     inm_mod_in_place,
     inm_mod_repo,
@@ -84,7 +84,10 @@ from .parameters import (
     inm_venv,
     pip_index_url,
 )
-from .test_parameter import ParameterNotSetException, TestParameterRegistry
+from pytest_inmanta.test_parameter import (
+    ParameterNotSetException,
+    TestParameterRegistry,
+)
 
 try:
     """
@@ -452,6 +455,20 @@ class MockAgent(object):
         self.uri = uri
         self.process = MockProcess()
         self._env_id = cfg_env.get()
+        self.sessionid = "mockid"
+        self.environment = self._env_id
+
+
+class MockClient(object):
+    def __init__(self):
+        self.facts = []
+        self.discovered_resources: List[DiscoveredResource] = []
+
+    async def discovered_resource_create_batch(
+        self, tid, discovered_resources: collections.abc.Sequence[DiscoveredResource]
+    ) -> Result:
+        self.discovered_resources.extend(discovered_resources)
+        return inmanta.protocol.common.Result(200)
 
 
 class InmantaPluginsImportLoader:
@@ -906,6 +923,7 @@ class Project:
             p.stat_file = lambda x: self.stat_blob(x)  # type: ignore
             p.upload_file = lambda x, y: self.add_blob(x, y)  # type: ignore
             p.run_sync = ioloop.IOLoop.current().run_sync  # type: ignore
+            p._client = MockClient()
             self._handlers.add(p)
             return p
         except Exception as e:
@@ -1357,6 +1375,68 @@ license: Test License
     def finalize_all_handlers(self) -> None:
         for handler_instance in self._handlers:
             self.finalize_handler(handler_instance)
+
+    def deploy_resource_v2(
+        self,
+        resource_type: str,
+        run_as_root: bool = False,
+        dry_run: bool = False,
+        **filter_args: object,
+    ) -> "DeployResult":
+        """
+        Deploy a resource of the given type, that matches the filter and assert the outcome
+
+        :param resource_type: the type of resource to deploy
+        :param filter_args: a set of kwargs, the resource must have all matching attributes set to the given values
+        :param run_as_root: run the handler as root or not
+        """
+        resource = self.get_resource(resource_type, **filter_args)
+        assert resource is not None, "No resource found of given type and filter args"
+
+        h = self.get_handler(resource, run_as_root)
+        assert h is not None
+
+        ctx = handler.HandlerContext(resource, dry_run=dry_run)
+        h.execute(ctx, resource, dry_run)
+        self.finalize_context(ctx)
+        self.finalize_handler(h)
+
+        return DeployResult(ctx=ctx, handler=h)
+
+
+@dataclass
+class DeployResult:
+    ctx: HandlerContext
+    handler: ResourceHandler
+
+    def assert_status(
+        self,
+        status: const.ResourceState = const.ResourceState.deployed,
+        change: const.Change = None,
+    ):
+        ctx = self.ctx
+        if ctx.status != status:
+            print("Deploy did not result in correct status")
+            print("Requested changes: ", ctx._changes)
+            for log in ctx.logs:
+                print("Log: ", log._data["msg"])
+                print(
+                    "Kwargs: ",
+                    [
+                        "%s: %s" % (k, v)
+                        for k, v in log._data["kwargs"].items()
+                        if k != "traceback"
+                    ],
+                )
+                if "traceback" in log._data["kwargs"]:
+                    print("Traceback:\n", log._data["kwargs"]["traceback"])
+
+        assert ctx.status == status
+        if change is not None:
+            assert ctx._change == change
+
+    def discovered_resources(self) -> List[DiscoveredResource]:
+        return self.handler._client.discovered_resources
 
 
 @pytest.fixture(scope="function")
