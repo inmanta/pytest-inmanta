@@ -712,7 +712,7 @@ class Result:
         for r, ct in self.results.items():
             assert (
                 ct.status == status
-            ), f"Resource {r.id} has status {ct.status}, expected {status}"
+            ), f"Resource {r.id} has status {ct.status.value}, expected {status.value}"
 
     def assert_has_no_changes(self) -> None:
         for r, ct in self.results.items():
