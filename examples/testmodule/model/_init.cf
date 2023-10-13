@@ -32,3 +32,14 @@ end
 index ResourceBadIdAttribute(agent, name)
 
 implement ResourceBadIdAttribute using std::none
+
+entity Fail extends std::PurgeableResource:
+    string name
+    string agent
+    string key
+    string value
+end
+
+index Fail(agent, name)
+
+implement Fail using std::none

@@ -102,6 +102,8 @@ CURDIR = os.getcwd()
 LOGGER = logging.getLogger()
 SYS_EXECUTABLE = sys.executable
 
+DEFAULT = object()
+
 
 def pytest_addoption(parser: "Parser") -> None:
     TestParameterRegistry.pytest_addoption(parser)
@@ -1381,7 +1383,7 @@ license: Test License
         resource_type: str,
         run_as_root: bool = False,
         dry_run: bool = False,
-        status: Optional[const.ResourceState] = const.ResourceState.deployed,
+        expected_status: Optional[const.ResourceState] = DEFAULT,
         **filter_args: object,
     ) -> "DeployResultV2":
         """
@@ -1391,8 +1393,16 @@ license: Test License
         :param filter_args: a set of kwargs, the resource must have all matching attributes set to the given values
         :param run_as_root: run the handler as root or not
         :param dry_run: only perform dryrun
-        :param status: expected status after deploy, set to None to not check
+        :param status: expected status after deploy,
+            set to None to not check,
+            for deploy defaults to deployed
+            for dryrun defaults to dry
         """
+        if expected_status == DEFAULT:
+            expected_status = (
+                const.ResourceState.deployed if not dry_run else const.ResourceState.dry
+            )
+
         resource = self.get_resource(resource_type, **filter_args)
         assert resource is not None, "No resource found of given type and filter args"
 
@@ -1405,10 +1415,21 @@ license: Test License
         self.finalize_handler(h)
 
         out = DeployResultV2(resource=resource, ctx=ctx, handler=h)
-        if status is not None:
-            out.assert_status(status)
+        if expected_status is not None:
+            out.assert_status(expected_status)
 
         return out
+
+    def dryrun_resource_v2(
+        self,
+        resource_type: str,
+        run_as_root: bool = False,
+        expected_status: Optional[const.ResourceState] = DEFAULT,
+        **filter_args: object,
+    ) -> "DeployResultV2":
+        return self.deploy_resource_v2(
+            resource_type, run_as_root, True, expected_status, **filter_args
+        )
 
 
 @dataclass
@@ -1417,6 +1438,7 @@ class DeployResultV2:
     handler: ResourceHandler
     resource: Resource
 
+    # status
     def assert_status(
         self,
         status: const.ResourceState = const.ResourceState.deployed,
@@ -1442,9 +1464,56 @@ class DeployResultV2:
         assert ctx.status == status
         if change is not None:
             assert ctx._change == change
+        self.assert_consistent_status()
 
-    def discovered_resources(self) -> List[object]:
+    # Discovery
+    @property
+    def discovered_resources(self) -> list[object]:
         return self.handler._client.discovered_resources
+
+    # Logs
+    @property
+    def logs(self) -> list[LogLine]:
+        return self.ctx.logs
+
+    def assert_has_logline(self, matches: str) -> LogLine:
+        """
+         Assert the handler logged a log line matching the pattern
+
+        :return: that logline
+        """
+        pattern = re.compile(matches)
+        for logline in self.logs:
+            if pattern.search(logline.msg):
+                return logline
+        assert False, f"No line found matching {pattern}"
+
+    # changes
+    @property
+    def changes(self) -> Dict[str, AttributeStateChange]:
+        return self.ctx.changes
+
+    def assert_no_changes(self) -> None:
+        """Assert that the diff produced no changes"""
+        assert not self.changes
+
+    def assert_consistent_status(self):
+        """Make sure we report change and doing changes consistently"""
+        if self.ctx.status != const.ResourceState.deployed:
+            return
+
+        if bool(self.ctx.changes):
+            assert (
+                self.ctx.change != const.Change.nochange
+            ), f"""Inconsistent handler state:
+    the handler reported it was deployed successful,
+    that it had {len(self.ctx.changes)} changes when doing the diff
+    and performed no change during deploy.
+
+    Perhaps you forgot to call ctx.set_created(), ctx.set_updated() or ctx.set_deleted()?
+"""
+        else:
+            assert self.ctx.change == const.Change.nochange
 
 
 @pytest.fixture(scope="function")

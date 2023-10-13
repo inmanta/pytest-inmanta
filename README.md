@@ -61,14 +61,19 @@ std::print(std::template("unittest/test.tmpl"))
 And allows deployment of specific resources
 
 ```python
-    project.deploy_resource("std::ConfigFile")
+    # perform deploy
+    result = project.deploy_resource_v2("std::ConfigFile", expected_status=inmanta.const.ResourceState.deployed)
+    # assert the deploy performed no changes
+    result.assert_no_changes()
+    # assert the deploy produced specific log lines
+    result.assert_has_logline("Calling read_resource")
 ```
 
 And dryrun
 
 ```python
-    changes = project.dryrun_resource("testmodule::Resource")
-    assert changes == {"value": {'current': 'read', 'desired': 'write'}}
+    result = project.dryrun_resource_v2("testmodule::Resource")
+    assert result.changes == {"value": {'current': 'read', 'desired': 'write'}}
     # Or dryrun all resources at once
     result = project.dryrun_all()
 ```
