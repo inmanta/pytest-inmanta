@@ -56,7 +56,7 @@ index IgnoreResource(name)
 implement IgnoreResource using std::none
 
 
-entity IgnoreResourceInId extends std::PurgeableResource:
+entity IgnoreResourceInIdAttr extends std::PurgeableResource:
     """
         This resource will raise an IgnoreResourceException when building its id.
     """
