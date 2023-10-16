@@ -58,7 +58,7 @@ implement IgnoreResource using std::none
 
 entity IgnoreResourceInId extends std::PurgeableResource:
     """
-        This resource will raise an IgnoreResourceException when buildings its id.
+        This resource will raise an IgnoreResourceException when building its id.
     """
     string name
     string desired_value
