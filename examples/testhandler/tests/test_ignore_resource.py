@@ -28,10 +28,10 @@ def test_ignore_resource(project):
 
     unittest::Resource(name="res", desired_value="x")
     unittest::IgnoreResource(name="res_ignore", desired_value="y")
-    unittest::IgnoreResourceInId(name="res_ignore_2", desired_value="z")
+    unittest::IgnoreResourceInIdAttr(name="res_ignore_2", desired_value="z")
     """
     )
 
     assert project.get_resource("unittest::Resource") is not None
     assert project.get_resource("unittest::IgnoreResource") is None
-    assert project.get_resource("unittest::IgnoreResourceInId") is None
+    assert project.get_resource("unittest::IgnoreResourceInIdAttr") is None

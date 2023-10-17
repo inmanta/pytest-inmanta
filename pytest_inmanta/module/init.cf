@@ -65,6 +65,6 @@ entity IgnoreResourceInIdAttr extends std::PurgeableResource:
     string agent="internal"
 end
 
-index IgnoreResourceInId(name)
+index IgnoreResourceInIdAttr(name)
 
-implement IgnoreResourceInId using std::none
+implement IgnoreResourceInIdAttr using std::none

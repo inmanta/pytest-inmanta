@@ -115,8 +115,10 @@ class IgnoreResourceHandler(handler.CRUDHandler):
     pass
 
 
-@resources.resource("unittest::IgnoreResourceInId", id_attribute="name", agent="agent")
-class IgnoreResourceInId(resources.PurgeableResource):
+@resources.resource(
+    "unittest::IgnoreResourceInIdAttr", id_attribute="name", agent="agent"
+)
+class IgnoreResourceInIdAttr(resources.PurgeableResource):
     fields = ("name", "desired_value")
 
     @staticmethod
@@ -124,6 +126,6 @@ class IgnoreResourceInId(resources.PurgeableResource):
         raise resources.IgnoreResourceException()
 
 
-@handler.provider("unittest::IgnoreResourceInId", name="ignore")
-class IgnoreResourceInIdHandler(handler.CRUDHandler):
+@handler.provider("unittest::IgnoreResourceInIdAttr", name="ignore")
+class IgnoreResourceInIdAttrHandler(handler.CRUDHandler):
     pass
