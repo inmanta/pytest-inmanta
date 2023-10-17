@@ -1,6 +1,8 @@
 # v 2.9.0 (?)
 Changes in this release:
-
+- Add deploy_resouces v2 endpoint
+- Add support for unmanaged resources 
+ 
 # v 2.8.0 (2023-08-03)
 Changes in this release:
 - Log a warning when the id_attribute of a resource is called id.
