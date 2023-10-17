@@ -111,5 +111,17 @@ class IgnoreResource(resources.PurgeableResource):
 
 
 @handler.provider("unittest::IgnoreResource", name="ignore")
+@handler.provider("unittest::IgnoreResourceInIdAttr", name="ignore")
 class IgnoreResourceHandler(handler.CRUDHandler):
     pass
+
+
+@resources.resource(
+    "unittest::IgnoreResourceInIdAttr", id_attribute="name", agent="agent"
+)
+class IgnoreResourceInIdAttr(resources.PurgeableResource):
+    fields = ("name", "desired_value")
+
+    @staticmethod
+    def get_name(exporter, resource):
+        raise resources.IgnoreResourceException()

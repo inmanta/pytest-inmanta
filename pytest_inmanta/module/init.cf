@@ -54,3 +54,17 @@ end
 index IgnoreResource(name)
 
 implement IgnoreResource using std::none
+
+
+entity IgnoreResourceInIdAttr extends std::PurgeableResource:
+    """
+        This resource will raise an IgnoreResourceException when building its id.
+    """
+    string name
+    string desired_value
+    string agent="internal"
+end
+
+index IgnoreResourceInIdAttr(name)
+
+implement IgnoreResourceInIdAttr using std::none
