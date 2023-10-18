@@ -34,6 +34,16 @@ index ResourceBadIdAttribute(agent, name)
 implement ResourceBadIdAttribute using std::none
 
 entity Fail extends std::PurgeableResource:
+    """
+    A resource that fails unless value is `read` or purged is true
+
+    Logs a warning `Oh no!`
+
+    :attr agent: agent to deploy on
+    :attr name: value used as the resource id
+    :attr key: meaningless value
+    :attr value: meaningless value
+    """
     string name
     string agent
     string key

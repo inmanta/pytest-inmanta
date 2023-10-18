@@ -1460,22 +1460,28 @@ class DeployResultV2:
     ):
         ctx = self.ctx
         if ctx.status != status:
-            print("Deploy did not result in correct status")
-            print("Requested changes: ", ctx._changes)
+            loglines = [
+                "Deploy did not result in correct status",
+                f"Requested changes: {ctx._changes}"
+                f"Outputting resource logs"
+            ]
+
             for log in ctx.logs:
-                print("Log: ", log._data["msg"])
-                print(
-                    "Kwargs: ",
-                    [
+                loglines.append(f"Log: {log._data['msg']}")
+                formattedkwargs = [
                         "%s: %s" % (k, v)
                         for k, v in log._data["kwargs"].items()
                         if k != "traceback"
-                    ],
-                )
+                    ]
+                if formattedkwargs:
+                    loglines.append(
+                        "\tKwargs: " + ",".join(formattedkwargs
+                        )
+                    )
                 if "traceback" in log._data["kwargs"]:
-                    print("Traceback:\n", log._data["kwargs"]["traceback"])
+                    loglines.append(f"\tTraceback: {log._data['kwargs']['traceback']}")
 
-        assert ctx.status == status
+        assert ctx.status == status, "\n\t".join(loglines)
         if change is not None:
             assert ctx._change == change
         self.assert_consistent_status()
