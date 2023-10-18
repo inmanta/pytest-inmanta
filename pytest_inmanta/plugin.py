@@ -462,13 +462,27 @@ class MockAgent(object):
 
 
 class MockClient(object):
+    """
+    A mock object for Handler._client
+
+    It should be of type inmanta.protocol.endpoints.SessionClient
+    However, we chose to only mock those functions we expect to see used.
+
+    Any unexpected use of the client will cause an attribute error.
+    This will prevent any unexpected/unsafe attempts to reach an orchestrator
+    """
+
     def __init__(self):
-        self.facts = []
-        self.discovered_resources: List[object] = []
+        self.discovered_resources: list[object] = []
 
     async def discovered_resource_create_batch(
         self, tid, discovered_resources: collections.abc.Sequence[object]
     ) -> Result:
+        """
+        Mock function for inmanta.protocol.methodsv2.discovered_resource_create_batch
+
+        Collects all discovered resources
+        """
         self.discovered_resources.extend(discovered_resources)
         return inmanta.protocol.common.Result(200)
 
