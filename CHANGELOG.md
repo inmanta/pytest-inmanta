@@ -1,5 +1,7 @@
 # v 2.9.0 (?)
 Changes in this release:
+- Add `deploy_resouce_v2` endpoint
+- Add support for unmanaged resources
 - Adds a new resource entity that raises an IgnoreResourceException when buildings its id
 
 # v 2.8.0 (2023-08-03)

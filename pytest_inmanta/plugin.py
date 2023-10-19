@@ -54,7 +54,7 @@ from inmanta.data import LogLine
 from inmanta.data.model import AttributeStateChange, ResourceIdStr
 from inmanta.execute.proxy import DynamicProxy
 from inmanta.export import Exporter, ResourceDict, cfg_env
-from inmanta.protocol import json_encode
+from inmanta.protocol import Result, json_encode
 from inmanta.resources import Resource
 from pytest_inmanta.core import SUPPORTS_PROJECT_PIP_INDEX
 
@@ -74,8 +74,8 @@ if typing.TYPE_CHECKING:
 if SUPPORTS_PROJECT_PIP_INDEX:
     from inmanta.module import ProjectPipConfig
 
-from .handler import DATA
-from .parameters import (
+from pytest_inmanta.handler import DATA
+from pytest_inmanta.parameters import (
     inm_install_mode,
     inm_mod_in_place,
     inm_mod_repo,
@@ -84,7 +84,10 @@ from .parameters import (
     inm_venv,
     pip_index_url,
 )
-from .test_parameter import ParameterNotSetException, TestParameterRegistry
+from pytest_inmanta.test_parameter import (
+    ParameterNotSetException,
+    TestParameterRegistry,
+)
 
 try:
     """
@@ -98,6 +101,8 @@ except ImportError:
 CURDIR = os.getcwd()
 LOGGER = logging.getLogger()
 SYS_EXECUTABLE = sys.executable
+
+DEFAULT = object()
 
 
 def pytest_addoption(parser: "Parser") -> None:
@@ -452,6 +457,34 @@ class MockAgent(object):
         self.uri = uri
         self.process = MockProcess()
         self._env_id = cfg_env.get()
+        self.sessionid = "mockid"
+        self.environment = self._env_id
+
+
+class MockClient(object):
+    """
+    A mock object for Handler._client
+
+    It should be of type inmanta.protocol.endpoints.SessionClient
+    However, we chose to only mock those functions we expect to see used.
+
+    Any unexpected use of the client will cause an attribute error.
+    This will prevent any unexpected/unsafe attempts to reach an orchestrator
+    """
+
+    def __init__(self):
+        self.discovered_resources: list[object] = []
+
+    async def discovered_resource_create_batch(
+        self, tid, discovered_resources: collections.abc.Sequence[object]
+    ) -> Result:
+        """
+        Mock function for inmanta.protocol.methodsv2.discovered_resource_create_batch
+
+        Collects all discovered resources
+        """
+        self.discovered_resources.extend(discovered_resources)
+        return inmanta.protocol.common.Result(200)
 
 
 class InmantaPluginsImportLoader:
@@ -695,7 +728,7 @@ class Result:
         for r, ct in self.results.items():
             assert (
                 ct.status == status
-            ), f"Resource {r.id} has status {ct.status}, expected {status}"
+            ), f"Resource {r.id} has status {ct.status.value}, expected {status.value}"
 
     def assert_has_no_changes(self) -> None:
         for r, ct in self.results.items():
@@ -906,6 +939,7 @@ class Project:
             p.stat_file = lambda x: self.stat_blob(x)  # type: ignore
             p.upload_file = lambda x, y: self.add_blob(x, y)  # type: ignore
             p.run_sync = ioloop.IOLoop.current().run_sync  # type: ignore
+            p._client = MockClient()
             self._handlers.add(p)
             return p
         except Exception as e:
@@ -1357,6 +1391,145 @@ license: Test License
     def finalize_all_handlers(self) -> None:
         for handler_instance in self._handlers:
             self.finalize_handler(handler_instance)
+
+    def deploy_resource_v2(
+        self,
+        resource_type: str,
+        run_as_root: bool = False,
+        dry_run: bool = False,
+        expected_status: Optional[const.ResourceState] = DEFAULT,
+        **filter_args: object,
+    ) -> "DeployResultV2":
+        """
+        Deploy a resource of the given type, that matches the filter and assert the outcome
+
+        :param resource_type: the type of resource to deploy
+        :param filter_args: a set of kwargs, the resource must have all matching attributes set to the given values
+        :param run_as_root: run the handler as root or not
+        :param dry_run: only perform dryrun
+        :param status: expected status after deploy,
+            set to None to not check,
+            for deploy defaults to deployed
+            for dryrun defaults to dry
+        """
+        if expected_status == DEFAULT:
+            expected_status = (
+                const.ResourceState.deployed if not dry_run else const.ResourceState.dry
+            )
+
+        resource = self.get_resource(resource_type, **filter_args)
+        assert resource is not None, "No resource found of given type and filter args"
+
+        h = self.get_handler(resource, run_as_root)
+        assert h is not None
+
+        ctx = handler.HandlerContext(resource, dry_run=dry_run)
+        h.execute(ctx, resource, dry_run)
+        self.finalize_context(ctx)
+        self.finalize_handler(h)
+
+        out = DeployResultV2(resource=resource, ctx=ctx, handler=h)
+        if expected_status is not None:
+            out.assert_status(expected_status)
+
+        return out
+
+    def dryrun_resource_v2(
+        self,
+        resource_type: str,
+        run_as_root: bool = False,
+        expected_status: Optional[const.ResourceState] = DEFAULT,
+        **filter_args: object,
+    ) -> "DeployResultV2":
+        return self.deploy_resource_v2(
+            resource_type, run_as_root, True, expected_status, **filter_args
+        )
+
+
+@dataclass
+class DeployResultV2:
+    ctx: HandlerContext
+    handler: ResourceHandler
+    resource: Resource
+
+    # status
+    def assert_status(
+        self,
+        status: const.ResourceState = const.ResourceState.deployed,
+        change: const.Change = None,
+    ):
+        ctx = self.ctx
+        if ctx.status != status:
+            loglines = [
+                "Deploy did not result in correct status",
+                f"Requested changes: {ctx._changes}" f"Outputting resource logs",
+            ]
+
+            for log in ctx.logs:
+                loglines.append(f"Log: {log._data['msg']}")
+                formattedkwargs = [
+                    "%s: %s" % (k, v)
+                    for k, v in log._data["kwargs"].items()
+                    if k != "traceback"
+                ]
+                if formattedkwargs:
+                    loglines.append("\tKwargs: " + ",".join(formattedkwargs))
+                if "traceback" in log._data["kwargs"]:
+                    loglines.append(f"\tTraceback: {log._data['kwargs']['traceback']}")
+
+        assert ctx.status == status, "\n\t".join(loglines)
+        if change is not None:
+            assert ctx._change == change
+        self.assert_consistent_status()
+
+    # Discovery
+    @property
+    def discovered_resources(self) -> list[object]:
+        return self.handler._client.discovered_resources
+
+    # Logs
+    @property
+    def logs(self) -> list[LogLine]:
+        return self.ctx.logs
+
+    def assert_has_logline(self, matches: str) -> LogLine:
+        """
+         Assert the handler logged a log line matching the pattern
+
+        :return: that logline
+        """
+        pattern = re.compile(matches)
+        for logline in self.logs:
+            if pattern.search(logline.msg):
+                return logline
+        assert False, f"No line found matching {pattern}"
+
+    # changes
+    @property
+    def changes(self) -> Dict[str, AttributeStateChange]:
+        return self.ctx.changes
+
+    def assert_no_changes(self) -> None:
+        """Assert that the diff produced no changes"""
+        assert not self.changes
+
+    def assert_consistent_status(self):
+        """Make sure we report change and doing changes consistently"""
+        if self.ctx.status != const.ResourceState.deployed:
+            return
+
+        if bool(self.ctx.changes):
+            assert (
+                self.ctx.change != const.Change.nochange
+            ), f"""Inconsistent handler state:
+    the handler reported it was deployed successful,
+    that it had {len(self.ctx.changes)} changes when doing the diff
+    and performed no change during deploy.
+
+    Perhaps you forgot to call ctx.set_created(), ctx.set_updated() or ctx.set_deleted()?
+"""
+        else:
+            assert self.ctx.change == const.Change.nochange
 
 
 @pytest.fixture(scope="function")
