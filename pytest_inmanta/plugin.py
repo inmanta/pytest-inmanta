@@ -1462,22 +1462,18 @@ class DeployResultV2:
         if ctx.status != status:
             loglines = [
                 "Deploy did not result in correct status",
-                f"Requested changes: {ctx._changes}"
-                f"Outputting resource logs"
+                f"Requested changes: {ctx._changes}" f"Outputting resource logs",
             ]
 
             for log in ctx.logs:
                 loglines.append(f"Log: {log._data['msg']}")
                 formattedkwargs = [
-                        "%s: %s" % (k, v)
-                        for k, v in log._data["kwargs"].items()
-                        if k != "traceback"
-                    ]
+                    "%s: %s" % (k, v)
+                    for k, v in log._data["kwargs"].items()
+                    if k != "traceback"
+                ]
                 if formattedkwargs:
-                    loglines.append(
-                        "\tKwargs: " + ",".join(formattedkwargs
-                        )
-                    )
+                    loglines.append("\tKwargs: " + ",".join(formattedkwargs))
                 if "traceback" in log._data["kwargs"]:
                     loglines.append(f"\tTraceback: {log._data['kwargs']['traceback']}")
 
