@@ -54,7 +54,6 @@ from inmanta.data import LogLine
 from inmanta.data.model import AttributeStateChange, ResourceIdStr
 from inmanta.execute.proxy import DynamicProxy
 from inmanta.export import Exporter, ResourceDict, cfg_env
-from inmanta.protocol import Result, json_encode
 from inmanta.resources import Resource
 from pytest_inmanta.core import SUPPORTS_PROJECT_PIP_INDEX
 
@@ -477,7 +476,7 @@ class MockClient(object):
 
     async def discovered_resource_create_batch(
         self, tid, discovered_resources: collections.abc.Sequence[object]
-    ) -> Result:
+    ) -> protocol.Result:
         """
         Mock function for inmanta.protocol.methodsv2.discovered_resource_create_batch
 
@@ -709,7 +708,7 @@ def get_resource(
 
     def check_serialization(resource: Resource) -> Resource:
         """Check if the resource is serializable"""
-        serialized = json.loads(json_encode(resource.serialize()))
+        serialized = json.loads(protocol.json_encode(resource.serialize()))
         return Resource.deserialize(serialized)
 
     try:
@@ -947,7 +946,7 @@ class Project:
 
     def finalize_context(self, ctx: handler.HandlerContext) -> None:
         # ensure logs can be serialized
-        json_encode({"message": ctx.logs})
+        protocol.json_encode({"message": ctx.logs})
 
     def get_resource(
         self, resource_type: str, **filter_args: object
@@ -1370,7 +1369,7 @@ license: Test License
 
     def check_serialization(self, resource: Resource) -> Resource:
         """Check if the resource is serializable"""
-        serialized = json.loads(json_encode(resource.serialize()))
+        serialized = json.loads(protocol.json_encode(resource.serialize()))
         return Resource.deserialize(serialized)
 
     def clean(self) -> None:
