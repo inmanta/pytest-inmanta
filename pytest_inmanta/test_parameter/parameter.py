@@ -274,6 +274,16 @@ class TestParameter(Generic[ParameterType]):
         it to whatever value it wants.
         """
 
+    def get_default_value(self, config: "Config") -> Optional[ParameterType]:
+        """Get the default value"""
+        if self.default is None:
+            return None
+
+        if isinstance(self.default, DynamicDefault):
+            return self.default.get_value(config)
+        else:
+            return self.default
+
     def resolve(self, config: "Config") -> ParameterType:
         """
         Resolve the test parameter.
@@ -304,10 +314,8 @@ class TestParameter(Generic[ParameterType]):
             except ParameterNotSetException:
                 pass
 
-        if self.default is not None:
-            if isinstance(self.default, DynamicDefault):
-                return self.default.get_value(config)
-            else:
-                return self.default
+        default = self.get_default_value(config)
+        if default is not None:
+            return default
 
         raise ParameterNotSetException(self)

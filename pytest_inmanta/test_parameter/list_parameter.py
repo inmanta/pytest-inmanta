@@ -102,8 +102,8 @@ class ListTestParameter(TestParameter[Sequence[str]]):
             self._value_set_using = ValueSetBy.ENV_VARIABLE
             return self.validate(env_var.split(" "))
 
-        if self.default is not None:
-            self._value_set_using = ValueSetBy.DEFAULT_VALUE
-            return self.default
+        default = self.get_default_value(config)
+        if default is not None:
+            return default
 
         raise ParameterNotSetException(self)

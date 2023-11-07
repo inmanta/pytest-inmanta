@@ -1486,7 +1486,7 @@ class DeployResultV2:
         self,
         status: const.ResourceState = const.ResourceState.deployed,
         change: const.Change = None,
-    ):
+    ) -> None:
         ctx = self.ctx
         if ctx.status != status:
             loglines = [
@@ -1542,7 +1542,7 @@ class DeployResultV2:
         """Assert that the diff produced no changes"""
         assert not self.changes
 
-    def assert_consistent_status(self):
+    def assert_consistent_status(self) -> None:
         """Make sure we report change and doing changes consistently"""
         if self.ctx.status != const.ResourceState.deployed:
             return
