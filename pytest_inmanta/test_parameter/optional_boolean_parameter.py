@@ -16,30 +16,19 @@
     Contact: code@inmanta.com
 """
 import argparse
-import os
-from typing import Callable, Optional, Type, Union
+from typing import Optional, Type, Union
 
 from pytest_inmanta.test_parameter.boolean_parameter import BooleanTestParameter
-from pytest_inmanta.test_parameter.parameter import (
-    DynamicDefault,
-    ParameterNotSetException,
-)
-
-try:
-    """
-    Those classes are only used in type annotation, but the import doesn't work
-    in python 3.6.  So we simply catch the error and ignore it.
-    """
-    from pytest import Parser
-except ImportError:
-    pass
+from pytest_inmanta.test_parameter.parameter import DynamicDefault
 
 
 class OptionalBooleanTestParameter(BooleanTestParameter):
     """
     A test parameter that should contain a boolean value that can be set, unset or None
 
-    In case of None, the fallback function is called
+    It produces a positive and negative options e.g. `--pip-pre` and `--no-pip-pre`
+
+    In case of None, the default value is used
     """
 
     def __init__(
