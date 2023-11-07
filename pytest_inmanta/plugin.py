@@ -79,7 +79,6 @@ if SUPPORTS_PROJECT_PIP_INDEX:
 import pytest_inmanta.parameters as parameters
 from pytest_inmanta.handler import DATA
 from pytest_inmanta.parameters import (
-    inm_install_mode,
     inm_mod_in_place,
     inm_mod_repo,
     inm_no_load_plugins,

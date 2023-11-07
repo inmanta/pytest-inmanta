@@ -68,7 +68,7 @@ class BooleanTestParameter(TestParameter[bool]):
         )
 
     @property
-    def action(self) -> Union[str | Type[argparse.Action]]:
+    def action(self) -> Union[str, Type[argparse.Action]]:
         if self.default is True:
             return "store_false"
 

@@ -233,7 +233,7 @@ class TestParameter(Generic[ParameterType]):
         return self.usage + f" ({', '.join(additional_messages)})"
 
     @property
-    def action(self) -> Union[str | Type[argparse.Action]]:
+    def action(self) -> Union[str, Type[argparse.Action]]:
         """
         The argparse action for this option
         https://docs.python.org/3/library/argparse.html#action

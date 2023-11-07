@@ -24,7 +24,6 @@ from .test_parameter import (
     EnumTestParameter,
     ListTestParameter,
     PathTestParameter,
-    StringTestParameter,
 )
 from .test_parameter.optional_boolean_parameter import OptionalBooleanTestParameter
 

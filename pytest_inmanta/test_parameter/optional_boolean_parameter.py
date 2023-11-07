@@ -27,7 +27,7 @@ try:
     Those classes are only used in type annotation, but the import doesn't work
     in python 3.6.  So we simply catch the error and ignore it.
     """
-    from pytest import Config, OptionGroup, Parser
+    from pytest import Parser
 except ImportError:
     pass
 
