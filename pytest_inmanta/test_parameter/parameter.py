@@ -15,6 +15,7 @@
 
     Contact: code@inmanta.com
 """
+import abc
 import argparse
 import logging
 import os
@@ -177,6 +178,18 @@ class ValueSetBy(Enum):
     ENV_VARIABLE: str = "ENV_VARIABLE"
 
 
+class DynamicDefault(abc.ABC, Generic[ParameterType]):
+    """A class to provide a default value that is calculated on the fly"""
+
+    @abstractmethod
+    def get_value(self, config: "Config") -> ParameterType:
+        pass
+
+    @abstractmethod
+    def get_help(self) -> str:
+        pass
+
+
 class TestParameter(Generic[ParameterType]):
     """
     This class represents a parameter that can be passed to the tests, either via a pytest
@@ -189,7 +202,7 @@ class TestParameter(Generic[ParameterType]):
         environment_variable: str,
         usage: str,
         *,
-        default: Optional[ParameterType] = None,
+        default: Optional[Union[ParameterType, DynamicDefault[ParameterType]]] = None,
         key: Optional[str] = None,
         group: Optional[str] = None,
         legacy: Optional["TestParameter[ParameterType]"] = None,
@@ -228,7 +241,11 @@ class TestParameter(Generic[ParameterType]):
         """
         additional_messages = [f"overrides {self.environment_variable}"]
         if self.default is not None:
-            additional_messages.append(f"defaults to {self.default}")
+            if isinstance(self.default, DynamicDefault):
+                default_help = self.default.get_help()
+            else:
+                default_help = str(self.default)
+            additional_messages.append(f"defaults to {default_help}")
 
         return self.usage + f" ({', '.join(additional_messages)})"
 
@@ -288,6 +305,9 @@ class TestParameter(Generic[ParameterType]):
                 pass
 
         if self.default is not None:
-            return self.default
+            if isinstance(self.default, DynamicDefault):
+                return self.default.get_value(config)
+            else:
+                return self.default
 
         raise ParameterNotSetException(self)

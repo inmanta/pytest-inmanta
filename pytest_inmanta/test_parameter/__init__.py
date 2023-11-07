@@ -19,6 +19,7 @@ from .boolean_parameter import BooleanTestParameter  # noqa: F401
 from .enum_parameter import EnumTestParameter  # noqa: F401
 from .integer_parameter import IntegerTestParameter  # noqa: F401
 from .list_parameter import ListTestParameter  # noqa: F401
+from .optional_boolean_parameter import OptionalBooleanTestParameter  # noqa: F401
 from .parameter import (  # noqa: F401
     ParameterNotSetException,
     ParameterType,

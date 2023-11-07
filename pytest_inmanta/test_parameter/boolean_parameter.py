@@ -18,7 +18,7 @@
 import argparse
 from typing import Optional, Type, Union
 
-from .parameter import TestParameter
+from .parameter import DynamicDefault, TestParameter
 
 
 class BooleanTestParameter(TestParameter[bool]):
@@ -52,7 +52,7 @@ class BooleanTestParameter(TestParameter[bool]):
         environment_variable: str,
         usage: str,
         *,
-        default=False,
+        default: Optional[Union[bool, DynamicDefault[bool]]] = False,
         key: Optional[str] = None,
         group: Optional[str] = None,
         legacy: Optional["BooleanTestParameter"] = None,

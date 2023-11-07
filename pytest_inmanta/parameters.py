@@ -18,14 +18,16 @@
 import os
 
 from inmanta.module import InstallMode
-
-from .test_parameter import (
+from pytest_inmanta.test_parameter import (
     BooleanTestParameter,
     EnumTestParameter,
     ListTestParameter,
     PathTestParameter,
 )
-from .test_parameter.optional_boolean_parameter import OptionalBooleanTestParameter
+from pytest_inmanta.test_parameter.optional_boolean_parameter import (
+    OptionalBooleanTestParameter,
+)
+from pytest_inmanta.test_parameter.parameter import DynamicDefault
 
 try:
     """
@@ -103,7 +105,7 @@ inm_mod_repo = ListTestParameter(
 inm_install_mode_legacy = EnumTestParameter(
     argument="--install_mode",
     environment_variable="INMANTA_INSTALL_MODE",
-    usage="Install mode for modules downloaded during this test",
+    usage="Install mode for v1 modules downloaded during this test",
     enum=InstallMode,
 )
 
@@ -118,9 +120,15 @@ inm_install_mode = EnumTestParameter(
 )
 
 
-def pip_pre_fallback_to_release_mode(config):
-    install_mode = inm_install_mode.resolve(config)
-    return install_mode != InstallMode.release
+class PipPreFallbackToReleaseMode(DynamicDefault[bool]):
+    """Default value is to fall back to install mode"""
+
+    def get_value(self, config: "Config") -> bool:
+        install_mode = inm_install_mode.resolve(config)
+        return install_mode != InstallMode.release
+
+    def get_help(self) -> str:
+        return " --install-mode != release "
 
 
 pip_pre = OptionalBooleanTestParameter(
@@ -128,16 +136,16 @@ pip_pre = OptionalBooleanTestParameter(
     environment_variable="INMANTA_PIP_PRE",
     usage=("Allow installation of pre-release package by pip or not?"),
     group=param_group,
-    fallback=pip_pre_fallback_to_release_mode,
+    default=PipPreFallbackToReleaseMode(),
 )
 
 pip_index_url = ListTestParameter(
     argument="--pip-index-url",
     environment_variable="INMANTA_PIP_INDEX_URL",
     usage=(
-        "Pip index to install dependencies from."
-        "Can be specified multiple times to add multiple indexes."
-        "When set, it will overwrite the system index-url even if pip-use-system-config is set"
+        "Pip index to install dependencies from. "
+        "Can be specified multiple times to add multiple indexes. "
+        "When set, it will overwrite the system index-url even if pip-use-system-config is set."
     ),
     group=param_group,
     default=[],

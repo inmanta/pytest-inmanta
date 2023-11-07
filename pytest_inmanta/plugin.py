@@ -60,8 +60,6 @@ from pytest_inmanta.core import (
     SUPPORTS_PROJECT_PIP_INDEX_ISO7,
 )
 
-from .test_parameter.parameter import ValueSetBy
-
 if typing.TYPE_CHECKING:
     # Local type stub for mypy that works with both pytest < 7 and pytest >=7
     # https://docs.pytest.org/en/7.1.x/_modules/_pytest/legacypath.html#TempdirFactory
@@ -239,14 +237,17 @@ def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[obj
                         " Use the --pip-index-url <index_url> pytest option instead or set"
                         " the %s environment variable to address these warnings. "
                     )
-                    if inm_mod_repo._value_set_using == ValueSetBy.ENV_VARIABLE:
+                    if (
+                        inm_mod_repo._value_set_using
+                        == parameters.ValueSetBy.ENV_VARIABLE
+                    ):
                         LOGGER.warning(
                             "Setting a package source through the %s environment variable "
                             + alternative_text,
                             inm_mod_repo.environment_variable,
                             parameters.pip_index_url.environment_variable,
                         )
-                    elif inm_mod_repo._value_set_using == ValueSetBy.CLI:
+                    elif inm_mod_repo._value_set_using == parameters.ValueSetBy.CLI:
                         LOGGER.warning(
                             "Setting a package source through the --module-repo <index_url> cli option with type `package` "
                             + alternative_text,
