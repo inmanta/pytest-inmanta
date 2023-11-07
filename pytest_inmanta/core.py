@@ -36,6 +36,11 @@ except DistributionNotFound:
     CORE_VERSION = None
 
 # Setting a project-wide pip index is only supported for iso7+
+SUPPORTS_PROJECT_PIP_INDEX_ISO7: bool = (
+    CORE_VERSION is not None and CORE_VERSION >= version.Version("10.0.0.dev")
+)
+
+
 SUPPORTS_PROJECT_PIP_INDEX: bool = (
     CORE_VERSION is not None and CORE_VERSION >= version.Version("9.0.0.dev")
 )

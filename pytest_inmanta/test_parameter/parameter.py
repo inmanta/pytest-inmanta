@@ -15,13 +15,14 @@
 
     Contact: code@inmanta.com
 """
+import argparse
 import logging
 import os
 import uuid
 from abc import abstractmethod
 from collections import defaultdict
 from enum import Enum
-from typing import Container, Dict, Generic, List, Optional, Set, TypeVar, Union
+from typing import Container, Dict, Generic, List, Optional, Set, Type, TypeVar, Union
 
 try:
     """
@@ -232,7 +233,7 @@ class TestParameter(Generic[ParameterType]):
         return self.usage + f" ({', '.join(additional_messages)})"
 
     @property
-    def action(self) -> str:
+    def action(self) -> Union[str | Type[argparse.Action]]:
         """
         The argparse action for this option
         https://docs.python.org/3/library/argparse.html#action

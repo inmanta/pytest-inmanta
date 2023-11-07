@@ -24,7 +24,9 @@ from .test_parameter import (
     EnumTestParameter,
     ListTestParameter,
     PathTestParameter,
+    StringTestParameter,
 )
+from .test_parameter.optional_boolean_parameter import OptionalBooleanTestParameter
 
 try:
     """
@@ -96,17 +98,6 @@ inm_mod_repo = ListTestParameter(
     legacy=inm_mod_repo_legacy,
 )
 
-pip_index_url = ListTestParameter(
-    argument="--pip-index-url",
-    environment_variable="INMANTA_PIP_INDEX_URL",
-    usage=(
-        "Pip index to install dependencies from."
-        "Can be specified multiple times to add multiple indexes."
-    ),
-    group=param_group,
-    default=[],
-)
-
 
 # This is the legacy install mode option
 # TODO remove this in next major version bump
@@ -125,6 +116,40 @@ inm_install_mode = EnumTestParameter(
     default=InstallMode.release,
     group=param_group,
     legacy=inm_install_mode_legacy,
+)
+
+
+def pip_pre_fallback_to_release_mode(config):
+    install_mode = inm_install_mode.resolve(config)
+    return install_mode != InstallMode.release
+
+
+pip_pre = OptionalBooleanTestParameter(
+    argument="--pip-pre",
+    environment_variable="INMANTA_PIP_PRE",
+    usage=("Allow installation of pre-release package by pip or not?"),
+    group=param_group,
+    fallback=pip_pre_fallback_to_release_mode,
+)
+
+pip_index_url = ListTestParameter(
+    argument="--pip-index-url",
+    environment_variable="INMANTA_PIP_INDEX_URL",
+    usage=(
+        "Pip index to install dependencies from."
+        "Can be specified multiple times to add multiple indexes."
+        "When set, it will overwrite the system index-url even if pip-use-system-config is set"
+    ),
+    group=param_group,
+    default=[],
+)
+
+pip_use_system_config = BooleanTestParameter(
+    argument="--pip-use-system-config",
+    environment_variable="INMANTA_PIP_USE_SYSTEM_CONFIG",
+    usage=("Allow pytest-inmanta to use the system pip config or not?"),
+    group=param_group,
+    default=False,
 )
 
 

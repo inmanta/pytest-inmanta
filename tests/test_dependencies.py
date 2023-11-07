@@ -147,9 +147,7 @@ def test_transitive_v2_dependencies_legacy_warning(
                     # include configured pip index for inmanta-module-std
                     "--module_repo",
                     "package:"
-                    + os.environ.get(
-                        "PIP_INDEX_URL", "package:https://pypi.org/simple"
-                    ),
+                    + os.environ.get("PIP_INDEX_URL", "https://pypi.org/simple"),
                 )
                 result.assert_outcomes(passed=1)
             finally:

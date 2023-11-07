@@ -55,7 +55,10 @@ from inmanta.data.model import AttributeStateChange, ResourceIdStr
 from inmanta.execute.proxy import DynamicProxy
 from inmanta.export import Exporter, ResourceDict, cfg_env
 from inmanta.resources import Resource
-from pytest_inmanta.core import SUPPORTS_PROJECT_PIP_INDEX
+from pytest_inmanta.core import (
+    SUPPORTS_PROJECT_PIP_INDEX,
+    SUPPORTS_PROJECT_PIP_INDEX_ISO7,
+)
 
 from .test_parameter.parameter import ValueSetBy
 
@@ -73,6 +76,7 @@ if typing.TYPE_CHECKING:
 if SUPPORTS_PROJECT_PIP_INDEX:
     from inmanta.module import ProjectPipConfig
 
+import pytest_inmanta.parameters as parameters
 from pytest_inmanta.handler import DATA
 from pytest_inmanta.parameters import (
     inm_install_mode,
@@ -81,7 +85,6 @@ from pytest_inmanta.parameters import (
     inm_no_load_plugins,
     inm_no_strict_deps_check,
     inm_venv,
-    pip_index_url,
 )
 from pytest_inmanta.test_parameter import (
     ParameterNotSetException,
@@ -242,13 +245,13 @@ def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[obj
                             "Setting a package source through the %s environment variable "
                             + alternative_text,
                             inm_mod_repo.environment_variable,
-                            pip_index_url.environment_variable,
+                            parameters.pip_index_url.environment_variable,
                         )
                     elif inm_mod_repo._value_set_using == ValueSetBy.CLI:
                         LOGGER.warning(
                             "Setting a package source through the --module-repo <index_url> cli option with type `package` "
                             + alternative_text,
-                            pip_index_url.environment_variable,
+                            parameters.pip_index_url.environment_variable,
                         )
             return json.loads(repo_info.json())
 
@@ -293,19 +296,48 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
         )
     )
 
-    index_urls: Sequence[str] = pip_index_url.resolve(request.config)
+    index_urls: Sequence[str] = parameters.pip_index_url.resolve(request.config)
+    repos_urls: List[str] = [
+        repo["url"]
+        for repo in repos
+        if repo["type"] == module.ModuleRepoType.package.value
+    ]
+
+    pip_use_system_config = parameters.pip_use_system_config.resolve(request.config)
+    pip_pre = parameters.pip_pre.resolve(request.config)
+
     modulepath = ["libs"]
     in_place = inm_mod_in_place.resolve(request.config)
     if in_place:
         modulepath.append(str(Path(CURDIR).parent))
 
-    if SUPPORTS_PROJECT_PIP_INDEX:
+    if SUPPORTS_PROJECT_PIP_INDEX_ISO7:
+        # Backward compat: translate repo url to index url
+        index_urls = list(index_urls) + repos_urls
+        if index_urls:
+            index_url = index_urls[0]
+            extra_index_url = index_urls[1:]
+        else:
+            index_url = None
+            extra_index_url = []
+
+        pip_config: ProjectPipConfig = ProjectPipConfig(
+            index_url=index_url,
+            extra_index_url=extra_index_url,
+            use_system_config=pip_use_system_config,
+            pre=pip_pre,
+        )
+        return module.ProjectMetadata(
+            name="testcase",
+            description="Project for testcase",
+            repo=repos,
+            modulepath=modulepath,
+            downloadpath="libs",
+            install_mode=parameters.inm_install_mode.resolve(request.config).value,
+            pip=pip_config,
+        )
+    elif SUPPORTS_PROJECT_PIP_INDEX:
         # On newer versions of core we set the pip.index_url of the project.yml file
-        repos_urls: List[str] = [
-            repo["url"]
-            for repo in repos
-            if repo["type"] == module.ModuleRepoType.package
-        ]
         pip_config: ProjectPipConfig = ProjectPipConfig(
             # This ensures no duplicates are returned and insertion order is preserved.
             # i.e. the left-most index will be passed to pip as --index-url and the others as --extra-index-url
@@ -319,7 +351,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
             repo=repos,
             modulepath=modulepath,
             downloadpath="libs",
-            install_mode=inm_install_mode.resolve(request.config).value,
+            install_mode=parameters.inm_install_mode.resolve(request.config).value,
             pip=pip_config,
         )
     else:
@@ -337,7 +369,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
             repo=list(repos) + v2_source_repos,
             modulepath=modulepath,
             downloadpath="libs",
-            install_mode=inm_install_mode.resolve(request.config).value,
+            install_mode=parameters.inm_install_mode.resolve(request.config).value,
         )
 
 

@@ -15,7 +15,8 @@
 
     Contact: code@inmanta.com
 """
-from typing import Optional
+import argparse
+from typing import Optional, Type, Union
 
 from .parameter import TestParameter
 
@@ -67,7 +68,7 @@ class BooleanTestParameter(TestParameter[bool]):
         )
 
     @property
-    def action(self) -> str:
+    def action(self) -> Union[str | Type[argparse.Action]]:
         if self.default is True:
             return "store_false"
 
