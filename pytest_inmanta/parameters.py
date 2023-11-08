@@ -133,7 +133,7 @@ class PipPreFallbackToReleaseMode(DynamicDefault[bool]):
 
 pip_pre = OptionalBooleanTestParameter(
     argument="--pip-pre",
-    environment_variable="INMANTA_PIP_PRE",
+    environment_variable="PIP_PRE",
     usage=("Allow installation of pre-release package by pip or not?"),
     group=param_group,
     default=PipPreFallbackToReleaseMode(),
@@ -141,7 +141,7 @@ pip_pre = OptionalBooleanTestParameter(
 
 pip_index_url = ListTestParameter(
     argument="--pip-index-url",
-    environment_variable="INMANTA_PIP_INDEX_URL",
+    environment_variable="PIP_INDEX_URL",
     usage=(
         "Pip index to install dependencies from. "
         "Can be specified multiple times to add multiple indexes. "
