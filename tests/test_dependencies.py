@@ -228,6 +228,6 @@ def test_transitive_v2_dependencies_no_index_warning(
             finally:
                 utils.unload_modules_for_path(venv.site_packages_dir)
 
-        if SUPPORTS_PROJECT_PIP_INDEX:
+        if SUPPORTS_PROJECT_PIP_INDEX_ISO7:
             warning_msg: str = "No pip config source is configured, any attempt to perform a pip install will fail."
             assert warning_msg in caplog.text
