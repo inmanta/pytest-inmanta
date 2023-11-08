@@ -16,9 +16,9 @@
     Contact: code@inmanta.com
 """
 from enum import Enum
-from typing import Container, Optional, Type, TypeVar
+from typing import Container, Optional, Type, TypeVar, Union
 
-from .parameter import TestParameter
+from pytest_inmanta.test_parameter.parameter import DynamicDefault, TestParameter
 
 E = TypeVar("E", bound=Enum)
 
@@ -48,7 +48,7 @@ class EnumTestParameter(TestParameter[E]):
         usage: str,
         *,
         enum: Type[E],
-        default: Optional[E] = None,
+        default: Optional[Union[E, DynamicDefault[E]]] = None,
         key: Optional[str] = None,
         group: Optional[str] = None,
         legacy: Optional["EnumTestParameter[E]"] = None,

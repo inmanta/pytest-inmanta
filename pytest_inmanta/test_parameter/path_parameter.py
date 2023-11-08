@@ -16,9 +16,9 @@
     Contact: code@inmanta.com
 """
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
-from .parameter import TestParameter
+from pytest_inmanta.test_parameter.parameter import DynamicDefault, TestParameter
 
 
 class PathTestParameter(TestParameter[Path]):
@@ -50,7 +50,7 @@ class PathTestParameter(TestParameter[Path]):
         environment_variable: str,
         usage: str,
         *,
-        default: Optional[Path] = None,
+        default: Optional[Union[Path, DynamicDefault[Path]]] = None,
         key: Optional[str] = None,
         group: Optional[str] = None,
         legacy: Optional["PathTestParameter"] = None,

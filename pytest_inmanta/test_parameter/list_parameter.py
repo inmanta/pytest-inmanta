@@ -17,7 +17,7 @@
 """
 import collections
 import os
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
 
 try:
     """
@@ -28,7 +28,12 @@ try:
 except ImportError:
     pass
 
-from .parameter import ParameterNotSetException, TestParameter, ValueSetBy
+from pytest_inmanta.test_parameter.parameter import (
+    DynamicDefault,
+    ParameterNotSetException,
+    TestParameter,
+    ValueSetBy,
+)
 
 
 class ListTestParameter(TestParameter[Sequence[str]]):
@@ -58,7 +63,7 @@ class ListTestParameter(TestParameter[Sequence[str]]):
         environment_variable: str,
         usage: str,
         *,
-        default: Optional[Sequence[str]] = None,
+        default: Optional[Union[Sequence[str], DynamicDefault[Sequence[str]]]] = None,
         key: Optional[str] = None,
         group: Optional[str] = None,
         legacy: Optional["ListTestParameter"] = None,
