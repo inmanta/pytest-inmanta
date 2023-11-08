@@ -52,6 +52,7 @@ from inmanta.agent.handler import HandlerContext, ResourceHandler
 from inmanta.const import ResourceState
 from inmanta.data import LogLine
 from inmanta.data.model import AttributeStateChange, ResourceIdStr
+from inmanta.env import PackageNotFound
 from inmanta.execute.proxy import DynamicProxy
 from inmanta.export import Exporter, ResourceDict, cfg_env
 from inmanta.resources import Resource
@@ -60,6 +61,12 @@ from pytest_inmanta.core import (
     SUPPORTS_PROJECT_PIP_INDEX_ISO7,
 )
 from pytest_inmanta.test_parameter.parameter import ValueSetBy
+
+PIP_NO_SOURCE_WARNING = (
+    "No pip config source is configured, any attempt to perform a pip install will fail. "
+    "Please set either one of the options --pip-index-url, --pip-use-system-config or "
+    "one of the environment variables PIP_INDEX_URL or INMANTA_PIP_USE_SYSTEM_CONFIG"
+)
 
 if typing.TYPE_CHECKING:
     # Local type stub for mypy that works with both pytest < 7 and pytest >=7
@@ -325,6 +332,10 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
             use_system_config=pip_use_system_config,
             pre=pip_pre,
         )
+
+        if not pip_config.has_source():
+            LOGGER.warning(PIP_NO_SOURCE_WARNING)
+
         return module.ProjectMetadata(
             name="testcase",
             description="Project for testcase",
@@ -420,7 +431,12 @@ def project_factory(
             "env_path": env_dir,
             **kwargs,
         }
-        test_project = Project(project_dir, **extended_kwargs)
+        try:
+            test_project = Project(project_dir, **extended_kwargs)
+        except PackageNotFound as e:
+            if "pip is not configured" in str(e):
+                raise PackageNotFound(PIP_NO_SOURCE_WARNING) from e
+            raise
 
         # create the unittest module
         test_project.create_module(

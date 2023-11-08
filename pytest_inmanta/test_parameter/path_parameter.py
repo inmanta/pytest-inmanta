@@ -56,6 +56,7 @@ class PathTestParameter(TestParameter[Path]):
         legacy: Optional["PathTestParameter"] = None,
         is_file: Optional[bool] = None,
         exists: Optional[bool] = None,
+        legacy_environment_variable: Optional[str] = None,
     ) -> None:
         self.is_file = is_file
         self.exists = exists if is_file is None else True
@@ -67,6 +68,7 @@ class PathTestParameter(TestParameter[Path]):
             key=key,
             group=group,
             legacy=legacy,
+            legacy_environment_variable=legacy_environment_variable,
         )
 
     def validate(self, raw_value: object) -> Path:

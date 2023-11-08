@@ -22,6 +22,7 @@ from pytest_inmanta.test_parameter import (
     BooleanTestParameter,
     EnumTestParameter,
     ListTestParameter,
+    ParameterNotSetException,
     PathTestParameter,
 )
 from pytest_inmanta.test_parameter.optional_boolean_parameter import (
@@ -142,6 +143,7 @@ pip_pre = OptionalBooleanTestParameter(
 pip_index_url = ListTestParameter(
     argument="--pip-index-url",
     environment_variable="PIP_INDEX_URL",
+    legacy_environment_variable="INMANTA_PIP_INDEX_URL",
     usage=(
         "Pip index to install dependencies from. "
         "Can be specified multiple times to add multiple indexes. "
@@ -179,7 +181,7 @@ class _LegacyBooleanTestParameter(BooleanTestParameter):
         if os.getenv(self.environment_variable):
             return True
 
-        return False
+        raise ParameterNotSetException(self)
 
 
 # This is the legacy no load plugins option

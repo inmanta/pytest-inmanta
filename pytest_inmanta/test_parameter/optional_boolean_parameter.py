@@ -40,6 +40,7 @@ class OptionalBooleanTestParameter(BooleanTestParameter):
         default: Optional[Union[bool, DynamicDefault[bool]]] = None,
         key: Optional[str] = None,
         group: Optional[str] = None,
+        legacy_environment_variable: Optional[str] = None,
     ) -> None:
         super().__init__(
             argument,
@@ -48,6 +49,7 @@ class OptionalBooleanTestParameter(BooleanTestParameter):
             key=key,
             group=group,
             default=default,
+            legacy_environment_variable=legacy_environment_variable,
         )
 
     @property

@@ -29,6 +29,7 @@ except ImportError:
     pass
 
 from pytest_inmanta.test_parameter.parameter import (
+    LOGGER,
     DynamicDefault,
     ParameterNotSetException,
     TestParameter,
@@ -67,6 +68,7 @@ class ListTestParameter(TestParameter[Sequence[str]]):
         key: Optional[str] = None,
         group: Optional[str] = None,
         legacy: Optional["ListTestParameter"] = None,
+        legacy_environment_variable: Optional[str] = None,
     ) -> None:
         super().__init__(
             argument,
@@ -76,6 +78,7 @@ class ListTestParameter(TestParameter[Sequence[str]]):
             key=key,
             group=group,
             legacy=legacy,
+            legacy_environment_variable=legacy_environment_variable,
         )
 
     @property
@@ -106,6 +109,18 @@ class ListTestParameter(TestParameter[Sequence[str]]):
             # A value is set
             self._value_set_using = ValueSetBy.ENV_VARIABLE
             return self.validate(env_var.split(" "))
+
+        if self.legacy_environment_variable is not None:
+            # If we have a legacy env var, we check if it is set
+            env_var = os.getenv(self.legacy_environment_variable)
+            if env_var is not None:
+                # A value is set
+                LOGGER.warning(
+                    f"The usage of {self.legacy_environment_variable} is deprecated, "
+                    f"use {self.environment_variable} instead"
+                )
+                self._value_set_using = ValueSetBy.ENV_VARIABLE
+                return self.validate(env_var.split(" "))
 
         default = self.get_default_value(config)
         if default is not None:

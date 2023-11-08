@@ -206,6 +206,7 @@ class TestParameter(Generic[ParameterType]):
         key: Optional[str] = None,
         group: Optional[str] = None,
         legacy: Optional["TestParameter[ParameterType]"] = None,
+        legacy_environment_variable: Optional[str] = None,
     ) -> None:
         """
         :param argument: This is the argument that can be passed to the pytest command.
@@ -223,12 +224,14 @@ class TestParameter(Generic[ParameterType]):
             in future version of the product.  When resolving a value, we first check this
             parameter, and if it is not set, we check the legacy one and raise a warning about
             its deprecation.
+        :param legacy_environment_variable: An options legacy env var that this one replaces.
         """
         self.argument = argument
         self.environment_variable = environment_variable
         self.usage = usage
         self.default = default
         self.legacy = legacy
+        self.legacy_environment_variable = legacy_environment_variable
         # Track how the value was set when it is being resolved:
         self._value_set_using: Optional[str] = None
 
@@ -313,6 +316,17 @@ class TestParameter(Generic[ParameterType]):
                 return val
             except ParameterNotSetException:
                 pass
+
+        if self.legacy_environment_variable is not None:
+            # If we have a legacy env var, we check if it is set
+            env_var = os.getenv(self.legacy_environment_variable)
+            if env_var is not None:
+                # A value is set
+                LOGGER.warning(
+                    f"The usage of {self.legacy_environment_variable} is deprecated, "
+                    f"use {self.environment_variable} instead"
+                )
+                return self.validate(env_var)
 
         default = self.get_default_value(config)
         if default is not None:

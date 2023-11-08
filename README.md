@@ -219,8 +219,8 @@ The following options are available.
  * `--venv`: folder in which to place the virtual env for tests (will be shared by all tests), overrides `INMANTA_TEST_ENV`.
    This options depends on symlink support. This does not work on all windows versions. On windows 10 you need to run pytest in an
    admin shell. Using a fixed virtual environment can speed up running the tests.
- * `--pip-index-url`: pip index to install dependencies from. Can be specified multiple times to add multiple indexes. When set, it will overwrite the system index-url even if `pip-use-system-config` is set. (overrides `INMANTA_PIP_INDEX_URL`, defaults to `[]`)
- * `--pip-pre`, `--no-pip-pre` Allow installation of pre-release package by pip or not? (overrides `INMANTA_PIP_PRE`, defaults to  `--install-mode != release` )
+ * `--pip-index-url`: pip index to install dependencies from. Can be specified multiple times to add multiple indexes. When set, it will overwrite the system index-url even if `pip-use-system-config` is set. (overrides `PIP_INDEX_URL`, defaults to `[]`)
+ * `--pip-pre`, `--no-pip-pre` Allow installation of pre-release package by pip or not? (overrides `PIP_PRE`, defaults to  `--install-mode != release` )
  * `--pip-use-system-config` Allow pytest-inmanta to use the system pip config or not? (overrides `INMANTA_PIP_USE_SYSTEM_CONFIG`, defaults to `False`)
  * `--use-module-in-place`: makes inmanta add the parent directory of your module directory to it's directory path, instead of copying your
     module to a temporary libs directory. It allows testing the current module against specific versions of dependent modules. 

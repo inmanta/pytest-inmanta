@@ -56,6 +56,7 @@ class BooleanTestParameter(TestParameter[bool]):
         key: Optional[str] = None,
         group: Optional[str] = None,
         legacy: Optional["BooleanTestParameter"] = None,
+        legacy_environment_variable: Optional[str] = None,
     ) -> None:
         super().__init__(
             argument,
@@ -65,6 +66,7 @@ class BooleanTestParameter(TestParameter[bool]):
             key=key,
             group=group,
             legacy=legacy,
+            legacy_environment_variable=legacy_environment_variable,
         )
 
     @property

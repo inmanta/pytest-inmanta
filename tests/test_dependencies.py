@@ -25,7 +25,10 @@ import pytest
 import pytest_inmanta.plugin
 import utils
 from inmanta import env
-from pytest_inmanta.core import SUPPORTS_PROJECT_PIP_INDEX
+from pytest_inmanta.core import (
+    SUPPORTS_PROJECT_PIP_INDEX,
+    SUPPORTS_PROJECT_PIP_INDEX_ISO7,
+)
 from pytest_inmanta.parameters import pip_index_url
 
 
@@ -160,4 +163,71 @@ def test_transitive_v2_dependencies_legacy_warning(
                 " Use the --pip-index-url <index_url> pytest option instead or set"
                 f" the {pip_index_url.environment_variable} environment variable to address these warnings. "
             )
+            assert warning_msg in caplog.text
+
+
+def test_transitive_v2_dependencies_legacy_warning_for_env_var(
+    examples_v2_package_index, pytestconfig, testdir, caplog, monkeypatch
+):
+    # set working directory to allow in-place with all example modules
+    pytest_inmanta.plugin.CURDIR = str(
+        pytestconfig.rootpath / "examples" / "test_dependencies_head"
+    )
+
+    testdir.copy_example("test_dependencies_head")
+
+    with caplog.at_level(logging.WARNING):
+        with tempfile.TemporaryDirectory() as venv_dir:
+            # set up environment
+            venv: env.VirtualEnv = env.VirtualEnv(env_path=venv_dir)
+            try:
+                venv.use_virtual_env()
+                env_index = os.environ.get("PIP_INDEX_URL", "https://pypi.org/simple")
+
+                monkeypatch.delenv("PIP_INDEX_URL", raising=False)
+                monkeypatch.setenv(
+                    "INMANTA_PIP_INDEX_URL", f"{examples_v2_package_index} {env_index}"
+                )
+                # run tests
+                result = testdir.runpytest_inprocess(
+                    "tests/test_basics.py",
+                    "--use-module-in-place",
+                )
+                result.assert_outcomes(passed=1)
+            finally:
+                utils.unload_modules_for_path(venv.site_packages_dir)
+
+        if SUPPORTS_PROJECT_PIP_INDEX_ISO7:
+            warning_msg: str = "usage of INMANTA_PIP_INDEX_URL is deprecated, use PIP_INDEX_URL instead"
+            assert warning_msg in caplog.text
+
+
+def test_transitive_v2_dependencies_no_index_warning(
+    examples_v2_package_index, pytestconfig, testdir, caplog, monkeypatch
+):
+    # set working directory to allow in-place with all example modules
+    pytest_inmanta.plugin.CURDIR = str(
+        pytestconfig.rootpath / "examples" / "test_dependencies_head"
+    )
+
+    testdir.copy_example("test_dependencies_head")
+
+    with caplog.at_level(logging.WARNING):
+        with tempfile.TemporaryDirectory() as venv_dir:
+            # set up environment
+            venv: env.VirtualEnv = env.VirtualEnv(env_path=venv_dir)
+            try:
+                venv.use_virtual_env()
+                monkeypatch.delenv("PIP_INDEX_URL", raising=False)
+                # run tests
+                result = testdir.runpytest_inprocess(
+                    "tests/test_basics.py",
+                    "--use-module-in-place",
+                )
+                result.assert_outcomes(errors=1)  # fail, as no pip index is set
+            finally:
+                utils.unload_modules_for_path(venv.site_packages_dir)
+
+        if SUPPORTS_PROJECT_PIP_INDEX:
+            warning_msg: str = "No pip config source is configured, any attempt to perform a pip install will fail."
             assert warning_msg in caplog.text
