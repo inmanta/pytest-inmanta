@@ -109,6 +109,7 @@ class ListTestParameter(TestParameter[Sequence[str]]):
 
         default = self.get_default_value(config)
         if default is not None:
+            self._value_set_using = ValueSetBy.DEFAULT_VALUE
             return default
 
         raise ParameterNotSetException(self)
