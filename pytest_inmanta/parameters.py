@@ -136,7 +136,7 @@ pip_pre = OptionalBooleanTestParameter(
     argument="--pip-pre",
     environment_variable="PIP_PRE",
     usage=(
-        "Allow installation of pre-release package by pip or not? (only for inmanta-core>=11, >ISO7)"
+        "Allow installation of pre-release package by pip or not? (only for inmanta-core>=11, >=ISO7)"
     ),
     group=param_group,
     default=PipPreFallbackToInstallMode(),
@@ -159,7 +159,7 @@ pip_use_system_config = BooleanTestParameter(
     argument="--pip-use-system-config",
     environment_variable="INMANTA_PIP_USE_SYSTEM_CONFIG",
     usage=(
-        "Allow pytest-inmanta to use the system pip config or not? (only for inmanta-core>=11, >ISO7)"
+        "Allow pytest-inmanta to use the system pip config or not? (only for inmanta-core>=11, >=ISO7)"
     ),
     group=param_group,
     default=False,
