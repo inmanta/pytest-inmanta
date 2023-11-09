@@ -135,7 +135,9 @@ class PipPreFallbackToInstallMode(DynamicDefault[bool]):
 pip_pre = OptionalBooleanTestParameter(
     argument="--pip-pre",
     environment_variable="PIP_PRE",
-    usage=("Allow installation of pre-release package by pip or not?"),
+    usage=(
+        "Allow installation of pre-release package by pip or not? (only for inmanta-core>=11, >ISO7)"
+    ),
     group=param_group,
     default=PipPreFallbackToInstallMode(),
 )

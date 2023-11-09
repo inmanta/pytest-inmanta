@@ -36,16 +36,16 @@ except DistributionNotFound:
     CORE_VERSION = None
 
 # Setting a project-wide pip index is only supported for iso7+
-SUPPORTS_PROJECT_PIP_INDEX_ISO7: bool = (
+SUPPORTS_PROJECT_PIP_INDEX: bool = (
     CORE_VERSION is not None
     and CORE_VERSION
     >= version.Version(
-        "11.0.0.dev20231110000000"
+        "10.0.0.dev"
     )  # TODO: set correctly, now set to make backward compat tests succeed
 )
 
 
-SUPPORTS_PROJECT_PIP_INDEX: bool = (
+SUPPORTS_LEGACY_PROJECT_PIP_INDEX: bool = (
     CORE_VERSION is not None and CORE_VERSION >= version.Version("9.0.0.dev")
 )
 

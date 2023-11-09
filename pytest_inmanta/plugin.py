@@ -57,8 +57,8 @@ from inmanta.execute.proxy import DynamicProxy
 from inmanta.export import Exporter, ResourceDict, cfg_env
 from inmanta.resources import Resource
 from pytest_inmanta.core import (
+    SUPPORTS_LEGACY_PROJECT_PIP_INDEX,
     SUPPORTS_PROJECT_PIP_INDEX,
-    SUPPORTS_PROJECT_PIP_INDEX_ISO7,
 )
 from pytest_inmanta.test_parameter.parameter import ValueSetBy
 
@@ -79,7 +79,7 @@ if typing.TYPE_CHECKING:
             ...
 
 
-if SUPPORTS_PROJECT_PIP_INDEX:
+if SUPPORTS_LEGACY_PROJECT_PIP_INDEX:
     from inmanta.module import ProjectPipConfig
 
 import pytest_inmanta.parameters as parameters
@@ -238,7 +238,7 @@ def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[obj
             # there might be only one part or part might be just "https"
             except (IndexError, pydantic.ValidationError):
                 repo_info = module.ModuleRepoInfo(url=repo_str)
-            if SUPPORTS_PROJECT_PIP_INDEX:
+            if SUPPORTS_LEGACY_PROJECT_PIP_INDEX:
                 if repo_info.type == module.ModuleRepoType.package:
                     alternative_text: str = (
                         "is now deprecated and will raise a warning during compilation."
@@ -316,7 +316,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
     if in_place:
         modulepath.append(str(Path(CURDIR).parent))
 
-    if SUPPORTS_PROJECT_PIP_INDEX_ISO7:
+    if SUPPORTS_PROJECT_PIP_INDEX:
         # Backward compat: translate repo url to index url
         index_urls = list(index_urls) + repos_urls
         if index_urls:
@@ -345,7 +345,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
             install_mode=parameters.inm_install_mode.resolve(request.config).value,
             pip=pip_config,
         )
-    elif SUPPORTS_PROJECT_PIP_INDEX:
+    elif SUPPORTS_LEGACY_PROJECT_PIP_INDEX:
         # On newer versions of core we set the pip.index_url of the project.yml file
         pip_config: ProjectPipConfig = ProjectPipConfig(
             # This ensures no duplicates are returned and insertion order is preserved.

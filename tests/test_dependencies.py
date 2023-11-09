@@ -26,8 +26,8 @@ import pytest_inmanta.plugin
 import utils
 from inmanta import env
 from pytest_inmanta.core import (
+    SUPPORTS_LEGACY_PROJECT_PIP_INDEX,
     SUPPORTS_PROJECT_PIP_INDEX,
-    SUPPORTS_PROJECT_PIP_INDEX_ISO7,
 )
 from pytest_inmanta.parameters import pip_index_url
 
@@ -64,7 +64,7 @@ def test_transitive_v2_dependencies(
             finally:
                 utils.unload_modules_for_path(venv.site_packages_dir)
 
-        if not SUPPORTS_PROJECT_PIP_INDEX:
+        if not SUPPORTS_LEGACY_PROJECT_PIP_INDEX:
             warning_msg: str = (
                 "Setting a project-wide pip index is not supported on this version of inmanta-core. "
                 "The provided index will be used as a v2 package source"
@@ -156,7 +156,7 @@ def test_transitive_v2_dependencies_legacy_warning(
             finally:
                 utils.unload_modules_for_path(venv.site_packages_dir)
 
-        if SUPPORTS_PROJECT_PIP_INDEX:
+        if SUPPORTS_LEGACY_PROJECT_PIP_INDEX:
             warning_msg: str = (
                 "Setting a package source through the --module-repo <index_url> cli option with type `package` "
                 "is now deprecated and will raise a warning during compilation."
@@ -197,7 +197,7 @@ def test_transitive_v2_dependencies_legacy_warning_for_env_var(
             finally:
                 utils.unload_modules_for_path(venv.site_packages_dir)
 
-        if SUPPORTS_PROJECT_PIP_INDEX_ISO7:
+        if SUPPORTS_PROJECT_PIP_INDEX:
             warning_msg: str = "usage of INMANTA_PIP_INDEX_URL is deprecated, use PIP_INDEX_URL instead"
             assert warning_msg in caplog.text
 
@@ -228,6 +228,6 @@ def test_transitive_v2_dependencies_no_index_warning(
             finally:
                 utils.unload_modules_for_path(venv.site_packages_dir)
 
-        if SUPPORTS_PROJECT_PIP_INDEX_ISO7:
+        if SUPPORTS_PROJECT_PIP_INDEX:
             warning_msg: str = "No pip config source is configured, any attempt to perform a pip install will fail."
             assert warning_msg in caplog.text
