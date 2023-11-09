@@ -121,17 +121,6 @@ inm_install_mode = EnumTestParameter(
 )
 
 
-class PipPreFallbackToInstallMode(DynamicDefault[bool]):
-    """Default value is to fall back to install mode"""
-
-    def get_value(self, config: "Config") -> bool:
-        install_mode = inm_install_mode.resolve(config)
-        return install_mode != InstallMode.release
-
-    def get_help(self) -> str:
-        return " --install-mode != release "
-
-
 pip_pre = OptionalBooleanTestParameter(
     argument="--pip-pre",
     environment_variable="PIP_PRE",
@@ -139,7 +128,7 @@ pip_pre = OptionalBooleanTestParameter(
         "Allow installation of pre-release package by pip or not? (only for inmanta-core>=11, >ISO7)"
     ),
     group=param_group,
-    default=PipPreFallbackToInstallMode(),
+    default=False,
 )
 
 pip_index_url = ListTestParameter(
