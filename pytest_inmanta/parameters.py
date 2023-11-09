@@ -28,7 +28,6 @@ from pytest_inmanta.test_parameter import (
 from pytest_inmanta.test_parameter.optional_boolean_parameter import (
     OptionalBooleanTestParameter,
 )
-from pytest_inmanta.test_parameter.parameter import DynamicDefault
 
 try:
     """
