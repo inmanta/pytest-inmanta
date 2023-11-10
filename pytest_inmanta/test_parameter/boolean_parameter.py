@@ -15,9 +15,10 @@
 
     Contact: code@inmanta.com
 """
-from typing import Optional
+import argparse
+from typing import Optional, Type, Union
 
-from .parameter import TestParameter
+from .parameter import DynamicDefault, TestParameter
 
 
 class BooleanTestParameter(TestParameter[bool]):
@@ -51,10 +52,11 @@ class BooleanTestParameter(TestParameter[bool]):
         environment_variable: str,
         usage: str,
         *,
-        default=False,
+        default: Optional[Union[bool, DynamicDefault[bool]]] = False,
         key: Optional[str] = None,
         group: Optional[str] = None,
         legacy: Optional["BooleanTestParameter"] = None,
+        legacy_environment_variable: Optional[str] = None,
     ) -> None:
         super().__init__(
             argument,
@@ -64,10 +66,11 @@ class BooleanTestParameter(TestParameter[bool]):
             key=key,
             group=group,
             legacy=legacy,
+            legacy_environment_variable=legacy_environment_variable,
         )
 
     @property
-    def action(self) -> str:
+    def action(self) -> Union[str, Type[argparse.Action]]:
         if self.default is True:
             return "store_false"
 

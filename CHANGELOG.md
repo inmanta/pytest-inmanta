@@ -3,6 +3,8 @@ Changes in this release:
 - Add `deploy_resouce_v2` endpoint
 - Add support for unmanaged resources
 - Adds a new resource entity that raises an IgnoreResourceException when buildings its id
+- Add support for ISO7. 
+- Add `--pip-pre`, `--pip-use-system-config` and `--pip-index-url`
 
 # v 2.8.0 (2023-08-03)
 Changes in this release:

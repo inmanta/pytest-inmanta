@@ -15,7 +15,7 @@
 
     Contact: code@inmanta.com
 """
-from .parameter import TestParameter
+from pytest_inmanta.test_parameter.parameter import TestParameter
 
 
 class StringTestParameter(TestParameter[str]):

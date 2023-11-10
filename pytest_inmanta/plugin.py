@@ -52,12 +52,21 @@ from inmanta.agent.handler import HandlerContext, ResourceHandler
 from inmanta.const import ResourceState
 from inmanta.data import LogLine
 from inmanta.data.model import AttributeStateChange, ResourceIdStr
+from inmanta.env import PackageNotFound
 from inmanta.execute.proxy import DynamicProxy
 from inmanta.export import Exporter, ResourceDict, cfg_env
 from inmanta.resources import Resource
-from pytest_inmanta.core import SUPPORTS_PROJECT_PIP_INDEX
+from pytest_inmanta.core import (
+    SUPPORTS_LEGACY_PROJECT_PIP_INDEX,
+    SUPPORTS_PROJECT_PIP_INDEX,
+)
+from pytest_inmanta.test_parameter.parameter import ValueSetBy
 
-from .test_parameter.parameter import ValueSetBy
+PIP_NO_SOURCE_WARNING = (
+    "No pip config source is configured, any attempt to perform a pip install will fail. "
+    "Please set either one of the options --pip-index-url, --pip-use-system-config or "
+    "one of the environment variables PIP_INDEX_URL or INMANTA_PIP_USE_SYSTEM_CONFIG"
+)
 
 if typing.TYPE_CHECKING:
     # Local type stub for mypy that works with both pytest < 7 and pytest >=7
@@ -70,18 +79,17 @@ if typing.TYPE_CHECKING:
             ...
 
 
-if SUPPORTS_PROJECT_PIP_INDEX:
-    from inmanta.module import ProjectPipConfig
+if SUPPORTS_LEGACY_PROJECT_PIP_INDEX:
+    from inmanta.module import ProjectPipConfig, ModuleRepoInfo
 
+import pytest_inmanta.parameters as parameters
 from pytest_inmanta.handler import DATA
 from pytest_inmanta.parameters import (
-    inm_install_mode,
     inm_mod_in_place,
     inm_mod_repo,
     inm_no_load_plugins,
     inm_no_strict_deps_check,
     inm_venv,
-    pip_index_url,
 )
 from pytest_inmanta.test_parameter import (
     ParameterNotSetException,
@@ -230,7 +238,7 @@ def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[obj
             # there might be only one part or part might be just "https"
             except (IndexError, pydantic.ValidationError):
                 repo_info = module.ModuleRepoInfo(url=repo_str)
-            if SUPPORTS_PROJECT_PIP_INDEX:
+            if SUPPORTS_LEGACY_PROJECT_PIP_INDEX:
                 if repo_info.type == module.ModuleRepoType.package:
                     alternative_text: str = (
                         "is now deprecated and will raise a warning during compilation."
@@ -242,13 +250,13 @@ def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[obj
                             "Setting a package source through the %s environment variable "
                             + alternative_text,
                             inm_mod_repo.environment_variable,
-                            pip_index_url.environment_variable,
+                            parameters.pip_index_url.environment_variable,
                         )
                     elif inm_mod_repo._value_set_using == ValueSetBy.CLI:
                         LOGGER.warning(
                             "Setting a package source through the --module-repo <index_url> cli option with type `package` "
                             + alternative_text,
-                            pip_index_url.environment_variable,
+                            parameters.pip_index_url.environment_variable,
                         )
             return json.loads(repo_info.json())
 
@@ -293,19 +301,58 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
         )
     )
 
-    index_urls: Sequence[str] = pip_index_url.resolve(request.config)
+    index_urls: Sequence[str] = parameters.pip_index_url.resolve(request.config)
+    repos_urls: List[str] = [
+        repo["url"]
+        for repo in repos
+        if repo["type"] == module.ModuleRepoType.package.value
+    ]
+
+    pip_use_system_config = parameters.pip_use_system_config.resolve(request.config)
+    pip_pre = parameters.pip_pre.resolve(request.config)
+
     modulepath = ["libs"]
     in_place = inm_mod_in_place.resolve(request.config)
     if in_place:
         modulepath.append(str(Path(CURDIR).parent))
 
     if SUPPORTS_PROJECT_PIP_INDEX:
-        # On newer versions of core we set the pip.index_url of the project.yml file
-        repos_urls: List[str] = [
-            repo["url"]
+        # Backward compat: translate repo url to index url
+        index_urls = list(index_urls) + repos_urls
+        if index_urls:
+            index_url = index_urls[0]
+            extra_index_url = index_urls[1:]
+        else:
+            index_url = None
+            extra_index_url = []
+
+        pip_config: ProjectPipConfig = ProjectPipConfig(
+            index_url=index_url,
+            extra_index_url=extra_index_url,
+            use_system_config=pip_use_system_config,
+            pre=pip_pre,
+        )
+
+        if not pip_config.has_source():
+            LOGGER.warning(PIP_NO_SOURCE_WARNING)
+
+        git_repos: List[ModuleRepoInfo] = [
+            repo
             for repo in repos
-            if repo["type"] == module.ModuleRepoType.package
+            if repo["type"] != module.ModuleRepoType.package.value
         ]
+
+        return module.ProjectMetadata(
+            name="testcase",
+            description="Project for testcase",
+            repo=git_repos,
+            modulepath=modulepath,
+            downloadpath="libs",
+            install_mode=parameters.inm_install_mode.resolve(request.config).value,
+            pip=pip_config,
+        )
+    elif SUPPORTS_LEGACY_PROJECT_PIP_INDEX:
+        # On newer versions of core we set the pip.index_url of the project.yml file
         pip_config: ProjectPipConfig = ProjectPipConfig(
             # This ensures no duplicates are returned and insertion order is preserved.
             # i.e. the left-most index will be passed to pip as --index-url and the others as --extra-index-url
@@ -319,7 +366,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
             repo=repos,
             modulepath=modulepath,
             downloadpath="libs",
-            install_mode=inm_install_mode.resolve(request.config).value,
+            install_mode=parameters.inm_install_mode.resolve(request.config).value,
             pip=pip_config,
         )
     else:
@@ -337,7 +384,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
             repo=list(repos) + v2_source_repos,
             modulepath=modulepath,
             downloadpath="libs",
-            install_mode=inm_install_mode.resolve(request.config).value,
+            install_mode=parameters.inm_install_mode.resolve(request.config).value,
         )
 
 
@@ -390,7 +437,12 @@ def project_factory(
             "env_path": env_dir,
             **kwargs,
         }
-        test_project = Project(project_dir, **extended_kwargs)
+        try:
+            test_project = Project(project_dir, **extended_kwargs)
+        except PackageNotFound as e:
+            if "pip is not configured" in str(e):
+                raise PackageNotFound(PIP_NO_SOURCE_WARNING) from e
+            raise
 
         # create the unittest module
         test_project.create_module(
@@ -1456,7 +1508,7 @@ class DeployResultV2:
         self,
         status: const.ResourceState = const.ResourceState.deployed,
         change: const.Change = None,
-    ):
+    ) -> None:
         ctx = self.ctx
         if ctx.status != status:
             loglines = [
@@ -1512,7 +1564,7 @@ class DeployResultV2:
         """Assert that the diff produced no changes"""
         assert not self.changes
 
-    def assert_consistent_status(self):
+    def assert_consistent_status(self) -> None:
         """Make sure we report change and doing changes consistently"""
         if self.ctx.status != const.ResourceState.deployed:
             return
