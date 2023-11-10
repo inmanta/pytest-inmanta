@@ -80,7 +80,7 @@ if typing.TYPE_CHECKING:
 
 
 if SUPPORTS_LEGACY_PROJECT_PIP_INDEX:
-    from inmanta.module import ProjectPipConfig, ModuleRepoInfo
+    from inmanta.module import ProjectPipConfig
 
 import pytest_inmanta.parameters as parameters
 from pytest_inmanta.handler import DATA
