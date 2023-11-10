@@ -40,8 +40,8 @@ SUPPORTS_PROJECT_PIP_INDEX: bool = (
     CORE_VERSION is not None
     and CORE_VERSION
     >= version.Version(
-        "11.0.0.dev20231110000000"
-    )  # TODO: set correctly, now set to make backward compat tests succeed
+        "11.0.0.dev"
+    )
 )
 
 
