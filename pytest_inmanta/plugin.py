@@ -336,16 +336,10 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
         if not pip_config.has_source():
             LOGGER.warning(PIP_NO_SOURCE_WARNING)
 
-        git_repos: List[ModuleRepoInfo] = [
-            repo
-            for repo in repos
-            if repo["type"] != module.ModuleRepoType.package.value
-        ]
-
         return module.ProjectMetadata(
             name="testcase",
             description="Project for testcase",
-            repo=git_repos,
+            repo=repos,
             modulepath=modulepath,
             downloadpath="libs",
             install_mode=parameters.inm_install_mode.resolve(request.config).value,
