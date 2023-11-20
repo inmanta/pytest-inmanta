@@ -85,6 +85,6 @@ class BooleanTestParameter(TestParameter[bool]):
             return True
 
         raise ValueError(
-            f"Boolean env var should be set to either a truthy value ('true', 'yes' or 1) "
+            f"Boolean env var {self.environment_variable} should be set to either a truthy value ('true', 'yes' or 1) "
             f"or a falsy value ('false', 'no' or 0), got '{parsed}' instead"
         )
