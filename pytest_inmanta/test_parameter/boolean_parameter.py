@@ -78,12 +78,13 @@ class BooleanTestParameter(TestParameter[bool]):
 
     def validate(self, raw_value: object) -> bool:
         parsed = str(raw_value).lower().strip()
-        if parsed == "false":
+        if parsed in ["false", "no", "0"]:
             return False
 
-        if parsed == "true":
+        if parsed in ["true", "yes", "1"]:
             return True
 
         raise ValueError(
-            f"Boolean env var should be set to either 'true' or 'false', got '{parsed}' instead"
+            f"Boolean env var {self.environment_variable} should be set to either a truthy value ('true', 'yes' or 1) "
+            f"or a falsy value ('false', 'no' or 0), got '{parsed}' instead"
         )

@@ -1,5 +1,6 @@
 # v 2.9.0 (?)
 Changes in this release:
+- Add support for more values (yes, 1) and (no, 0) for boolean options
 - Add `deploy_resouce_v2` endpoint
 - Add support for unmanaged resources
 - Adds a new resource entity that raises an IgnoreResourceException when buildings its id
