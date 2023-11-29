@@ -17,7 +17,7 @@
 """
 import collections
 import os
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
 
 try:
     """
@@ -28,7 +28,13 @@ try:
 except ImportError:
     pass
 
-from .parameter import ParameterNotSetException, TestParameter, ValueSetBy
+from pytest_inmanta.test_parameter.parameter import (
+    LOGGER,
+    DynamicDefault,
+    ParameterNotSetException,
+    TestParameter,
+    ValueSetBy,
+)
 
 
 class ListTestParameter(TestParameter[Sequence[str]]):
@@ -58,10 +64,11 @@ class ListTestParameter(TestParameter[Sequence[str]]):
         environment_variable: str,
         usage: str,
         *,
-        default: Optional[Sequence[str]] = None,
+        default: Optional[Union[Sequence[str], DynamicDefault[Sequence[str]]]] = None,
         key: Optional[str] = None,
         group: Optional[str] = None,
         legacy: Optional["ListTestParameter"] = None,
+        legacy_environment_variable: Optional[str] = None,
     ) -> None:
         super().__init__(
             argument,
@@ -71,6 +78,7 @@ class ListTestParameter(TestParameter[Sequence[str]]):
             key=key,
             group=group,
             legacy=legacy,
+            legacy_environment_variable=legacy_environment_variable,
         )
 
     @property
@@ -102,8 +110,21 @@ class ListTestParameter(TestParameter[Sequence[str]]):
             self._value_set_using = ValueSetBy.ENV_VARIABLE
             return self.validate(env_var.split(" "))
 
-        if self.default is not None:
+        if self.legacy_environment_variable is not None:
+            # If we have a legacy env var, we check if it is set
+            env_var = os.getenv(self.legacy_environment_variable)
+            if env_var is not None:
+                # A value is set
+                LOGGER.warning(
+                    f"The usage of {self.legacy_environment_variable} is deprecated, "
+                    f"use {self.environment_variable} instead"
+                )
+                self._value_set_using = ValueSetBy.ENV_VARIABLE
+                return self.validate(env_var.split(" "))
+
+        default = self.get_default_value(config)
+        if default is not None:
             self._value_set_using = ValueSetBy.DEFAULT_VALUE
-            return self.default
+            return default
 
         raise ParameterNotSetException(self)

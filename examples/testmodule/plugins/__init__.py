@@ -21,6 +21,7 @@ std.pytest_inmanta_side_effect_count += 1
 @resource("testmodule::Resource", agent="agent", id_attribute="name")
 @resource("testmodule::BadLog", agent="agent", id_attribute="name")
 @resource("testmodule::ResourceBadIdAttribute", agent="agent", id_attribute="id")
+@resource("testmodule::Fail", agent="agent", id_attribute="name")
 class ResourceResource(PurgeableResource):
     fields = ("name", "agent", "key", "value")
 
@@ -53,6 +54,19 @@ class ResourceHandler(ResourceHandler):
         resource.purged = False
         resource.value = "read"
         ctx.warning("argument can not be serialized", argument={"a": "b"}.values())
+
+
+@provider("testmodule::Fail", name="fail")
+class ResourceHandler(ResourceHandler):
+    def read_resource(self, ctx: HandlerContext, resource: ResourceResource) -> None:
+        resource.purged = False
+        resource.value = "read"
+
+    def update_resource(
+        self, ctx: HandlerContext, changes: dict, resource: ResourceResource
+    ) -> None:
+        ctx.warning("Oh no!")
+        raise Exception()
 
 
 @plugin

@@ -18,12 +18,15 @@
 import os
 
 from inmanta.module import InstallMode
-
-from .test_parameter import (
+from pytest_inmanta.test_parameter import (
     BooleanTestParameter,
     EnumTestParameter,
     ListTestParameter,
+    ParameterNotSetException,
     PathTestParameter,
+)
+from pytest_inmanta.test_parameter.optional_boolean_parameter import (
+    OptionalBooleanTestParameter,
 )
 
 try:
@@ -96,24 +99,13 @@ inm_mod_repo = ListTestParameter(
     legacy=inm_mod_repo_legacy,
 )
 
-pip_index_url = ListTestParameter(
-    argument="--pip-index-url",
-    environment_variable="INMANTA_PIP_INDEX_URL",
-    usage=(
-        "Pip index to install dependencies from."
-        "Can be specified multiple times to add multiple indexes."
-    ),
-    group=param_group,
-    default=[],
-)
-
 
 # This is the legacy install mode option
 # TODO remove this in next major version bump
 inm_install_mode_legacy = EnumTestParameter(
     argument="--install_mode",
     environment_variable="INMANTA_INSTALL_MODE",
-    usage="Install mode for modules downloaded during this test",
+    usage="Install mode for v1 modules downloaded during this test",
     enum=InstallMode,
 )
 
@@ -125,6 +117,40 @@ inm_install_mode = EnumTestParameter(
     default=InstallMode.release,
     group=param_group,
     legacy=inm_install_mode_legacy,
+)
+
+
+pip_pre = OptionalBooleanTestParameter(
+    argument="--pip-pre",
+    environment_variable="PIP_PRE",
+    usage=(
+        "Allow installation of pre-release package by pip or not? (only for inmanta-core>=11, >=ISO7)"
+    ),
+    group=param_group,
+    default=False,
+)
+
+pip_index_url = ListTestParameter(
+    argument="--pip-index-url",
+    environment_variable="PIP_INDEX_URL",
+    legacy_environment_variable="INMANTA_PIP_INDEX_URL",
+    usage=(
+        "Pip index to install dependencies from. "
+        "Can be specified multiple times to add multiple indexes. "
+        "When set, it will overwrite the system index-url even if pip-use-system-config is set."
+    ),
+    group=param_group,
+    default=[],
+)
+
+pip_use_system_config = BooleanTestParameter(
+    argument="--pip-use-system-config",
+    environment_variable="INMANTA_PIP_USE_SYSTEM_CONFIG",
+    usage=(
+        "Allow pytest-inmanta to use the system pip config or not? (only for inmanta-core>=11, >=ISO7)"
+    ),
+    group=param_group,
+    default=False,
 )
 
 
@@ -147,7 +173,7 @@ class _LegacyBooleanTestParameter(BooleanTestParameter):
         if os.getenv(self.environment_variable):
             return True
 
-        return False
+        raise ParameterNotSetException(self)
 
 
 # This is the legacy no load plugins option

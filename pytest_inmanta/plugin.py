@@ -52,13 +52,21 @@ from inmanta.agent.handler import HandlerContext, ResourceHandler
 from inmanta.const import ResourceState
 from inmanta.data import LogLine
 from inmanta.data.model import AttributeStateChange, ResourceIdStr
+from inmanta.env import PackageNotFound
 from inmanta.execute.proxy import DynamicProxy
 from inmanta.export import Exporter, ResourceDict, cfg_env
-from inmanta.protocol import json_encode
 from inmanta.resources import Resource
-from pytest_inmanta.core import SUPPORTS_PROJECT_PIP_INDEX
+from pytest_inmanta.core import (
+    SUPPORTS_LEGACY_PROJECT_PIP_INDEX,
+    SUPPORTS_PROJECT_PIP_INDEX,
+)
+from pytest_inmanta.test_parameter.parameter import ValueSetBy
 
-from .test_parameter.parameter import ValueSetBy
+PIP_NO_SOURCE_WARNING = (
+    "No pip config source is configured, any attempt to perform a pip install will fail. "
+    "Please set either one of the options --pip-index-url, --pip-use-system-config or "
+    "one of the environment variables PIP_INDEX_URL or INMANTA_PIP_USE_SYSTEM_CONFIG"
+)
 
 if typing.TYPE_CHECKING:
     # Local type stub for mypy that works with both pytest < 7 and pytest >=7
@@ -71,20 +79,22 @@ if typing.TYPE_CHECKING:
             ...
 
 
-if SUPPORTS_PROJECT_PIP_INDEX:
+if SUPPORTS_LEGACY_PROJECT_PIP_INDEX:
     from inmanta.module import ProjectPipConfig
 
-from .handler import DATA
-from .parameters import (
-    inm_install_mode,
+import pytest_inmanta.parameters as parameters
+from pytest_inmanta.handler import DATA
+from pytest_inmanta.parameters import (
     inm_mod_in_place,
     inm_mod_repo,
     inm_no_load_plugins,
     inm_no_strict_deps_check,
     inm_venv,
-    pip_index_url,
 )
-from .test_parameter import ParameterNotSetException, TestParameterRegistry
+from pytest_inmanta.test_parameter import (
+    ParameterNotSetException,
+    TestParameterRegistry,
+)
 
 try:
     """
@@ -98,6 +108,8 @@ except ImportError:
 CURDIR = os.getcwd()
 LOGGER = logging.getLogger()
 SYS_EXECUTABLE = sys.executable
+
+DEFAULT = object()
 
 
 def pytest_addoption(parser: "Parser") -> None:
@@ -226,7 +238,7 @@ def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[obj
             # there might be only one part or part might be just "https"
             except (IndexError, pydantic.ValidationError):
                 repo_info = module.ModuleRepoInfo(url=repo_str)
-            if SUPPORTS_PROJECT_PIP_INDEX:
+            if SUPPORTS_LEGACY_PROJECT_PIP_INDEX:
                 if repo_info.type == module.ModuleRepoType.package:
                     alternative_text: str = (
                         "is now deprecated and will raise a warning during compilation."
@@ -238,13 +250,13 @@ def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[obj
                             "Setting a package source through the %s environment variable "
                             + alternative_text,
                             inm_mod_repo.environment_variable,
-                            pip_index_url.environment_variable,
+                            parameters.pip_index_url.environment_variable,
                         )
                     elif inm_mod_repo._value_set_using == ValueSetBy.CLI:
                         LOGGER.warning(
                             "Setting a package source through the --module-repo <index_url> cli option with type `package` "
                             + alternative_text,
-                            pip_index_url.environment_variable,
+                            parameters.pip_index_url.environment_variable,
                         )
             return json.loads(repo_info.json())
 
@@ -289,19 +301,52 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
         )
     )
 
-    index_urls: Sequence[str] = pip_index_url.resolve(request.config)
+    index_urls: Sequence[str] = parameters.pip_index_url.resolve(request.config)
+    repos_urls: List[str] = [
+        repo["url"]
+        for repo in repos
+        if repo["type"] == module.ModuleRepoType.package.value
+    ]
+
+    pip_use_system_config = parameters.pip_use_system_config.resolve(request.config)
+    pip_pre = parameters.pip_pre.resolve(request.config)
+
     modulepath = ["libs"]
     in_place = inm_mod_in_place.resolve(request.config)
     if in_place:
         modulepath.append(str(Path(CURDIR).parent))
 
     if SUPPORTS_PROJECT_PIP_INDEX:
+        # Backward compat: translate repo url to index url
+        index_urls = list(index_urls) + repos_urls
+        if index_urls:
+            index_url = index_urls[0]
+            extra_index_url = index_urls[1:]
+        else:
+            index_url = None
+            extra_index_url = []
+
+        pip_config: ProjectPipConfig = ProjectPipConfig(
+            index_url=index_url,
+            extra_index_url=extra_index_url,
+            use_system_config=pip_use_system_config,
+            pre=pip_pre,
+        )
+
+        if not pip_config.has_source():
+            LOGGER.warning(PIP_NO_SOURCE_WARNING)
+
+        return module.ProjectMetadata(
+            name="testcase",
+            description="Project for testcase",
+            repo=repos,
+            modulepath=modulepath,
+            downloadpath="libs",
+            install_mode=parameters.inm_install_mode.resolve(request.config).value,
+            pip=pip_config,
+        )
+    elif SUPPORTS_LEGACY_PROJECT_PIP_INDEX:
         # On newer versions of core we set the pip.index_url of the project.yml file
-        repos_urls: List[str] = [
-            repo["url"]
-            for repo in repos
-            if repo["type"] == module.ModuleRepoType.package
-        ]
         pip_config: ProjectPipConfig = ProjectPipConfig(
             # This ensures no duplicates are returned and insertion order is preserved.
             # i.e. the left-most index will be passed to pip as --index-url and the others as --extra-index-url
@@ -315,7 +360,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
             repo=repos,
             modulepath=modulepath,
             downloadpath="libs",
-            install_mode=inm_install_mode.resolve(request.config).value,
+            install_mode=parameters.inm_install_mode.resolve(request.config).value,
             pip=pip_config,
         )
     else:
@@ -333,7 +378,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
             repo=list(repos) + v2_source_repos,
             modulepath=modulepath,
             downloadpath="libs",
-            install_mode=inm_install_mode.resolve(request.config).value,
+            install_mode=parameters.inm_install_mode.resolve(request.config).value,
         )
 
 
@@ -386,7 +431,12 @@ def project_factory(
             "env_path": env_dir,
             **kwargs,
         }
-        test_project = Project(project_dir, **extended_kwargs)
+        try:
+            test_project = Project(project_dir, **extended_kwargs)
+        except PackageNotFound as e:
+            if "pip is not configured" in str(e):
+                raise PackageNotFound(PIP_NO_SOURCE_WARNING) from e
+            raise
 
         # create the unittest module
         test_project.create_module(
@@ -452,6 +502,34 @@ class MockAgent(object):
         self.uri = uri
         self.process = MockProcess()
         self._env_id = cfg_env.get()
+        self.sessionid = "mockid"
+        self.environment = self._env_id
+
+
+class MockClient(object):
+    """
+    A mock object for Handler._client
+
+    It should be of type inmanta.protocol.endpoints.SessionClient
+    However, we chose to only mock those functions we expect to see used.
+
+    Any unexpected use of the client will cause an attribute error.
+    This will prevent any unexpected/unsafe attempts to reach an orchestrator
+    """
+
+    def __init__(self):
+        self.discovered_resources: list[object] = []
+
+    async def discovered_resource_create_batch(
+        self, tid, discovered_resources: collections.abc.Sequence[object]
+    ) -> protocol.Result:
+        """
+        Mock function for inmanta.protocol.methodsv2.discovered_resource_create_batch
+
+        Collects all discovered resources
+        """
+        self.discovered_resources.extend(discovered_resources)
+        return inmanta.protocol.common.Result(200)
 
 
 class InmantaPluginsImportLoader:
@@ -676,7 +754,7 @@ def get_resource(
 
     def check_serialization(resource: Resource) -> Resource:
         """Check if the resource is serializable"""
-        serialized = json.loads(json_encode(resource.serialize()))
+        serialized = json.loads(protocol.json_encode(resource.serialize()))
         return Resource.deserialize(serialized)
 
     try:
@@ -695,7 +773,7 @@ class Result:
         for r, ct in self.results.items():
             assert (
                 ct.status == status
-            ), f"Resource {r.id} has status {ct.status}, expected {status}"
+            ), f"Resource {r.id} has status {ct.status.value}, expected {status.value}"
 
     def assert_has_no_changes(self) -> None:
         for r, ct in self.results.items():
@@ -906,6 +984,7 @@ class Project:
             p.stat_file = lambda x: self.stat_blob(x)  # type: ignore
             p.upload_file = lambda x, y: self.add_blob(x, y)  # type: ignore
             p.run_sync = ioloop.IOLoop.current().run_sync  # type: ignore
+            p._client = MockClient()
             self._handlers.add(p)
             return p
         except Exception as e:
@@ -913,7 +992,7 @@ class Project:
 
     def finalize_context(self, ctx: handler.HandlerContext) -> None:
         # ensure logs can be serialized
-        json_encode({"message": ctx.logs})
+        protocol.json_encode({"message": ctx.logs})
 
     def get_resource(
         self, resource_type: str, **filter_args: object
@@ -1336,7 +1415,7 @@ license: Test License
 
     def check_serialization(self, resource: Resource) -> Resource:
         """Check if the resource is serializable"""
-        serialized = json.loads(json_encode(resource.serialize()))
+        serialized = json.loads(protocol.json_encode(resource.serialize()))
         return Resource.deserialize(serialized)
 
     def clean(self) -> None:
@@ -1357,6 +1436,145 @@ license: Test License
     def finalize_all_handlers(self) -> None:
         for handler_instance in self._handlers:
             self.finalize_handler(handler_instance)
+
+    def deploy_resource_v2(
+        self,
+        resource_type: str,
+        run_as_root: bool = False,
+        dry_run: bool = False,
+        expected_status: Optional[const.ResourceState] = DEFAULT,
+        **filter_args: object,
+    ) -> "DeployResultV2":
+        """
+        Deploy a resource of the given type, that matches the filter and assert the outcome
+
+        :param resource_type: the type of resource to deploy
+        :param filter_args: a set of kwargs, the resource must have all matching attributes set to the given values
+        :param run_as_root: run the handler as root or not
+        :param dry_run: only perform dryrun
+        :param status: expected status after deploy,
+            set to None to not check,
+            for deploy defaults to deployed
+            for dryrun defaults to dry
+        """
+        if expected_status == DEFAULT:
+            expected_status = (
+                const.ResourceState.deployed if not dry_run else const.ResourceState.dry
+            )
+
+        resource = self.get_resource(resource_type, **filter_args)
+        assert resource is not None, "No resource found of given type and filter args"
+
+        h = self.get_handler(resource, run_as_root)
+        assert h is not None
+
+        ctx = handler.HandlerContext(resource, dry_run=dry_run)
+        h.execute(ctx, resource, dry_run)
+        self.finalize_context(ctx)
+        self.finalize_handler(h)
+
+        out = DeployResultV2(resource=resource, ctx=ctx, handler=h)
+        if expected_status is not None:
+            out.assert_status(expected_status)
+
+        return out
+
+    def dryrun_resource_v2(
+        self,
+        resource_type: str,
+        run_as_root: bool = False,
+        expected_status: Optional[const.ResourceState] = DEFAULT,
+        **filter_args: object,
+    ) -> "DeployResultV2":
+        return self.deploy_resource_v2(
+            resource_type, run_as_root, True, expected_status, **filter_args
+        )
+
+
+@dataclass
+class DeployResultV2:
+    ctx: HandlerContext
+    handler: ResourceHandler
+    resource: Resource
+
+    # status
+    def assert_status(
+        self,
+        status: const.ResourceState = const.ResourceState.deployed,
+        change: const.Change = None,
+    ) -> None:
+        ctx = self.ctx
+        if ctx.status != status:
+            loglines = [
+                "Deploy did not result in correct status",
+                f"Requested changes: {ctx._changes}" f"Outputting resource logs",
+            ]
+
+            for log in ctx.logs:
+                loglines.append(f"Log: {log._data['msg']}")
+                formattedkwargs = [
+                    "%s: %s" % (k, v)
+                    for k, v in log._data["kwargs"].items()
+                    if k != "traceback"
+                ]
+                if formattedkwargs:
+                    loglines.append("\tKwargs: " + ",".join(formattedkwargs))
+                if "traceback" in log._data["kwargs"]:
+                    loglines.append(f"\tTraceback: {log._data['kwargs']['traceback']}")
+
+        assert ctx.status == status, "\n\t".join(loglines)
+        if change is not None:
+            assert ctx._change == change
+        self.assert_consistent_status()
+
+    # Discovery
+    @property
+    def discovered_resources(self) -> list[object]:
+        return self.handler._client.discovered_resources
+
+    # Logs
+    @property
+    def logs(self) -> list[LogLine]:
+        return self.ctx.logs
+
+    def assert_has_logline(self, matches: str) -> LogLine:
+        """
+         Assert the handler logged a log line matching the pattern
+
+        :return: that logline
+        """
+        pattern = re.compile(matches)
+        for logline in self.logs:
+            if pattern.search(logline.msg):
+                return logline
+        assert False, f"No line found matching {pattern}"
+
+    # changes
+    @property
+    def changes(self) -> Dict[str, AttributeStateChange]:
+        return self.ctx.changes
+
+    def assert_no_changes(self) -> None:
+        """Assert that the diff produced no changes"""
+        assert not self.changes
+
+    def assert_consistent_status(self) -> None:
+        """Make sure we report change and doing changes consistently"""
+        if self.ctx.status != const.ResourceState.deployed:
+            return
+
+        if bool(self.ctx.changes):
+            assert (
+                self.ctx.change != const.Change.nochange
+            ), f"""Inconsistent handler state:
+    the handler reported it was deployed successful,
+    that it had {len(self.ctx.changes)} changes when doing the diff
+    and performed no change during deploy.
+
+    Perhaps you forgot to call ctx.set_created(), ctx.set_updated() or ctx.set_deleted()?
+"""
+        else:
+            assert self.ctx.change == const.Change.nochange
 
 
 @pytest.fixture(scope="function")

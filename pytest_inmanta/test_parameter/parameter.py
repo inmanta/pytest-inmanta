@@ -15,13 +15,15 @@
 
     Contact: code@inmanta.com
 """
+import abc
+import argparse
 import logging
 import os
 import uuid
 from abc import abstractmethod
 from collections import defaultdict
 from enum import Enum
-from typing import Container, Dict, Generic, List, Optional, Set, TypeVar, Union
+from typing import Container, Dict, Generic, List, Optional, Set, Type, TypeVar, Union
 
 try:
     """
@@ -176,6 +178,18 @@ class ValueSetBy(Enum):
     ENV_VARIABLE: str = "ENV_VARIABLE"
 
 
+class DynamicDefault(abc.ABC, Generic[ParameterType]):
+    """A class to provide a default value that is calculated on the fly"""
+
+    @abstractmethod
+    def get_value(self, config: "Config") -> ParameterType:
+        pass
+
+    @abstractmethod
+    def get_help(self) -> str:
+        pass
+
+
 class TestParameter(Generic[ParameterType]):
     """
     This class represents a parameter that can be passed to the tests, either via a pytest
@@ -188,10 +202,11 @@ class TestParameter(Generic[ParameterType]):
         environment_variable: str,
         usage: str,
         *,
-        default: Optional[ParameterType] = None,
+        default: Optional[Union[ParameterType, DynamicDefault[ParameterType]]] = None,
         key: Optional[str] = None,
         group: Optional[str] = None,
         legacy: Optional["TestParameter[ParameterType]"] = None,
+        legacy_environment_variable: Optional[str] = None,
     ) -> None:
         """
         :param argument: This is the argument that can be passed to the pytest command.
@@ -209,12 +224,14 @@ class TestParameter(Generic[ParameterType]):
             in future version of the product.  When resolving a value, we first check this
             parameter, and if it is not set, we check the legacy one and raise a warning about
             its deprecation.
+        :param legacy_environment_variable: An options legacy env var that this one replaces.
         """
         self.argument = argument
         self.environment_variable = environment_variable
         self.usage = usage
         self.default = default
         self.legacy = legacy
+        self.legacy_environment_variable = legacy_environment_variable
         # Track how the value was set when it is being resolved:
         self._value_set_using: Optional[str] = None
 
@@ -227,12 +244,16 @@ class TestParameter(Generic[ParameterType]):
         """
         additional_messages = [f"overrides {self.environment_variable}"]
         if self.default is not None:
-            additional_messages.append(f"defaults to {self.default}")
+            if isinstance(self.default, DynamicDefault):
+                default_help = self.default.get_help()
+            else:
+                default_help = str(self.default)
+            additional_messages.append(f"defaults to {default_help}")
 
         return self.usage + f" ({', '.join(additional_messages)})"
 
     @property
-    def action(self) -> str:
+    def action(self) -> Union[str, Type[argparse.Action]]:
         """
         The argparse action for this option
         https://docs.python.org/3/library/argparse.html#action
@@ -255,6 +276,16 @@ class TestParameter(Generic[ParameterType]):
         of the received value.  It is up to the class extending this one to convert
         it to whatever value it wants.
         """
+
+    def get_default_value(self, config: "Config") -> Optional[ParameterType]:
+        """Get the default value"""
+        if self.default is None:
+            return None
+
+        if isinstance(self.default, DynamicDefault):
+            return self.default.get_value(config)
+        else:
+            return self.default
 
     def resolve(self, config: "Config") -> ParameterType:
         """
@@ -286,7 +317,19 @@ class TestParameter(Generic[ParameterType]):
             except ParameterNotSetException:
                 pass
 
-        if self.default is not None:
-            return self.default
+        if self.legacy_environment_variable is not None:
+            # If we have a legacy env var, we check if it is set
+            env_var = os.getenv(self.legacy_environment_variable)
+            if env_var is not None:
+                # A value is set
+                LOGGER.warning(
+                    f"The usage of {self.legacy_environment_variable} is deprecated, "
+                    f"use {self.environment_variable} instead"
+                )
+                return self.validate(env_var)
+
+        default = self.get_default_value(config)
+        if default is not None:
+            return default
 
         raise ParameterNotSetException(self)
