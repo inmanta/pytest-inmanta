@@ -6,6 +6,7 @@
 import pytest
 
 from inmanta import const
+from inmanta.data.model import AttributeStateChange
 from pytest_inmanta.plugin import DeployResultV2, Project
 
 
@@ -53,7 +54,16 @@ def test_dryrun(project: Project):
     project.compile(basemodel)
 
     result = project.deploy_resource_v2("testmodule::Resource", dry_run=True)
-    assert result.changes == {"value": {"current": "read", "desired": "write"}}
+
+    assert ["value"] == list(result.changes.keys())
+    change = result.changes["value"]
+    # change in type in iso7
+    if isinstance(change, AttributeStateChange):
+        # dict method is deprecated on pydanticv2, iso7,
+        # but replacement doesn't exist on pydanticv1, iso6
+        change = change.dict()
+
+    assert change == {"current": "read", "desired": "write"}
 
     with pytest.raises(AssertionError):
         assert result.assert_no_changes()
