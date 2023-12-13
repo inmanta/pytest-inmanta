@@ -59,7 +59,9 @@ def test_dryrun(project: Project):
     change = result.changes["value"]
     # change in type in iso7
     if isinstance(change, AttributeStateChange):
-        change = change.model_dump()
+        # dict method is deprecated on pydanticv2, iso7,
+        # but replacement doesn't exist on pydanticv1, iso6
+        change = change.dict()
 
     assert change == {"current": "read", "desired": "write"}
 
