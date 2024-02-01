@@ -15,6 +15,7 @@
 
     Contact: code@inmanta.com
 """
+
 from pytest_inmanta.test_parameter.parameter import TestParameter
 
 

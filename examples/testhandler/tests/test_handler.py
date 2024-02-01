@@ -15,6 +15,7 @@
 
     Contact: code@inmanta.com
 """
+
 import sys
 from pathlib import Path
 

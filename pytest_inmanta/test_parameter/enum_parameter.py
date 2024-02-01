@@ -15,6 +15,7 @@
 
     Contact: code@inmanta.com
 """
+
 from enum import Enum
 from typing import Container, Optional, Type, TypeVar, Union
 

@@ -15,6 +15,7 @@
 
     Contact: code@inmanta.com
 """
+
 from typing import Dict, Union
 
 DATA: Dict[str, Dict[str, Union[str, bool, float, int]]] = {}

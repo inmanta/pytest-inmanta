@@ -15,6 +15,7 @@
 
     Contact: code@inmanta.com
 """
+
 # Note: These tests only function when the pytest output is not modified by plugins such as pytest-sugar!
 
 

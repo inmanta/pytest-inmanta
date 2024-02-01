@@ -15,6 +15,7 @@
 
     Contact: code@inmanta.com
 """
+
 import argparse
 from typing import Optional, Type, Union
 
