@@ -3,6 +3,7 @@
     Contact: code@inmanta.com
     License: Apache 2.0
 """
+
 from inmanta.plugins import plugin
 
 

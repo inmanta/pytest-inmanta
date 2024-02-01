@@ -15,6 +15,7 @@
 
     Contact: code@inmanta.com
 """
+
 from .boolean_parameter import BooleanTestParameter  # noqa: F401
 from .enum_parameter import EnumTestParameter  # noqa: F401
 from .integer_parameter import IntegerTestParameter  # noqa: F401
