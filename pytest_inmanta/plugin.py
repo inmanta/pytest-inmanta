@@ -879,6 +879,14 @@ class Project:
         self._capsys: typing.Optional["CaptureFixture"] = None
         self.ctx: typing.Optional[HandlerContext] = None
         self._handlers: typing.Set[ResourceHandler] = set()
+
+        # The agent_map attribute can contain a mapping of agent name to io uri.
+        # This can be used to overwrite the default behavior of the `get_handler`
+        # method, and test a handler against a real remote host.
+        # This attribute is part of the public interface of the `Project` class,
+        # the developer can manipulate it directly, or populate it automatically using the
+        # `populate_agent_map` method.
+        self.agent_map: dict[str, str] = {}
         config.Config.load_config()
 
     def _set_sys_executable(self) -> None:
@@ -906,6 +914,7 @@ class Project:
         self._facts = defaultdict(dict)
         self.ctx = None
         self._handlers = set()
+        self.agent_map = {}
         self._load()
         self._set_sys_executable()
         config.Config.load_config()
@@ -972,7 +981,12 @@ class Project:
     def get_handler(self, resource: Resource, run_as_root: bool) -> ResourceHandler:
         # TODO: if user is root, do not use remoting
         c = cache.AgentCache()
-        if run_as_root:
+        if resource.id.agent in self.agent_map:
+            # If the agent is in the agent map, we keep its uri, this allows
+            # us to test remote agent (with respect to the configuration target)
+            # + remote io (with respect to the agent process) scenarios
+            agent = MockAgent(self.agent_map[resource.id.agent])
+        elif run_as_root:
             agent = MockAgent("ssh://root@localhost")
         else:
             agent = MockAgent("local:")
@@ -1242,6 +1256,22 @@ license: Test License
         mod: module.Module
         mod, _ = get_module()
         self._create_project_and_load(model=f"import {mod.name}")
+
+    def populate_agent_map(self) -> None:
+        """
+        Populate the agent map attribute based on the agent config resources present in the
+        desired state.
+        This method can only be called after a compile.
+        It doesn't cleanup the agent map from existing entries, but will overwrite existing
+        ones if a newer version of the agent config is part of the desired state.
+        """
+        for resource_id, resource in self.resources.items():
+            if resource_id.entity_type != "std:AgentConfig":
+                # This is not an agent config
+                continue
+
+            # Save the uri for this agent name
+            self.agent_map[resource.agentname] = resource.uri
 
     def compile(self, main: str, export: bool = False, no_dedent: bool = True) -> None:
         """
