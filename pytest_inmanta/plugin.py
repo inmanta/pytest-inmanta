@@ -981,11 +981,11 @@ class Project:
     def get_handler(self, resource: Resource, run_as_root: bool) -> ResourceHandler:
         # TODO: if user is root, do not use remoting
         c = cache.AgentCache()
-        if resource.id.agent in self.agent_map:
+        if resource.id.agent_name in self.agent_map:
             # If the agent is in the agent map, we keep its uri, this allows
             # us to test remote agent (with respect to the configuration target)
             # + remote io (with respect to the agent process) scenarios
-            agent = MockAgent(self.agent_map[resource.id.agent])
+            agent = MockAgent(self.agent_map[resource.id.agent_name])
         elif run_as_root:
             agent = MockAgent("ssh://root@localhost")
         else:
