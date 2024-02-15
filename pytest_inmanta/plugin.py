@@ -1266,7 +1266,7 @@ license: Test License
         ones if a newer version of the agent config is part of the desired state.
         """
         for resource_id, resource in self.resources.items():
-            if resource_id.entity_type != "std:AgentConfig":
+            if resource_id.entity_type != "std::AgentConfig":
                 # This is not an agent config
                 continue
 
