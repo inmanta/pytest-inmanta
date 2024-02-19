@@ -60,6 +60,7 @@ def test_transitive_v2_dependencies(
                     # include configured pip index for inmanta-module-std
                     "--pip-index-url",
                     f'{os.environ.get("PIP_INDEX_URL", "https://pypi.org/simple")}',
+                    f"--confcutdir={testdir}",
                 )
                 result.assert_outcomes(passed=1)
             finally:
@@ -117,6 +118,7 @@ def test_conflicing_dependencies(
                 # include configured pip index for inmanta-module-std and lorem
                 "--pip-index-url",
                 f'{os.environ.get("PIP_INDEX_URL", "https://pypi.org/simple")}',
+                f"--confcutdir={testdir}",
             )
             result.assert_outcomes(errors=1)
             assert error_msg in "\n".join(result.outlines)
