@@ -741,6 +741,12 @@ def get_resources_matching(
         yield resource
 
 
+def check_serialization(resource: Resource) -> Resource:
+    """Check if the resource is serializable"""
+    serialized = json.loads(protocol.json_encode(resource.serialize()))
+    return Resource.deserialize(serialized)
+
+
 def get_resource(
     resources: "collections.abc.Iterable[Resource]",
     resource_type: str,
@@ -752,11 +758,6 @@ def get_resource(
 
     :param resource_type: The exact type used in the model (no super types)
     """
-
-    def check_serialization(resource: Resource) -> Resource:
-        """Check if the resource is serializable"""
-        serialized = json.loads(protocol.json_encode(resource.serialize()))
-        return Resource.deserialize(serialized)
 
     try:
         resource = next(get_resources_matching(resources, resource_type, **filter_args))
@@ -1054,16 +1055,17 @@ class Project:
         # clear context, just to avoid confusion
         self.ctx = None
 
-        def build_handler_and_context(
+        def build_resource_handler_and_context(
             resource: Resource,
         ) -> Tuple[Resource, ResourceHandler, HandlerContext]:
             h = self.get_handler(resource, run_as_root)
             assert h is not None
             ctx = HandlerContext(resource)
-            return resource, h, ctx
+            res = check_serialization(resource)
+            return res, h, ctx
 
         all_contexts = {
-            str(rid): build_handler_and_context(resource)
+            str(rid): build_resource_handler_and_context(resource)
             for rid, resource in self.resources.items()
             if not any(resource.is_type(extype) for extype in exclude_all)
         }
@@ -1443,11 +1445,6 @@ license: Test License
         Change a value of the unittest resource
         """
         DATA[name].update(kwargs)
-
-    def check_serialization(self, resource: Resource) -> Resource:
-        """Check if the resource is serializable"""
-        serialized = json.loads(protocol.json_encode(resource.serialize()))
-        return Resource.deserialize(serialized)
 
     def clean(self) -> None:
         shutil.rmtree(os.path.join(self._test_project_dir, "libs", "unittest"))
