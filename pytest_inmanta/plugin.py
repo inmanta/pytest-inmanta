@@ -1323,7 +1323,7 @@ license: Test License
 
         # Fix the resource serialization (fully serialize them)
         new_resources = {}
-        for resource_id, resource in self.resources.items():
+        for resource_id, resource in resources.items():
             new_resource = inmanta.resources.Resource.deserialize(
                 json.loads(inmanta.protocol.common.json_encode(resource.serialize()))
             )
