@@ -741,6 +741,12 @@ def get_resources_matching(
         yield resource
 
 
+def check_serialization(resource: Resource) -> Resource:
+    """Check if the resource is serializable"""
+    serialized = json.loads(protocol.json_encode(resource.serialize()))
+    return Resource.deserialize(serialized)
+
+
 def get_resource(
     resources: "collections.abc.Iterable[Resource]",
     resource_type: str,
@@ -752,11 +758,6 @@ def get_resource(
 
     :param resource_type: The exact type used in the model (no super types)
     """
-
-    def check_serialization(resource: Resource) -> Resource:
-        """Check if the resource is serializable"""
-        serialized = json.loads(protocol.json_encode(resource.serialize()))
-        return Resource.deserialize(serialized)
 
     try:
         resource = next(get_resources_matching(resources, resource_type, **filter_args))
@@ -1320,9 +1321,18 @@ license: Test License
                     DeprecationWarning,
                 )
 
+        # Fix the resource serialization (fully serialize them)
+        new_resources = {}
+        for resource_id, resource in resources.items():
+            new_resource = inmanta.resources.Resource.deserialize(
+                json.loads(inmanta.protocol.common.json_encode(resource.serialize()))
+            )
+            new_resource.model = resource.model
+            new_resources[resource_id] = new_resource
+
         self._root_scope = scopes
         self.version = version
-        self.resources = resources
+        self.resources = new_resources
         self.types = types
         self._exporter = exporter
 
@@ -1445,9 +1455,7 @@ license: Test License
         DATA[name].update(kwargs)
 
     def check_serialization(self, resource: Resource) -> Resource:
-        """Check if the resource is serializable"""
-        serialized = json.loads(protocol.json_encode(resource.serialize()))
-        return Resource.deserialize(serialized)
+        return check_serialization(resource)
 
     def clean(self) -> None:
         shutil.rmtree(os.path.join(self._test_project_dir, "libs", "unittest"))

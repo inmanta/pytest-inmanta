@@ -5,9 +5,8 @@ black = black pytest_inmanta tests examples
 
 .PHONY: install
 install:
-	pip install -U setuptools pip
-	pip install -U -r requirements.txt -r requirements.dev.txt
-	pip install -e .
+	pip install -U --upgrade-strategy=eager pip setuptools wheel
+	pip install -U --upgrade-strategy=eager -e . -c requirements.txt -r requirements.dev.txt
 
 .PHONY: format
 format:
