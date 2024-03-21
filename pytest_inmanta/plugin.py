@@ -1055,17 +1055,16 @@ class Project:
         # clear context, just to avoid confusion
         self.ctx = None
 
-        def build_resource_handler_and_context(
+        def build_handler_and_context(
             resource: Resource,
         ) -> Tuple[Resource, ResourceHandler, HandlerContext]:
             h = self.get_handler(resource, run_as_root)
             assert h is not None
             ctx = HandlerContext(resource)
-            res = check_serialization(resource)
-            return res, h, ctx
+            return resource, h, ctx
 
         all_contexts = {
-            str(rid): build_resource_handler_and_context(resource)
+            str(rid): build_handler_and_context(resource)
             for rid, resource in self.resources.items()
             if not any(resource.is_type(extype) for extype in exclude_all)
         }
@@ -1322,9 +1321,18 @@ license: Test License
                     DeprecationWarning,
                 )
 
+        # Fix the resource serialization (fully serialize them)
+        new_resources = {}
+        for resource_id, resource in self.resources.items():
+            new_resource = inmanta.resources.Resource.deserialize(
+                json.loads(inmanta.protocol.common.json_encode(resource.serialize()))
+            )
+            new_resource.model = resource.model
+            new_resources[resource_id] = new_resource
+
         self._root_scope = scopes
         self.version = version
-        self.resources = resources
+        self.resources = new_resources
         self.types = types
         self._exporter = exporter
 
@@ -1445,6 +1453,9 @@ license: Test License
         Change a value of the unittest resource
         """
         DATA[name].update(kwargs)
+
+    def check_serialization(self, resource: Resource) -> Resource:
+        return check_serialization(resource)
 
     def clean(self) -> None:
         shutil.rmtree(os.path.join(self._test_project_dir, "libs", "unittest"))
