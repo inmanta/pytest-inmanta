@@ -546,9 +546,9 @@ class InmantaPluginsImportLoader:
         self._importer: InmantaPluginsImporter = importer
 
     def __getattr__(self, name: str):
-        submodules: typing.Optional[
-            typing.Dict[str, ModuleType]
-        ] = self._importer.get_submodules(name)
+        submodules: typing.Optional[typing.Dict[str, ModuleType]] = (
+            self._importer.get_submodules(name)
+        )
         fq_mod_name: str = f"inmanta_plugins.{name}"
         if submodules is None or fq_mod_name not in submodules:
             raise AttributeError("No inmanta module named %s" % name)
@@ -874,9 +874,9 @@ class Project:
         self._root_scope: typing.Optional[inmanta.ast.Namespace] = None
         self._exporter: typing.Optional[Exporter] = None
         self._blobs: typing.Dict[str, bytes] = {}
-        self._facts: typing.Dict[
-            ResourceIdStr, typing.Dict[str, typing.Any]
-        ] = defaultdict(dict)
+        self._facts: typing.Dict[ResourceIdStr, typing.Dict[str, typing.Any]] = (
+            defaultdict(dict)
+        )
         self._should_load_plugins: typing.Optional[bool] = load_plugins
         self._plugins: typing.Optional[typing.Dict[str, FunctionType]] = None
         self._load()
@@ -1391,9 +1391,9 @@ license: Test License
     def _load_plugins(self) -> typing.Dict[str, FunctionType]:
         mod: module.Module
         mod, _ = get_module()
-        submodules: typing.Optional[
-            typing.Dict[str, ModuleType]
-        ] = InmantaPluginsImporter(self).get_submodules(mod.name)
+        submodules: typing.Optional[typing.Dict[str, ModuleType]] = (
+            InmantaPluginsImporter(self).get_submodules(mod.name)
+        )
         return (
             {}
             if submodules is None
