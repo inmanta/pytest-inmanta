@@ -501,10 +501,13 @@ class MockAgent(object):
 
     def __init__(self, uri):
         self.uri = uri
-        self.process = MockProcess()
         self._env_id = cfg_env.get()
         self.sessionid = "mockid"
         self.environment = self._env_id
+        # This is for the new old api in inmanta.agent.agent.AgentInstance
+        self.process = MockProcess()
+        # This is for the new agent api in inmanta.agent.executor.AgentInstance
+        self.eventloop = self.process._io_loop
 
 
 class MockClient(object):
