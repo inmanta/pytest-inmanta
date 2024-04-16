@@ -2,6 +2,7 @@
 Changes in this release:
 - Add support for custom `agent_map` enabling testing or remote io scenarios.
 - Fix resource serialization (#437)
+- Fix new agent api in inmanta.agent.executor.AgentInstance (ISO8)
 
 # v 2.9.0 (2023-11-29)
 Changes in this release:
