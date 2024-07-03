@@ -790,6 +790,40 @@ def get_resource(
         return None
 
 
+def get_one_resource(
+    resources: "collections.abc.Iterable[Resource]",
+    resource_type: str,
+    **filter_args: object,
+) -> typing.Optional[Resource]:
+    """
+    Get a resource of the given type and given filter on the resource attributes. This method makes sure that the
+    `entity_type` matches the provided `resource_type`, unlike the `get_resource` function
+    If multiple resource match, an assertion error is raised. If none match, None is returned.
+
+    :param resource_type: The exact type used in the model (no super types)
+    """
+    resources = iter(
+        get_resources_matching(
+            resources,
+            resource_type,
+            should_filter_model_type=True,
+            **filter_args,
+        )
+    )
+
+    list_resources = []
+    for resource in resources:
+        resource = check_serialization(resource)
+        list_resources.append(resource)
+
+    # If we don't find anything matching these criteria, we should return `None`
+    if len(list_resources) == 0:
+        list_resources.append(None)
+
+    assert len(list_resources) == 1, "Only one resource should be found!"
+    return list_resources[0]
+
+
 class Result:
     def __init__(self, results: Dict[Resource, HandlerContext]) -> None:
         self.results = results
@@ -840,6 +874,23 @@ class Result:
         return self.results[resources[0]]
 
     def get_resource(
+        self, resource_type: str, strict_mode: bool = False, **filter_args: object
+    ) -> typing.Optional[Resource]:
+        """
+        Get a resource of the given type and given filter on the results attributes from a Result object.
+        If multiple resource match, the first one is returned. If none match, None is returned.
+
+        :param resource_type: The exact type used in the model (no super types)
+        :param strict_mode: If we need to make additional assertion when retrieving the resource:
+            - stricter filtering: matching the entity type of the resource
+            - assert only one instance
+        """
+        if strict_mode:
+            return self.get_one_resource(resource_type, **filter_args)
+        else:
+            return get_resource(self.results.keys(), resource_type, **filter_args)
+
+    def get_one_resource(
         self, resource_type: str, **filter_args: object
     ) -> typing.Optional[Resource]:
         """
@@ -848,7 +899,7 @@ class Result:
 
         :param resource_type: The exact type used in the model (no super types)
         """
-        return get_resource(self.results.keys(), resource_type, **filter_args)
+        return get_one_resource(self.results.keys(), resource_type, **filter_args)
 
 
 DeployResult = Result
@@ -1046,40 +1097,20 @@ class Project:
             - assert only one instance
         """
         if strict_mode:
-            return self.get_resource_strict(resource_type, **filter_args)
+            return self.get_one_resource(resource_type, **filter_args)
         else:
             return get_resource(self.resources.values(), resource_type, **filter_args)
 
-    def get_resource_strict(
+    def get_one_resource(
         self, resource_type: str, **filter_args: object
     ) -> typing.Optional[Resource]:
         """
-        Get a resource of the given type and given filter on the resource attributes. This method makes sure that the
-        `entity_type` matches the provided `resource_type`, unlike the `get_resource` function
-        If multiple resource match, an assertion error is raised. If none match, None is returned.
+        Get a resource of the given type and given filter on the resource attributes. If multiple resource match, the
+        first one is returned. If none match, None is returned.
 
         :param resource_type: The exact type used in the model (no super types)
         """
-        resources = iter(
-            get_resources_matching(
-                self.resources.values(),
-                resource_type,
-                should_filter_model_type=True,
-                **filter_args,
-            )
-        )
-
-        list_resources = []
-        for resource in resources:
-            resource = check_serialization(resource)
-            list_resources.append(resource)
-
-        # If we don't find anything matching these criteria, we should return `None`
-        if len(list_resources) == 0:
-            list_resources.append(None)
-
-        assert len(list_resources) == 1, "Only one resource should be found!"
-        return list_resources[0]
+        return get_one_resource(self.resources.values(), resource_type, **filter_args)
 
     def deploy(
         self, resource: Resource, dry_run: bool = False, run_as_root: bool = False

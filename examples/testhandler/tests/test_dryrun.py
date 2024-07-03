@@ -63,13 +63,13 @@ def test_dryrun_all(project):
     """
     )
     result = project.dryrun_all()
-    resource = result.get_resource("unittest::Resource", name="res")
+    resource = result.get_one_resource("unittest::Resource", name="res")
     assert resource.desired_value == "x"
 
-    resource = result.get_resource("unittest::Resource", name="res2")
+    resource = result.get_one_resource("unittest::Resource", name="res2")
     assert resource.desired_value == "y"
 
-    resource = result.get_resource("unittest::Resource", name="res3")
+    resource = result.get_one_resource("unittest::Resource", name="res3")
     assert resource.desired_value == "z"
 
 

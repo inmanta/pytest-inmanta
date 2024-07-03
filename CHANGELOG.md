@@ -3,6 +3,8 @@ Changes in this release:
 - Add support for custom `agent_map` enabling testing or remote io scenarios.
 - Fix resource serialization (#437)
 - Fix new agent api in inmanta.agent.executor.AgentInstance (ISO8)
+- Add `get_one_resource` method to the `project` fixture. This method is the upgraded version of `get_resource`. This new method should be used instead of the old one and any user is encouraged to migrate to the new one. Please refer to the documentation of the fixture for further information.
+- Add strict mode in `get_resource` method to  the `project` fixture (by default set to False). If strict mode is set to True, the new `get_one_resource` method will be called. 
 
 # v 2.9.0 (2023-11-29)
 Changes in this release:

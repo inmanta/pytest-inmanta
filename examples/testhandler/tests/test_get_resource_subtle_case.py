@@ -45,7 +45,9 @@ def test_ignore_resource(project: Project):
 
     # Now, with the strict mode, the types should match
     real_resource_a = project.get_resource("unittest::ResourceA", strict_mode=True)
+    real_resource_a_other_method = project.get_one_resource("unittest::ResourceA")
     assert real_resource_a.id.entity_type == "unittest::ResourceA"
+    assert real_resource_a.id.entity_type == real_resource_a_other_method.id.entity_type
 
     # Now, let's check that only one instance can exist at the same time when no filtering arguments are provided
     project.compile(
