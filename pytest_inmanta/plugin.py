@@ -747,11 +747,13 @@ def get_resources_matching(
         return True
 
     for resource in resources:
-        match_entity_type = resource.id.entity_type == resource_type
-        if not resource.is_type(resource_type) or (
-            should_filter_model_type and not match_entity_type
-        ):
-            continue
+
+        if not should_filter_model_type:
+            if not resource.is_type(resource_type):
+                continue
+        else:
+            if not resource.id.entity_type == resource_type:
+                continue
 
         if not apply_filter(resource):
             continue
@@ -821,7 +823,10 @@ def get_one_resource(
     if len(list_resources) == 0:
         list_resources.append(None)
 
-    assert len(list_resources) == 1, "Only one resource should be found!"
+    assert len(list_resources) == 1, (
+        "The filter should only match one resource, but it matches: "
+        f"[{','.join(str(resource.id) for resource in list_resources)}]"
+    )
     return list_resources[0]
 
 
@@ -889,7 +894,9 @@ class Result:
         if strict_mode:
             return self.get_one_resource(resource_type, **filter_args)
         else:
-            return get_resource(self.results.keys(), resource_type, **filter_args)
+            return get_resource(
+                self.results.keys(), resource_type, strict_mode, **filter_args
+            )
 
     def get_one_resource(
         self, resource_type: str, **filter_args: object

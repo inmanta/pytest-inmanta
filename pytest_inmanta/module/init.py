@@ -25,7 +25,6 @@ from pytest_inmanta.handler import DATA
 KEY_PREFIX = "unittest_"
 
 
-@resources.resource("unittest::ResourceA", id_attribute="name", agent="agent")
 @resources.resource("unittest::Resource", id_attribute="name", agent="agent")
 class Resource(resources.PurgeableResource):
     fields = ("name", "desired_value", "skip", "fail", "fail_deploy", "wrong_diff")

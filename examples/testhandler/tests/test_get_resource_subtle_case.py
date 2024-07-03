@@ -38,28 +38,27 @@ def test_subtle_get_resource(project: Project):
     """
     )
 
-    resource = project.get_resource("unittest::Resource")
-    wrong_resource_a = project.get_resource("unittest::ResourceA")
-    assert wrong_resource_a.id.entity_type == "unittest::Resource"
-    assert wrong_resource_a.id.entity_type == resource.id.entity_type
-
-    # Now, with the strict mode, the types should match
-    real_resource_a = project.get_resource("unittest::ResourceA", strict_mode=True)
-    real_resource_a_other_method = project.get_one_resource("unittest::ResourceA")
-    assert real_resource_a.id.entity_type == "unittest::ResourceA"
-    assert real_resource_a.id.entity_type == real_resource_a_other_method.id.entity_type
-
-    # Now, let's check that only one instance can exist at the same time when no filtering arguments are provided
-    project.compile(
-        """
-    import unittest
-
-    unittest::ResourceA(name="fakeres", desired_value="fakex")
-    unittest::ResourceA(name="fakeres22", desired_value="fakex22")
-    """
+    # will not find anything in normal mode, but will in strict mode
+    assert project.get_resource("unittest::Resource", name="fakeres") is None
+    resource = project.get_resource(
+        "unittest::Resource", strict_mode=True, name="fakeres"
     )
-    with pytest.raises(AssertionError, match="Only one resource should be found!"):
-        project.get_resource("unittest::ResourceA", strict_mode=True)
+    assert resource is not None
+    assert resource.id.entity_type == "unittest::Resource"
+
+    # will not find anything in strict mode, but will in normal mode
+    assert (
+        project.get_resource("unittest::ResourceA", strict_mode=True, name="fakeres")
+        is None
+    )
+    resource = project.get_resource("unittest::ResourceA", name="fakeres")
+    assert resource is not None
+    assert resource.id.entity_type == "unittest::Resource"
+
+    # will fail in strict mode, succeed in normal mode
+    assert project.get_resource("unittest::Resource") is not None
+    with pytest.raises(AssertionError):
+        project.get_resource("unittest::Resource", strict_mode=True)
 
     # And let's make sure that if the resource doesn't exist, `None` is returned
     project.compile(
