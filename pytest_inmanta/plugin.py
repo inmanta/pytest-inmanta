@@ -800,6 +800,7 @@ def get_one_resource(
     `entity_type` matches the provided `resource_type`, unlike the `get_resource` function
     If multiple resource match, an assertion error is raised. If none match, None is returned.
 
+    :param resources: The resources to filter on
     :param resource_type: The exact type used in the model (no super types)
     """
     resources = iter(

@@ -21,7 +21,7 @@ import pytest
 from pytest_inmanta.plugin import Project
 
 
-def test_ignore_resource(project: Project):
+def test_subtle_get_resource(project: Project):
     """
     Ensure that the stricter filtering on get_resource is working as intended on a subtle scenario -> inheritance in the model
     but relying on the same resource / handler pair. Things that need to be checked:
