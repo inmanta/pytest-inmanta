@@ -30,7 +30,6 @@ class Resource(resources.PurgeableResource):
     fields = ("name", "desired_value", "skip", "fail", "fail_deploy", "wrong_diff")
 
 
-@handler.provider("unittest::ResourceA", name="test")
 @handler.provider("unittest::Resource", name="test")
 class ResourceHandler(handler.CRUDHandler):
     def read_resource(
