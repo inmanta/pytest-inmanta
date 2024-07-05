@@ -15,6 +15,7 @@
 
     Contact: code@inmanta.com
 """
+
 import collections
 import os
 from typing import Optional, Sequence, Union

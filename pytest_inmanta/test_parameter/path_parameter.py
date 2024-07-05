@@ -15,6 +15,7 @@
 
     Contact: code@inmanta.com
 """
+
 from pathlib import Path
 from typing import Optional, Union
 

@@ -15,6 +15,7 @@
 
     Contact: code@inmanta.com
 """
+
 import collections
 import importlib
 import inspect
@@ -76,7 +77,7 @@ if typing.TYPE_CHECKING:
 
     class TempdirFactory:
         def mktemp(self, path: str) -> py.path.local:
-            ...
+            pass
 
 
 if SUPPORTS_LEGACY_PROJECT_PIP_INDEX:
@@ -500,10 +501,13 @@ class MockAgent(object):
 
     def __init__(self, uri):
         self.uri = uri
-        self.process = MockProcess()
         self._env_id = cfg_env.get()
         self.sessionid = "mockid"
         self.environment = self._env_id
+        # This is for the new old api in inmanta.agent.agent.AgentInstance
+        self.process = MockProcess()
+        # This is for the new agent api in inmanta.agent.executor.AgentInstance
+        self.eventloop = self.process._io_loop
 
 
 class MockClient(object):
@@ -542,9 +546,9 @@ class InmantaPluginsImportLoader:
         self._importer: InmantaPluginsImporter = importer
 
     def __getattr__(self, name: str):
-        submodules: typing.Optional[
-            typing.Dict[str, ModuleType]
-        ] = self._importer.get_submodules(name)
+        submodules: typing.Optional[typing.Dict[str, ModuleType]] = (
+            self._importer.get_submodules(name)
+        )
         fq_mod_name: str = f"inmanta_plugins.{name}"
         if submodules is None or fq_mod_name not in submodules:
             raise AttributeError("No inmanta module named %s" % name)
@@ -740,6 +744,12 @@ def get_resources_matching(
         yield resource
 
 
+def check_serialization(resource: Resource) -> Resource:
+    """Check if the resource is serializable"""
+    serialized = json.loads(protocol.json_encode(resource.serialize()))
+    return Resource.deserialize(serialized)
+
+
 def get_resource(
     resources: "collections.abc.Iterable[Resource]",
     resource_type: str,
@@ -751,11 +761,6 @@ def get_resource(
 
     :param resource_type: The exact type used in the model (no super types)
     """
-
-    def check_serialization(resource: Resource) -> Resource:
-        """Check if the resource is serializable"""
-        serialized = json.loads(protocol.json_encode(resource.serialize()))
-        return Resource.deserialize(serialized)
 
     try:
         resource = next(get_resources_matching(resources, resource_type, **filter_args))
@@ -869,15 +874,23 @@ class Project:
         self._root_scope: typing.Optional[inmanta.ast.Namespace] = None
         self._exporter: typing.Optional[Exporter] = None
         self._blobs: typing.Dict[str, bytes] = {}
-        self._facts: typing.Dict[
-            ResourceIdStr, typing.Dict[str, typing.Any]
-        ] = defaultdict(dict)
+        self._facts: typing.Dict[ResourceIdStr, typing.Dict[str, typing.Any]] = (
+            defaultdict(dict)
+        )
         self._should_load_plugins: typing.Optional[bool] = load_plugins
         self._plugins: typing.Optional[typing.Dict[str, FunctionType]] = None
         self._load()
         self._capsys: typing.Optional["CaptureFixture"] = None
         self.ctx: typing.Optional[HandlerContext] = None
         self._handlers: typing.Set[ResourceHandler] = set()
+
+        # The agent_map attribute can contain a mapping of agent name to io uri.
+        # This can be used to overwrite the default behavior of the `get_handler`
+        # method, and test a handler against a real remote host.
+        # This attribute is part of the public interface of the `Project` class,
+        # the developer can manipulate it directly, or populate it automatically using the
+        # `populate_agent_map` method.
+        self.agent_map: dict[str, str] = {}
         config.Config.load_config()
 
     def _set_sys_executable(self) -> None:
@@ -905,6 +918,7 @@ class Project:
         self._facts = defaultdict(dict)
         self.ctx = None
         self._handlers = set()
+        self.agent_map = {}
         self._load()
         self._set_sys_executable()
         config.Config.load_config()
@@ -971,7 +985,12 @@ class Project:
     def get_handler(self, resource: Resource, run_as_root: bool) -> ResourceHandler:
         # TODO: if user is root, do not use remoting
         c = cache.AgentCache()
-        if run_as_root:
+        if resource.id.agent_name in self.agent_map:
+            # If the agent is in the agent map, we keep its uri, this allows
+            # us to test remote agent (with respect to the configuration target)
+            # + remote io (with respect to the agent process) scenarios
+            agent = MockAgent(self.agent_map[resource.id.agent_name])
+        elif run_as_root:
             agent = MockAgent("ssh://root@localhost")
         else:
             agent = MockAgent("local:")
@@ -1242,6 +1261,22 @@ license: Test License
         mod, _ = get_module()
         self._create_project_and_load(model=f"import {mod.name}")
 
+    def populate_agent_map(self) -> None:
+        """
+        Populate the agent map attribute based on the agent config resources present in the
+        desired state.
+        This method can only be called after a compile.
+        It doesn't cleanup the agent map from existing entries, but will overwrite existing
+        ones if a newer version of the agent config is part of the desired state.
+        """
+        for resource_id, resource in self.resources.items():
+            if resource_id.entity_type != "std::AgentConfig":
+                # This is not an agent config
+                continue
+
+            # Save the uri for this agent name
+            self.agent_map[resource.agentname] = resource.uri
+
     def compile(self, main: str, export: bool = False, no_dedent: bool = True) -> None:
         """
         Compile the configuration model in main. This method will load all required modules.
@@ -1289,9 +1324,18 @@ license: Test License
                     DeprecationWarning,
                 )
 
+        # Fix the resource serialization (fully serialize them)
+        new_resources = {}
+        for resource_id, resource in resources.items():
+            new_resource = inmanta.resources.Resource.deserialize(
+                json.loads(inmanta.protocol.common.json_encode(resource.serialize()))
+            )
+            new_resource.model = resource.model
+            new_resources[resource_id] = new_resource
+
         self._root_scope = scopes
         self.version = version
-        self.resources = resources
+        self.resources = new_resources
         self.types = types
         self._exporter = exporter
 
@@ -1347,9 +1391,9 @@ license: Test License
     def _load_plugins(self) -> typing.Dict[str, FunctionType]:
         mod: module.Module
         mod, _ = get_module()
-        submodules: typing.Optional[
-            typing.Dict[str, ModuleType]
-        ] = InmantaPluginsImporter(self).get_submodules(mod.name)
+        submodules: typing.Optional[typing.Dict[str, ModuleType]] = (
+            InmantaPluginsImporter(self).get_submodules(mod.name)
+        )
         return (
             {}
             if submodules is None
@@ -1414,9 +1458,7 @@ license: Test License
         DATA[name].update(kwargs)
 
     def check_serialization(self, resource: Resource) -> Resource:
-        """Check if the resource is serializable"""
-        serialized = json.loads(protocol.json_encode(resource.serialize()))
-        return Resource.deserialize(serialized)
+        return check_serialization(resource)
 
     def clean(self) -> None:
         shutil.rmtree(os.path.join(self._test_project_dir, "libs", "unittest"))

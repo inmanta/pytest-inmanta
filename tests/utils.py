@@ -26,7 +26,10 @@ from importlib.abc import Loader
 from types import ModuleType
 from typing import Iterator, Optional, Sequence, Tuple
 
+import inmanta.util
 from inmanta import env
+from inmanta.moduletool import ModuleTool
+from packaging.version import Version
 
 
 @contextlib.contextmanager
@@ -43,24 +46,49 @@ def module_v2_venv(
         venv_unset_python_path(venv)
         # install test module into environment
 
-        # Base command to run the installation of a module
-        install_command = [
-            venv.python_path,
-            "-m",
-            "inmanta.app",
-            "-X",
-            "module",
-            "install",
-        ]
+        if Version(inmanta.__version__) < Version("11.0"):
+            # Pre iso 7
+            # Base command to run the installation of a module
+            install_command = [
+                venv.python_path,
+                "-m",
+                "inmanta.app",
+                "-X",
+                "module",
+                "install",
+            ]
 
-        if editable_install:
-            # Editable install, add editable option
-            install_command.append("-e")
+            if editable_install:
+                # Editable install, add editable option
+                install_command.append("-e")
 
-        install_command.append(module_path)
+            install_command.append(module_path)
 
-        # Run the install command
-        subprocess.check_call(install_command)
+            # Run the install command
+            subprocess.check_call(install_command)
+        else:
+            # ISO 7, module install doesn't exist
+            if editable_install:
+                install_command = [
+                    venv.python_path,
+                    "-m",
+                    "pip",
+                    "install",
+                    "-e",
+                    module_path,
+                ]
+                subprocess.check_call(install_command)
+            else:
+                mod_artifact_path = ModuleTool().build(path=module_path)
+                install_command = [
+                    venv.python_path,
+                    "-m",
+                    "pip",
+                    "install",
+                    mod_artifact_path,
+                ]
+                subprocess.check_call(install_command)
+
         yield venv
 
 
@@ -85,9 +113,9 @@ def venv_unset_python_path(venv: env.VirtualEnv) -> None:
     """
     Workaround for pypa/build#405: unset PYTHONPATH because it's not required in this case and it triggers a bug in build
     """
-    sitecustomize_existing: Optional[
-        Tuple[Optional[str], Loader]
-    ] = env.ActiveEnv.get_module_file("sitecustomize")
+    sitecustomize_existing: Optional[Tuple[Optional[str], Loader]] = (
+        env.ActiveEnv.get_module_file("sitecustomize")
+    )
     # inherit from existing sitecustomize.py
     sitecustomize_inherit: str
     if sitecustomize_existing is not None and sitecustomize_existing[0] is not None:

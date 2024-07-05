@@ -15,6 +15,7 @@
 
     Contact: code@inmanta.com
 """
+
 # Note: These tests only function when the pytest output is not modified by plugins such as pytest-sugar!
 import logging
 import os
@@ -59,6 +60,7 @@ def test_transitive_v2_dependencies(
                     # include configured pip index for inmanta-module-std
                     "--pip-index-url",
                     f'{os.environ.get("PIP_INDEX_URL", "https://pypi.org/simple")}',
+                    f"--confcutdir={testdir}",
                 )
                 result.assert_outcomes(passed=1)
             finally:
@@ -116,6 +118,7 @@ def test_conflicing_dependencies(
                 # include configured pip index for inmanta-module-std and lorem
                 "--pip-index-url",
                 f'{os.environ.get("PIP_INDEX_URL", "https://pypi.org/simple")}',
+                f"--confcutdir={testdir}",
             )
             result.assert_outcomes(errors=1)
             assert error_msg in "\n".join(result.outlines)
@@ -198,7 +201,9 @@ def test_transitive_v2_dependencies_legacy_warning_for_env_var(
                 utils.unload_modules_for_path(venv.site_packages_dir)
 
         if SUPPORTS_PROJECT_PIP_INDEX:
-            warning_msg: str = "usage of INMANTA_PIP_INDEX_URL is deprecated, use PIP_INDEX_URL instead"
+            warning_msg: str = (
+                "usage of INMANTA_PIP_INDEX_URL is deprecated, use PIP_INDEX_URL instead"
+            )
             assert warning_msg in caplog.text
 
 
@@ -229,5 +234,7 @@ def test_transitive_v2_dependencies_no_index_warning(
                 utils.unload_modules_for_path(venv.site_packages_dir)
 
         if SUPPORTS_PROJECT_PIP_INDEX:
-            warning_msg: str = "No pip config source is configured, any attempt to perform a pip install will fail."
+            warning_msg: str = (
+                "No pip config source is configured, any attempt to perform a pip install will fail."
+            )
             assert warning_msg in caplog.text
