@@ -1,4 +1,4 @@
-# v 2.10.0 (?)
+# v 2.10.0 (2024-07-05)
 Changes in this release:
 - Add support for custom `agent_map` enabling testing or remote io scenarios.
 - Fix resource serialization (#437)
