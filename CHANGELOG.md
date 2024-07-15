@@ -1,5 +1,9 @@
 # v 2.11.0 (?)
 Changes in this release:
+- Add strict mode in `get_resource` method to  the `project` fixture and `Result` object (by default set to `False`). 
+
+## Updating
+- All uses of the `get_resource` method should be replaced with the `get_one_resource` method. It has improved type matching and raises an exception when multiple matches are present.
 
 # v 2.10.0 (2024-07-05)
 Changes in this release:
@@ -7,10 +11,6 @@ Changes in this release:
 - Fix resource serialization (#437)
 - Fix new agent api in inmanta.agent.executor.AgentInstance (ISO8)
 - Add `get_one_resource` method to the `project` fixture and `Result` object.
-- Add strict mode in `get_resource` method to  the `project` fixture and `Result` object (by default set to `False`). 
-
-## Updating
-- All uses of the `get_resource` method should be replaced with the `get_one_resource` method. It has improved type matching and raises an exception when multiple matches are present. 
 
 # v 2.9.0 (2023-11-29)
 Changes in this release:
