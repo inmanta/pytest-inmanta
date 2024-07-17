@@ -32,6 +32,6 @@ def test_ignore_resource(project):
     """
     )
 
-    assert project.get_resource("unittest::Resource") is not None
-    assert project.get_resource("unittest::IgnoreResource") is None
-    assert project.get_resource("unittest::IgnoreResourceInIdAttr") is None
+    assert project.get_one_resource("unittest::Resource") is not None
+    assert project.get_one_resource("unittest::IgnoreResource") is None
+    assert project.get_one_resource("unittest::IgnoreResourceInIdAttr") is None

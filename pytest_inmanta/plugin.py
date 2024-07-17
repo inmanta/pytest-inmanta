@@ -722,8 +722,20 @@ class ProjectLoader:
 def get_resources_matching(
     resources: "collections.abc.Iterable[Resource]",
     resource_type: str,
+    should_filter_model_type: bool = False,
     **filter_args: object,
 ) -> Iterator[Resource]:
+    """
+    Return the resources that are matching the provided criteria. If none are provided, it will match every resource this
+    function encounters.
+
+    :param resources: The resources to filter on
+    :param resource_type: The desired resource type
+    :param should_filter_model_type: flag to have a stricter filtering -> make sure the entity type of the resource is matching
+        the one provided in the arguments of the function.
+    :param filter_args: Additional args to filter the resources
+    """
+
     def apply_filter(resource: Resource) -> bool:
         for arg, value in filter_args.items():
             if not hasattr(resource, arg):
@@ -735,8 +747,13 @@ def get_resources_matching(
         return True
 
     for resource in resources:
-        if not resource.is_type(resource_type):
-            continue
+
+        if not should_filter_model_type:
+            if not resource.is_type(resource_type):
+                continue
+        else:
+            if not resource.id.entity_type == resource_type:
+                continue
 
         if not apply_filter(resource):
             continue
@@ -753,6 +770,7 @@ def check_serialization(resource: Resource) -> Resource:
 def get_resource(
     resources: "collections.abc.Iterable[Resource]",
     resource_type: str,
+    should_filter_model_type: bool = False,
     **filter_args: object,
 ) -> typing.Optional[Resource]:
     """
@@ -763,11 +781,53 @@ def get_resource(
     """
 
     try:
-        resource = next(get_resources_matching(resources, resource_type, **filter_args))
+        resource = next(
+            get_resources_matching(
+                resources, resource_type, should_filter_model_type, **filter_args
+            )
+        )
         resource = check_serialization(resource)
         return resource
     except StopIteration:
         return None
+
+
+def get_one_resource(
+    resources: "collections.abc.Iterable[Resource]",
+    resource_type: str,
+    **filter_args: object,
+) -> typing.Optional[Resource]:
+    """
+    Get a resource of the given type and given filter on the resource attributes. This method makes sure that the
+    `entity_type` matches the provided `resource_type`, unlike the `get_resource` function
+    If multiple resource match, an assertion error is raised. If none match, None is returned.
+
+    :param resources: The resources to filter on
+    :param resource_type: The exact type used in the model (no super types)
+    """
+    resources = iter(
+        get_resources_matching(
+            resources,
+            resource_type,
+            should_filter_model_type=True,
+            **filter_args,
+        )
+    )
+
+    list_resources = []
+    for resource in resources:
+        resource = check_serialization(resource)
+        list_resources.append(resource)
+
+    # If we don't find anything matching these criteria, we should return `None`
+    if len(list_resources) == 0:
+        list_resources.append(None)
+
+    assert len(list_resources) == 1, (
+        "The filter should only match one resource, but it matches: "
+        f"[{','.join(str(resource.id) for resource in list_resources)}]"
+    )
+    return list_resources[0]
 
 
 class Result:
@@ -820,6 +880,25 @@ class Result:
         return self.results[resources[0]]
 
     def get_resource(
+        self, resource_type: str, strict_mode: bool = False, **filter_args: object
+    ) -> typing.Optional[Resource]:
+        """
+        Get a resource of the given type and given filter on the results attributes from a Result object.
+        If multiple resource match, the first one is returned. If none match, None is returned.
+
+        :param resource_type: The exact type used in the model (no super types)
+        :param strict_mode: If we need to make additional assertion when retrieving the resource:
+            - stricter filtering: matching the entity type of the resource
+            - assert only one instance
+        """
+        if strict_mode:
+            return self.get_one_resource(resource_type, **filter_args)
+        else:
+            return get_resource(
+                self.results.keys(), resource_type, strict_mode, **filter_args
+            )
+
+    def get_one_resource(
         self, resource_type: str, **filter_args: object
     ) -> typing.Optional[Resource]:
         """
@@ -828,7 +907,7 @@ class Result:
 
         :param resource_type: The exact type used in the model (no super types)
         """
-        return get_resource(self.results.keys(), resource_type, **filter_args)
+        return get_one_resource(self.results.keys(), resource_type, **filter_args)
 
 
 DeployResult = Result
@@ -1014,6 +1093,23 @@ class Project:
         protocol.json_encode({"message": ctx.logs})
 
     def get_resource(
+        self, resource_type: str, strict_mode: bool = False, **filter_args: object
+    ) -> typing.Optional[Resource]:
+        """
+        Get a resource of the given type and given filter on the resource attributes. If multiple resource match, the
+        first one is returned. If none match, None is returned.
+
+        :param resource_type: The exact type used in the model (no super types)
+        :param strict_mode: If we need to make additional assertion when retrieving the resource:
+            - stricter filtering: matching the entity type of the resource
+            - assert only one instance
+        """
+        if strict_mode:
+            return self.get_one_resource(resource_type, **filter_args)
+        else:
+            return get_resource(self.resources.values(), resource_type, **filter_args)
+
+    def get_one_resource(
         self, resource_type: str, **filter_args: object
     ) -> typing.Optional[Resource]:
         """
@@ -1022,7 +1118,7 @@ class Project:
 
         :param resource_type: The exact type used in the model (no super types)
         """
-        return get_resource(self.resources.values(), resource_type, **filter_args)
+        return get_one_resource(self.resources.values(), resource_type, **filter_args)
 
     def deploy(
         self, resource: Resource, dry_run: bool = False, run_as_root: bool = False
