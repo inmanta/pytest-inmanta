@@ -134,7 +134,7 @@ def test_close_cache(project):
     )
 
     project.deploy_resource("unittest::Resource")
-    res = project.get_resource("unittest::Resource")
+    res = project.get_one_resource("unittest::Resource")
     handler = project.get_handler(res, False)
     project.finalize_handler(handler)
     versions = handler.cache.counterforVersion.keys()
