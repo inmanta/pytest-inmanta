@@ -45,8 +45,9 @@ from tornado import ioloop
 
 import inmanta.ast
 from inmanta import compiler, config, const, module, plugins, protocol
-from inmanta.agent import cache, handler
+from inmanta.agent import cache
 from inmanta.agent import config as inmanta_config
+from inmanta.agent import handler
 from inmanta.agent.handler import HandlerContext, ResourceHandler
 from inmanta.const import ResourceState
 from inmanta.data import LogLine
@@ -994,7 +995,7 @@ class Project:
 
         c.open_version(resource.id.version)
         try:
-            p = handler.Commander.get_provider(c, agent, resource)  # type: ignore
+            p = handler.Commander.get_provider(agent, resource)  # type: ignore
             p.set_cache(c)
             p.get_file = lambda x: self.get_blob(x)  # type: ignore
             p.stat_file = lambda x: self.stat_blob(x)  # type: ignore
@@ -1450,7 +1451,6 @@ license: Test License
         return check_serialization(resource)
 
     def clean(self) -> None:
-        handler.Commander.reset()
         shutil.rmtree(os.path.join(self._test_project_dir, "libs", "unittest"))
         self.finalize_all_handlers()
         self.create_module(
