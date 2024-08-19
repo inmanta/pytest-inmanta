@@ -1,4 +1,4 @@
-# v 3.0.0 (?)
+# v 3.0.0 (2024-08-19)
 Changes in this release:
 - Remove io support to be compatible with ISO8
 - Add strict mode in `get_resource` method to  the `project` fixture and `Result` object (by default set to `False`). 
