@@ -190,3 +190,13 @@ def test_cwd(testdir):
     result = testdir.runpytest("tests/test_cwd.py")
 
     result.assert_outcomes(passed=2)
+
+
+def test_get_resource(testdir):
+    """Make sure that importing functions works."""
+
+    testdir.copy_example("testhandler")
+
+    result = testdir.runpytest("tests/test_get_resource_subtle_case.py")
+
+    result.assert_outcomes(passed=1)

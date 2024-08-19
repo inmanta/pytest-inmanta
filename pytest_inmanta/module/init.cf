@@ -68,3 +68,9 @@ end
 index IgnoreResourceInIdAttr(name)
 
 implement IgnoreResourceInIdAttr using std::none
+
+
+entity ResourceA extends Resource:
+end
+
+implement ResourceA using std::none
