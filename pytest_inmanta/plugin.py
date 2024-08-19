@@ -45,10 +45,8 @@ from tornado import ioloop
 
 import inmanta.ast
 from inmanta import compiler, config, const, module, plugins, protocol
-from inmanta.agent import cache
+from inmanta.agent import cache, handler
 from inmanta.agent import config as inmanta_config
-from inmanta.agent import handler
-from inmanta.agent import io as agent_io
 from inmanta.agent.handler import HandlerContext, ResourceHandler
 from inmanta.const import ResourceState
 from inmanta.data import LogLine
@@ -73,7 +71,6 @@ if typing.TYPE_CHECKING:
     # Local type stub for mypy that works with both pytest < 7 and pytest >=7
     # https://docs.pytest.org/en/7.1.x/_modules/_pytest/legacypath.html#TempdirFactory
     import py
-    from inmanta.agent.io.local import IOBase
 
     class TempdirFactory:
         def mktemp(self, path: str) -> py.path.local:
@@ -1221,14 +1218,6 @@ class Project:
             first_dryrun=first_dryrun, deploy=deploy, last_dryrun=last_dryrun
         )
 
-    def io(self, run_as_root: bool = False) -> "IOBase":
-        version = 1
-        if run_as_root:
-            ret = agent_io.get_io(None, "ssh://root@localhost", version)
-        else:
-            ret = agent_io.get_io(None, "local:", version)
-        return ret
-
     def create_module(self, name: str, initcf: str = "", initpy: str = "") -> None:
         module_dir = os.path.join(self._test_project_dir, "libs", name)
         os.mkdir(module_dir)
@@ -1461,6 +1450,7 @@ license: Test License
         return check_serialization(resource)
 
     def clean(self) -> None:
+        handler.Commander.reset()
         shutil.rmtree(os.path.join(self._test_project_dir, "libs", "unittest"))
         self.finalize_all_handlers()
         self.create_module(
