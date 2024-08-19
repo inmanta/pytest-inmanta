@@ -995,9 +995,10 @@ class Project:
 
         c.open_version(resource.id.version)
         try:
-            if inspect.signature(handler.Commander.get_provider) == 3:
+            # ISO8 and later no longer have the cache argument
+            try:
                 p = handler.Commander.get_provider(agent, resource)  # type: ignore
-            else:
+            except TypeError:
                 p = handler.Commander.get_provider(c, agent, resource)  # type: ignore
             p.set_cache(c)
             p.get_file = lambda x: self.get_blob(x)  # type: ignore
