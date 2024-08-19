@@ -995,7 +995,10 @@ class Project:
 
         c.open_version(resource.id.version)
         try:
-            p = handler.Commander.get_provider(agent, resource)  # type: ignore
+            if inspect.signature(handler.Commander.get_provider) == 3:
+                p = handler.Commander.get_provider(agent, resource)  # type: ignore
+            else:
+                p = handler.Commander.get_provider(c, agent, resource)  # type: ignore
             p.set_cache(c)
             p.get_file = lambda x: self.get_blob(x)  # type: ignore
             p.stat_file = lambda x: self.stat_blob(x)  # type: ignore
