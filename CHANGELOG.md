@@ -1,5 +1,6 @@
 # v 2.11.0 (?)
 Changes in this release:
+- Remove io support to be compatible with ISO8
 
 # v 2.10.0 (2024-07-05)
 Changes in this release:
