@@ -59,7 +59,7 @@ def test_dryrun(project: Project):
 
     assert ["value"] == list(result.changes.keys())
     change = result.changes["value"]
-    assert json.loads(change.json()) == {"current": "read", "desired": "write"}
+    assert change.model_dump() == {"current": "read", "desired": "write"}
 
     with pytest.raises(AssertionError):
         assert result.assert_no_changes()

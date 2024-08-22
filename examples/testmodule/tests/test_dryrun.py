@@ -19,4 +19,4 @@ def test_dryrun(project):
     changes = project.dryrun_resource("testmodule::Resource")
     assert ["value"] == list(changes.keys())
     change = changes["value"]
-    assert json.loads(change.json()) == {"current": "read", "desired": "write"}
+    assert change.model_dump == {"current": "read", "desired": "write"}
