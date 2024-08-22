@@ -4,8 +4,6 @@
     License: Apache 2.0
 """
 
-import json
-
 
 def test_dryrun(project):
     basemodel = """
@@ -19,4 +17,4 @@ def test_dryrun(project):
     changes = project.dryrun_resource("testmodule::Resource")
     assert ["value"] == list(changes.keys())
     change = changes["value"]
-    assert change.model_dump == {"current": "read", "desired": "write"}
+    assert change.model_dump() == {"current": "read", "desired": "write"}

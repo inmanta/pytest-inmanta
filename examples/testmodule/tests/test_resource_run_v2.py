@@ -4,8 +4,6 @@
     License: Apache 2.0
 """
 
-import json
-
 import pytest
 
 from inmanta import const
