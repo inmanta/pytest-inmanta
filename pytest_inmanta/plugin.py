@@ -1072,23 +1072,27 @@ class Project:
         else:
             agent = MockAgent("local:")
 
-        c.open_version(resource.id.version)
         try:
-            # ISO8 and later no longer have the cache argument
-            try:
-                p = handler.Commander.get_provider(agent, resource)  # type: ignore
-            except TypeError:
-                p = handler.Commander.get_provider(c, agent, resource)  # type: ignore
-            p.set_cache(c)
-            p.get_file = lambda x: self.get_blob(x)  # type: ignore
-            p.stat_file = lambda x: self.stat_blob(x)  # type: ignore
-            p.upload_file = lambda x, y: self.add_blob(x, y)  # type: ignore
-            p.run_sync = ioloop.IOLoop.current().run_sync  # type: ignore
-            p._client = MockClient()
-            self._handlers.add(p)
-            return p
-        except Exception as e:
-            raise e
+            c.open_version(resource.id.version)
+        except AttributeError:
+            # ISO8 and later no longer have the open_version method
+            with c:
+                try:
+                    # ISO8 and later no longer have the cache argument
+                    try:
+                        p = handler.Commander.get_provider(agent, resource)  # type: ignore
+                    except TypeError:
+                        p = handler.Commander.get_provider(c, agent, resource)  # type: ignore
+                    p.set_cache(c)
+                    p.get_file = lambda x: self.get_blob(x)  # type: ignore
+                    p.stat_file = lambda x: self.stat_blob(x)  # type: ignore
+                    p.upload_file = lambda x, y: self.add_blob(x, y)  # type: ignore
+                    p.run_sync = ioloop.IOLoop.current().run_sync  # type: ignore
+                    p._client = MockClient()
+                    self._handlers.add(p)
+                    return p
+                except Exception as e:
+                    raise e
 
     def finalize_context(self, ctx: handler.HandlerContext) -> None:
         # ensure logs can be serialized
