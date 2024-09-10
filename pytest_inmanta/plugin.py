@@ -41,7 +41,6 @@ from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple
 import pydantic
 import pytest
 import yaml
-from inmanta.agent.cache import AgentCache
 from tornado import ioloop
 
 import inmanta.ast
@@ -49,7 +48,8 @@ from inmanta import compiler, config, const, module, plugins, protocol
 from inmanta.agent import cache
 from inmanta.agent import config as inmanta_config
 from inmanta.agent import handler
-from inmanta.agent.handler import HandlerContext, ResourceHandler, HandlerAPI
+from inmanta.agent.cache import AgentCache
+from inmanta.agent.handler import HandlerContext, ResourceHandler
 from inmanta.const import ResourceState
 from inmanta.data import LogLine
 from inmanta.data.model import AttributeStateChange, ResourceIdStr
@@ -1098,7 +1098,6 @@ class Project:
             # ISO<8 rely on the open_version method
             c.open_version(resource.id.version)
             return setup_handler(c)
-
 
     def finalize_context(self, ctx: handler.HandlerContext) -> None:
         # ensure logs can be serialized
