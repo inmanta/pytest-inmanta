@@ -49,7 +49,7 @@ from inmanta.agent import cache
 from inmanta.agent import config as inmanta_config
 from inmanta.agent import handler
 from inmanta.agent.cache import AgentCache
-from inmanta.agent.handler import HandlerContext, ResourceHandler
+from inmanta.agent.handler import HandlerAPI, HandlerContext, ResourceHandler
 from inmanta.const import ResourceState
 from inmanta.data import LogLine
 from inmanta.data.model import AttributeStateChange, ResourceIdStr
@@ -1073,9 +1073,7 @@ class Project:
         else:
             agent = MockAgent("local:")
 
-        def setup_handler(
-            cache: AgentCache, provider: ResourceHandler
-        ) -> ResourceHandler:
+        def setup_handler(cache: AgentCache, provider: HandlerAPI) -> ResourceHandler:
             try:
                 provider.set_cache(cache)
                 provider.get_file = lambda x: self.get_blob(x)  # type: ignore
