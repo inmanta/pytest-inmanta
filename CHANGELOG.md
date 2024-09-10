@@ -1,5 +1,6 @@
 # v 3.1.0 (?)
 Changes in this release:
+- Add compatibility with ISO8 AgentCache
 
 # v 3.0.0 (2024-08-19)
 Changes in this release:

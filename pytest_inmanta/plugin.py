@@ -48,7 +48,8 @@ from inmanta import compiler, config, const, module, plugins, protocol
 from inmanta.agent import cache
 from inmanta.agent import config as inmanta_config
 from inmanta.agent import handler
-from inmanta.agent.handler import HandlerContext, ResourceHandler
+from inmanta.agent.cache import AgentCache
+from inmanta.agent.handler import HandlerAPI, HandlerContext, ResourceHandler
 from inmanta.const import ResourceState
 from inmanta.data import LogLine
 from inmanta.data.model import AttributeStateChange, ResourceIdStr
@@ -1072,23 +1073,27 @@ class Project:
         else:
             agent = MockAgent("local:")
 
-        c.open_version(resource.id.version)
-        try:
-            # ISO8 and later no longer have the cache argument
+        def setup_handler(cache: AgentCache, provider: HandlerAPI) -> ResourceHandler:
             try:
-                p = handler.Commander.get_provider(agent, resource)  # type: ignore
-            except TypeError:
-                p = handler.Commander.get_provider(c, agent, resource)  # type: ignore
-            p.set_cache(c)
-            p.get_file = lambda x: self.get_blob(x)  # type: ignore
-            p.stat_file = lambda x: self.stat_blob(x)  # type: ignore
-            p.upload_file = lambda x, y: self.add_blob(x, y)  # type: ignore
-            p.run_sync = ioloop.IOLoop.current().run_sync  # type: ignore
-            p._client = MockClient()
-            self._handlers.add(p)
-            return p
-        except Exception as e:
-            raise e
+                provider.set_cache(cache)
+                provider.get_file = lambda x: self.get_blob(x)  # type: ignore
+                provider.stat_file = lambda x: self.stat_blob(x)  # type: ignore
+                provider.upload_file = lambda x, y: self.add_blob(x, y)  # type: ignore
+                provider.run_sync = ioloop.IOLoop.current().run_sync  # type: ignore
+                provider._client = MockClient()
+                self._handlers.add(provider)
+                return provider
+            except Exception as e:
+                raise e
+
+        if hasattr(c, "open_version"):
+            c.open_version(resource.id.version)
+            p = handler.Commander.get_provider(c, agent, resource)  # type: ignore
+        else:
+            # ISO8 and later no longer have the cache argument
+            p = handler.Commander.get_provider(agent, resource)  # type: ignore
+
+        return setup_handler(c, p)
 
     def finalize_context(self, ctx: handler.HandlerContext) -> None:
         # ensure logs can be serialized
