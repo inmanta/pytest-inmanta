@@ -41,6 +41,7 @@ from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple
 import pydantic
 import pytest
 import yaml
+from inmanta.agent.cache import AgentCache
 from tornado import ioloop
 
 import inmanta.ast
@@ -48,7 +49,7 @@ from inmanta import compiler, config, const, module, plugins, protocol
 from inmanta.agent import cache
 from inmanta.agent import config as inmanta_config
 from inmanta.agent import handler
-from inmanta.agent.handler import HandlerContext, ResourceHandler
+from inmanta.agent.handler import HandlerContext, ResourceHandler, HandlerAPI
 from inmanta.const import ResourceState
 from inmanta.data import LogLine
 from inmanta.data.model import AttributeStateChange, ResourceIdStr
@@ -1072,27 +1073,32 @@ class Project:
         else:
             agent = MockAgent("local:")
 
-        try:
-            c.open_version(resource.id.version)
-        except AttributeError:
-            # ISO8 and later no longer have the open_version method
-            with c:
+        def setup_handler(cache: AgentCache) -> ResourceHandler:
+            try:
+                # ISO8 and later no longer have the cache argument
                 try:
-                    # ISO8 and later no longer have the cache argument
-                    try:
-                        p = handler.Commander.get_provider(agent, resource)  # type: ignore
-                    except TypeError:
-                        p = handler.Commander.get_provider(c, agent, resource)  # type: ignore
-                    p.set_cache(c)
-                    p.get_file = lambda x: self.get_blob(x)  # type: ignore
-                    p.stat_file = lambda x: self.stat_blob(x)  # type: ignore
-                    p.upload_file = lambda x, y: self.add_blob(x, y)  # type: ignore
-                    p.run_sync = ioloop.IOLoop.current().run_sync  # type: ignore
-                    p._client = MockClient()
-                    self._handlers.add(p)
-                    return p
-                except Exception as e:
-                    raise e
+                    p = handler.Commander.get_provider(agent, resource)  # type: ignore
+                except TypeError:
+                    p = handler.Commander.get_provider(cache, agent, resource)  # type: ignore
+                p.set_cache(cache)
+                p.get_file = lambda x: self.get_blob(x)  # type: ignore
+                p.stat_file = lambda x: self.stat_blob(x)  # type: ignore
+                p.upload_file = lambda x, y: self.add_blob(x, y)  # type: ignore
+                p.run_sync = ioloop.IOLoop.current().run_sync  # type: ignore
+                p._client = MockClient()
+                self._handlers.add(p)
+                return p
+            except Exception as e:
+                raise e
+
+        try:
+            with c:
+                return setup_handler(c)
+        except TypeError:
+            # ISO<8 rely on the open_version method
+            c.open_version(resource.id.version)
+            return setup_handler(c)
+
 
     def finalize_context(self, ctx: handler.HandlerContext) -> None:
         # ensure logs can be serialized
