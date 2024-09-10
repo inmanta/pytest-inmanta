@@ -137,8 +137,13 @@ def test_close_cache(project):
     res = project.get_one_resource("unittest::Resource")
     handler = project.get_handler(res, False)
     project.finalize_handler(handler)
-    versions = handler.cache.counterforVersion.keys()
-    assert len(versions) == 0
+    try:
+
+        versions = handler.cache.counterforVersion.keys()
+        assert len(versions) == 0
+    except AttributeError:
+        # ISO8+ no longer have explicitly versioned cache
+        pass
     assert len(handler.cache.cache) == 0
 
 

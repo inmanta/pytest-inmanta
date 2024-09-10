@@ -1073,31 +1073,29 @@ class Project:
         else:
             agent = MockAgent("local:")
 
-        def setup_handler(cache: AgentCache) -> ResourceHandler:
+        def setup_handler(
+            cache: AgentCache, provider: ResourceHandler
+        ) -> ResourceHandler:
             try:
-                # ISO8 and later no longer have the cache argument
-                try:
-                    p = handler.Commander.get_provider(agent, resource)  # type: ignore
-                except TypeError:
-                    p = handler.Commander.get_provider(cache, agent, resource)  # type: ignore
-                p.set_cache(cache)
-                p.get_file = lambda x: self.get_blob(x)  # type: ignore
-                p.stat_file = lambda x: self.stat_blob(x)  # type: ignore
-                p.upload_file = lambda x, y: self.add_blob(x, y)  # type: ignore
-                p.run_sync = ioloop.IOLoop.current().run_sync  # type: ignore
-                p._client = MockClient()
-                self._handlers.add(p)
-                return p
+                provider.set_cache(cache)
+                provider.get_file = lambda x: self.get_blob(x)  # type: ignore
+                provider.stat_file = lambda x: self.stat_blob(x)  # type: ignore
+                provider.upload_file = lambda x, y: self.add_blob(x, y)  # type: ignore
+                provider.run_sync = ioloop.IOLoop.current().run_sync  # type: ignore
+                provider._client = MockClient()
+                self._handlers.add(provider)
+                return provider
             except Exception as e:
                 raise e
 
-        try:
-            with c:
-                return setup_handler(c)
-        except TypeError:
-            # ISO<8 rely on the open_version method
+        if hasattr(c, "open_version"):
             c.open_version(resource.id.version)
-            return setup_handler(c)
+            p = handler.Commander.get_provider(c, agent, resource)  # type: ignore
+        else:
+            # ISO8 and later no longer have the cache argument
+            p = handler.Commander.get_provider(agent, resource)  # type: ignore
+
+        return setup_handler(c, p)
 
     def finalize_context(self, ctx: handler.HandlerContext) -> None:
         # ensure logs can be serialized
