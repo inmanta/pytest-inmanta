@@ -16,10 +16,27 @@
     Contact: code@inmanta.com
 """
 
+import contextlib
+import os
 from pathlib import Path
 from typing import Optional, Union
 
+import pytest_inmanta.plugin
 from pytest_inmanta.test_parameter.parameter import DynamicDefault, TestParameter
+
+
+@contextlib.contextmanager
+def working_dir(path: str):
+    """
+    Helper to be able to temporarily change the working directory
+    """
+    # https://stackoverflow.com/questions/75048986/way-to-temporarily-change-the-directory-in-python-to-execute-code-without-affect
+    d = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(d)
 
 
 class PathTestParameter(TestParameter[Path]):
@@ -73,7 +90,11 @@ class PathTestParameter(TestParameter[Path]):
         )
 
     def validate(self, raw_value: object) -> Path:
-        path = Path(str(raw_value)).absolute()
+
+        # Use module curdir to allow relative path
+        with working_dir(pytest_inmanta.plugin.CURDIR):
+            path = Path(str(raw_value)).absolute()
+
         if self.exists is None:
             # We don't need the file to exist, nothing to check here
             return path
