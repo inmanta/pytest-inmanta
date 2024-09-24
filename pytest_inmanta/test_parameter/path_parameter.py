@@ -92,6 +92,10 @@ class PathTestParameter(TestParameter[Path]):
     def validate(self, raw_value: object) -> Path:
 
         # Use module curdir to allow relative path
+        # This is required because wherever the shared_project fixture is used, the cwd
+        # will be changed by `Project.set()`, meaning that if the test option is resolved after
+        # the fixture is called, the relative path would point to a different place making it way
+        # harder to use said option.
         with working_dir(pytest_inmanta.plugin.CURDIR):
             path = Path(str(raw_value)).absolute()
 
