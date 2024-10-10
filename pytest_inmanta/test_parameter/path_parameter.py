@@ -27,6 +27,9 @@ from pytest_inmanta.test_parameter.parameter import DynamicDefault, TestParamete
 def abspath(path: str, *, source: str) -> str:
     """
     Compute absolute path from relative or absolute path
+
+    :param path: path of the object
+    :param source: base directory to use when the path is relative
     """
     return path if os.path.isabs(path) else os.path.abspath(os.path.join(source, path))
 
