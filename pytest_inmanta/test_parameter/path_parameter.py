@@ -16,7 +16,6 @@
     Contact: code@inmanta.com
 """
 
-import contextlib
 import os
 from pathlib import Path
 from typing import Optional, Union
@@ -25,18 +24,8 @@ import pytest_inmanta.plugin
 from pytest_inmanta.test_parameter.parameter import DynamicDefault, TestParameter
 
 
-@contextlib.contextmanager
-def working_dir(path: str):
-    """
-    Helper to be able to temporarily change the working directory
-    """
-    # https://stackoverflow.com/questions/75048986/way-to-temporarily-change-the-directory-in-python-to-execute-code-without-affect
-    d = os.getcwd()
-    os.chdir(path)
-    try:
-        yield
-    finally:
-        os.chdir(d)
+def abspath(path: str, *, source: str) -> str:
+    return path if os.path.isabs(path) else os.path.abspath(os.path.join(source, path))
 
 
 class PathTestParameter(TestParameter[Path]):
@@ -96,8 +85,9 @@ class PathTestParameter(TestParameter[Path]):
         # will be changed by `Project.set()`, meaning that if the test option is resolved after
         # the fixture is called, the relative path would point to a different place making it way
         # harder to use said option.
-        with working_dir(pytest_inmanta.plugin.CURDIR):
-            path = Path(str(raw_value)).absolute()
+        path = Path(
+            abspath(str(raw_value), source=pytest_inmanta.plugin.CURDIR)
+        ).absolute()
 
         if self.exists is None:
             # We don't need the file to exist, nothing to check here
