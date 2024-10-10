@@ -1,4 +1,4 @@
-# v 3.1.0 (?)
+# v 3.1.0 (2024-10-10)
 Changes in this release:
 - Allow to use relative path for PathTestParameter
 - Add compatibility with ISO8 AgentCache
