@@ -16,10 +16,22 @@
     Contact: code@inmanta.com
 """
 
+import os
 from pathlib import Path
 from typing import Optional, Union
 
+import pytest_inmanta.plugin
 from pytest_inmanta.test_parameter.parameter import DynamicDefault, TestParameter
+
+
+def abspath(path: str, *, source: str) -> str:
+    """
+    Compute absolute path from relative or absolute path
+
+    :param path: path of the object
+    :param source: base directory to use when the path is relative
+    """
+    return path if os.path.isabs(path) else os.path.abspath(os.path.join(source, path))
 
 
 class PathTestParameter(TestParameter[Path]):
@@ -73,7 +85,16 @@ class PathTestParameter(TestParameter[Path]):
         )
 
     def validate(self, raw_value: object) -> Path:
-        path = Path(str(raw_value)).absolute()
+
+        # Use module curdir to allow relative path
+        # This is required because wherever the shared_project fixture is used, the cwd
+        # will be changed by `Project.set()`, meaning that if the test option is resolved after
+        # the fixture is called, the relative path would point to a different place making it way
+        # harder to use said option.
+        path = Path(
+            abspath(str(raw_value), source=pytest_inmanta.plugin.CURDIR)
+        ).absolute()
+
         if self.exists is None:
             # We don't need the file to exist, nothing to check here
             return path
