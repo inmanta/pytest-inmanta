@@ -258,7 +258,8 @@ def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[obj
                             + alternative_text,
                             parameters.pip_index_url.environment_variable,
                         )
-            return json.loads(repo_info.json())
+
+            return repo_info.model_dump(mode="json")
 
     return [parse_repo(repo) for repo in repo_options]
 
@@ -413,9 +414,7 @@ def project_factory(
             raise
 
     with open(os.path.join(project_dir, "project.yml"), "w+") as fd:
-        # pydantic.BaseModel.dict() doesn't produce data that can be serialized
-        # so we first serialize it as json, then load it and dump it as yaml.
-        yaml.safe_dump(json.loads(project_metadata.json()), fd)
+        yaml.safe_dump(project_metadata.model_dump(mode="json"), fd)
 
     ensure_current_module_install(
         os.path.join(project_dir, "libs"),
