@@ -1,5 +1,6 @@
 # v 3.2.0 (?)
 Changes in this release:
+- Make sure to use pydantic v2+ methods when they are available
 
 # v 3.1.0 (2024-10-10)
 Changes in this release:
