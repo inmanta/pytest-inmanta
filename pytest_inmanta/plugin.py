@@ -156,11 +156,16 @@ def inmanta_plugins(
 
 @pytest.fixture()
 def project(
-    project_shared: "Project", capsys: "CaptureFixture", set_inmanta_state_dir: None
+    project_shared: "Project", capsys: "CaptureFixture", inmanta_state_dir: str
 ) -> typing.Iterator["Project"]:
     DATA.clear()
     project_shared.clean()
     project_shared.init(capsys)
+
+    # Set the state dir after initializing the project, as it reloads the
+    # config which would overwrite our setting
+    config.state_dir.set(inmanta_state_dir)
+
     yield project_shared
     project_shared.clean()
 
@@ -169,7 +174,7 @@ def project(
 def project_no_plugins(
     project_shared_no_plugins: "Project",
     capsys: "CaptureFixture",
-    set_inmanta_state_dir: None,
+    inmanta_state_dir: str,
 ) -> typing.Iterator["Project"]:
     warnings.warn(
         DeprecationWarning(
@@ -180,6 +185,11 @@ def project_no_plugins(
     DATA.clear()
     project_shared_no_plugins.clean()
     project_shared_no_plugins.init(capsys)
+
+    # Set the state dir after initializing the project, as it reloads the
+    # config which would overwrite our setting
+    config.state_dir.set(inmanta_state_dir)
+
     yield project_shared_no_plugins
     project_shared_no_plugins.clean()
 
