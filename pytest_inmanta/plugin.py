@@ -1,19 +1,19 @@
 """
-    Copyright 2021 Inmanta
+Copyright 2021 Inmanta
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-        http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
-    Contact: code@inmanta.com
+Contact: code@inmanta.com
 """
 
 import collections
@@ -205,7 +205,7 @@ def get_module_data(filename: str) -> str:
 
 @pytest.fixture(scope="session")
 def project_shared(
-    project_factory: typing.Callable[[typing.Dict[str, typing.Any]], "Project"]
+    project_factory: typing.Callable[[typing.Dict[str, typing.Any]], "Project"],
 ) -> Iterator["Project"]:
     """
     A test fixture that creates a new inmanta project with the current module in. The returned object can be used
@@ -217,7 +217,7 @@ def project_shared(
 # Temporary workaround for plugins loading multiple times (inmanta/pytest-inmanta#49)
 @pytest.fixture(scope="session")
 def project_shared_no_plugins(
-    project_factory: typing.Callable[[typing.Dict[str, typing.Any]], "Project"]
+    project_factory: typing.Callable[[typing.Dict[str, typing.Any]], "Project"],
 ) -> Iterator["Project"]:
     """
     A test fixture that creates a new inmanta project with the current module in. The returned object can be used

@@ -1,9 +1,9 @@
 """
-    Copyright 2018 Inmanta
-    Contact: code@inmanta.com
-    License: Apache 2.0
+Copyright 2018 Inmanta
+Contact: code@inmanta.com
+License: Apache 2.0
 
-    This file is used to test --use-module-in-place
+This file is used to test --use-module-in-place
 """
 
 
