@@ -1,5 +1,6 @@
 # v 3.2.0 (?)
 Changes in this release:
+- Format code using black 25.1.0
 - Make sure to use pydantic v2+ methods
 - Fix configuration of temporary state dir with the project fixture
 
