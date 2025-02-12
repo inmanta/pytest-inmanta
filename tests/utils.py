@@ -79,7 +79,7 @@ def module_v2_venv(
                 ]
                 subprocess.check_call(install_command)
             else:
-                mod_artifact_path = ModuleTool().build(path=module_path)
+                mod_artifact_path = ModuleTool().build(path=module_path, wheel=True)[0]
                 install_command = [
                     venv.python_path,
                     "-m",
