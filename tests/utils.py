@@ -39,6 +39,17 @@ def module_v2_venv(
     """
     Yields a Python environment with the given module installed in it.
     """
+
+    def _build_module(module_path: str):
+        """
+        Utility function to build a module and return the path to the wheel.
+        Accommodates for the api change to the moduletool.build function in core v15.1
+        """
+        if Version(inmanta.__version__) < Version("15.1"):
+            return ModuleTool().build(path=module_path)
+
+        return ModuleTool().build(path=module_path, wheel=True)[0]
+
     with tempfile.TemporaryDirectory() as venv_dir:
         # set up environment
         venv: env.VirtualEnv = env.VirtualEnv(env_path=venv_dir)
@@ -79,7 +90,7 @@ def module_v2_venv(
                 ]
                 subprocess.check_call(install_command)
             else:
-                mod_artifact_path = ModuleTool().build(path=module_path, wheel=True)[0]
+                mod_artifact_path = _build_module(module_path)
                 install_command = [
                     venv.python_path,
                     "-m",
