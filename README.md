@@ -199,7 +199,6 @@ To use pytest-inmanta to test code using References, nothing special is required
 However, when inspecting individual resources, some care is required. 
 1. After the `project.compile` call, all attributes containing reference will be `null`
 2. To get the correct value, use `project.resolve_references(resource)` this will update the resource in-place
-3. Calls to `deploy_resource_*` will also call `project.resolve_references(resource)`. This means they resources will be updated when doing a deploy.
 
 
 ```python
