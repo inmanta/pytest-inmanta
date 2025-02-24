@@ -48,3 +48,10 @@ SUPPORTS_LEGACY_PROJECT_PIP_INDEX: bool = (
 SUPPORTS_MODULES_V2: bool = (
     CORE_VERSION is not None and CORE_VERSION >= version.Version("6.dev")
 )
+
+try:
+    import inmanta.references # noqa: C801
+
+    SUPPORTS_REFERENCE = True
+except ImportError:
+    SUPPORTS_REFERENCE = False

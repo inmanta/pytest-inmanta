@@ -49,7 +49,13 @@ from inmanta.agent import cache
 from inmanta.agent import config as inmanta_config
 from inmanta.agent import handler
 from inmanta.agent.cache import AgentCache
-from inmanta.agent.handler import HandlerAPI, HandlerContext, ResourceHandler
+from inmanta.agent.handler import (
+    HandlerAPI,
+    HandlerContext,
+    LoggerABC,
+    PythonLogger,
+    ResourceHandler,
+)
 from inmanta.const import ResourceState
 from inmanta.data import LogLine
 from inmanta.data.model import AttributeStateChange, ResourceIdStr
@@ -1136,6 +1142,18 @@ class Project:
         """
         return get_one_resource(self.resources.values(), resource_type, **filter_args)
 
+    def resolve_references(
+        self, resource: Resource, ctx: LoggerABC | None = None
+    ) -> None:
+        """
+        Resolve all references in the resource
+        """
+        if hasattr(resource, "resolve_all_references"):
+            # Pre ISO 8.1 versions don't have this
+            if ctx is None:
+                ctx = PythonLogger(LOGGER)
+            resource.resolve_all_references(ctx)
+
     def deploy(
         self, resource: Resource, dry_run: bool = False, run_as_root: bool = False
     ) -> HandlerContext:
@@ -1149,6 +1167,18 @@ class Project:
         assert h is not None
 
         ctx = handler.HandlerContext(resource, dry_run=dry_run)
+        try:
+            self.resolve_references(resource, ctx)
+        except Exception as e:
+            # Resolver failure
+            ctx.set_resource_state(const.HandlerResourceState.failed)
+            ctx.exception(
+                "An error occurred during deployment of %(resource_id)s (exception: %(exception)s",
+                resource_id=str(resource.id),
+                exception=repr(e),
+            )
+            return ctx
+        # Normal execution
         h.execute(ctx, resource, dry_run)
         self.finalize_context(ctx)
         self.ctx = ctx
@@ -1217,7 +1247,19 @@ class Project:
                 ctx.set_status(ResourceState.skipped)
             else:
                 LOGGER.debug("Start executing %s", resource.id)
-                h.execute(ctx, resource)
+                try:
+                    self.resolve_references(resource, ctx)
+                except Exception as e:
+                    # Resolver failure
+                    ctx.set_resource_state(const.HandlerResourceState.failed)
+                    ctx.exception(
+                        "An error occurred during deployment of %(resource_id)s (exception: %(exception)s",
+                        resource_id=str(resource.id),
+                        exception=repr(e),
+                    )
+                else:
+                    # Normal execution
+                    h.execute(ctx, resource)
                 LOGGER.debug("Done executing %s", resource.id)
             self.finalize_context(ctx)
             self.finalize_handler(h)
@@ -1615,7 +1657,19 @@ license: Test License
         assert h is not None
 
         ctx = handler.HandlerContext(resource, dry_run=dry_run)
-        h.execute(ctx, resource, dry_run)
+        try:
+            self.resolve_references(resource, ctx)
+        except Exception as e:
+            # Resolver failure
+            ctx.set_resource_state(const.HandlerResourceState.failed)
+            ctx.exception(
+                "An error occurred during deployment of %(resource_id)s (exception: %(exception)s",
+                resource_id=str(resource.id),
+                exception=repr(e),
+            )
+        else:
+            # Normal execution
+            h.execute(ctx, resource, dry_run)
         self.finalize_context(ctx)
         self.finalize_handler(h)
 
