@@ -10,7 +10,7 @@ class StringReference(Reference[str]):
 
     def __init__(self, name: str | Reference[str]) -> None:
         """
-        :param name: The name of the environment variable.
+        :param name: The referenced string. Can be either a regular string, or another reference to a string.
         """
         super().__init__()
         self.name = name

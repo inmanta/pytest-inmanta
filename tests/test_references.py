@@ -1,5 +1,5 @@
 """
-Copyright 2021 Inmanta
+Copyright 2025 Inmanta
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ if not SUPPORTS_REFERENCE:
 
 def test_basic_refs(testdir: pytest.Testdir, deactive_venv) -> None:
     """
-    Make sure that the plugin reports an informative error if the module under test is not installed.
+    Run the references tests.
     """
     module_dir = testdir.copy_example("refs")
     with utils.module_v2_venv(module_dir, editable_install=True) as venv:

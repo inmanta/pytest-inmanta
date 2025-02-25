@@ -194,11 +194,11 @@ A test case, to test this plugin looks like this:
 
 ## References
 
-To use pytest-inmanta to test code using References, nothing special is required when using the `deploy_resource_*` endpoints
+To use pytest-inmanta to test code using References, nothing special is required when using the `deploy_resource_*` endpoints.
 
 However, when inspecting individual resources, some care is required. 
-1. After the `project.compile` call, all attributes containing reference will be `null`
-2. To get the correct value, use `project.resolve_references(resource)` this will update the resource in-place
+1. After the `project.compile` call, all attributes containing reference will be `null`.
+2. To get the correct value, use `project.resolve_references(resource)`. This will update the resource in-place.
 
 
 ```python
@@ -207,7 +207,7 @@ def test_refs(project):
     import refs
 
     ref = refs::create_string_reference(name="test")
-    refs::NullResource(name="T1",agentname="a1", value=ref)
+    refs::NullResource(name="T1", agentname="a1", value=ref)
     """)
 
     the_resource = project.get_resource("refs::NullResource")
