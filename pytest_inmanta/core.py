@@ -50,7 +50,7 @@ SUPPORTS_MODULES_V2: bool = (
 )
 
 try:
-    import inmanta.references # noqa: C801
+    import inmanta.references  # noqa: F401
 
     SUPPORTS_REFERENCE = True
 except ImportError:
