@@ -111,7 +111,7 @@ def test_basic_example_no_install(testdir: pytest.Testdir) -> None:
     result.stdout.re_match_lines(
         [
             r".*Exception: The module being tested is not installed in the current Python environment\."
-            r" Please install it with `inmanta module install -e \.` before running the tests\..*"
+            r" Please install it with `pip install -e \.` before running the tests\..*"
         ]
     )
 
