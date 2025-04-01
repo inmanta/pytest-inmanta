@@ -94,7 +94,7 @@ def test_basic_example(
             assert (
                 "The module being tested is not installed in editable mode."
                 " As a result the tests will not pick up any changes to the local source files."
-                " To install it in editable mode, run `inmanta module install -e .`."
+                " To install it in editable mode, run `pip install -e .`."
                 in caplog.messages
             )
 

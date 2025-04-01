@@ -475,12 +475,12 @@ def ensure_current_module_install(v1_modules_dir: str, in_place: bool = False) -
         if installed is None:
             raise Exception(
                 "The module being tested is not installed in the current Python environment. Please install it with"
-                " `inmanta module install -e .` before running the tests."
+                " `pip install -e .` before running the tests."
             )
         if not installed.is_editable():
             LOGGER.warning(
                 "The module being tested is not installed in editable mode. As a result the tests will not pick up any changes"
-                " to the local source files. To install it in editable mode, run `inmanta module install -e .`."
+                " to the local source files. To install it in editable mode, run `pip install -e .`."
             )
 
 
