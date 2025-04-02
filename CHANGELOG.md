@@ -1,4 +1,11 @@
-# v 3.1.0 (?)
+# v 3.2.0 (?)
+Changes in this release:
+- Add support for references
+- Format code using black 25.1.0
+- Make sure to use pydantic v2+ methods
+- Fix configuration of temporary state dir with the project fixture
+
+# v 3.1.0 (2024-10-10)
 Changes in this release:
 - Allow to use relative path for PathTestParameter
 - Add compatibility with ISO8 AgentCache

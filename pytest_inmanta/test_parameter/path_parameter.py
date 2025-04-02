@@ -1,22 +1,21 @@
 """
-    Copyright 2022 Inmanta
+Copyright 2022 Inmanta
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-        http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
-    Contact: code@inmanta.com
+Contact: code@inmanta.com
 """
 
-import contextlib
 import os
 from pathlib import Path
 from typing import Optional, Union
@@ -25,18 +24,14 @@ import pytest_inmanta.plugin
 from pytest_inmanta.test_parameter.parameter import DynamicDefault, TestParameter
 
 
-@contextlib.contextmanager
-def working_dir(path: str):
+def abspath(path: str, *, source: str) -> str:
     """
-    Helper to be able to temporarily change the working directory
+    Compute absolute path from relative or absolute path
+
+    :param path: path of the object
+    :param source: base directory to use when the path is relative
     """
-    # https://stackoverflow.com/questions/75048986/way-to-temporarily-change-the-directory-in-python-to-execute-code-without-affect
-    d = os.getcwd()
-    os.chdir(path)
-    try:
-        yield
-    finally:
-        os.chdir(d)
+    return path if os.path.isabs(path) else os.path.abspath(os.path.join(source, path))
 
 
 class PathTestParameter(TestParameter[Path]):
@@ -96,8 +91,9 @@ class PathTestParameter(TestParameter[Path]):
         # will be changed by `Project.set()`, meaning that if the test option is resolved after
         # the fixture is called, the relative path would point to a different place making it way
         # harder to use said option.
-        with working_dir(pytest_inmanta.plugin.CURDIR):
-            path = Path(str(raw_value)).absolute()
+        path = Path(
+            abspath(str(raw_value), source=pytest_inmanta.plugin.CURDIR)
+        ).absolute()
 
         if self.exists is None:
             # We don't need the file to exist, nothing to check here

@@ -1,7 +1,7 @@
 """
-    Copyright 2022 Inmanta
-    Contact: code@inmanta.com
-    License: Apache 2.0
+Copyright 2022 Inmanta
+Contact: code@inmanta.com
+License: Apache 2.0
 """
 
 import os
