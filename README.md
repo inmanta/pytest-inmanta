@@ -10,7 +10,7 @@ pip install pytest-inmanta
 
 If you want to use `pytest-inmanta` to test a v2 module, make sure to install the module:
 ```bash
-inmanta module install -e .
+pip install -e .
 ```
 
 ## Usage
