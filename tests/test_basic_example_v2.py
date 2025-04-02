@@ -94,7 +94,7 @@ def test_basic_example(
             assert (
                 "The module being tested is not installed in editable mode."
                 " As a result the tests will not pick up any changes to the local source files."
-                " To install it in editable mode, run `inmanta module install -e .`."
+                " To install it in editable mode, run `pip install -e .`."
                 in caplog.messages
             )
 
@@ -111,7 +111,7 @@ def test_basic_example_no_install(testdir: pytest.Testdir) -> None:
     result.stdout.re_match_lines(
         [
             r".*Exception: The module being tested is not installed in the current Python environment\."
-            r" Please install it with `inmanta module install -e \.` before running the tests\..*"
+            r" Please install it with `pip install -e \.` before running the tests\..*"
         ]
     )
 
