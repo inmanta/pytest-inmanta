@@ -1,4 +1,4 @@
-# v 3.2.0 (?)
+# v 3.2.0 (2025-04-09)
 Changes in this release:
 - Add support for references
 - Format code using black 25.1.0
