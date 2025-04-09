@@ -1,7 +1,7 @@
 """
-    Copyright 2020 Inmanta
-    Contact: code@inmanta.com
-    License: Apache 2.0
+Copyright 2020 Inmanta
+Contact: code@inmanta.com
+License: Apache 2.0
 """
 
 from typing import List

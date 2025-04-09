@@ -1,5 +1,5 @@
 """
-Copyright 2022 Inmanta
+Copyright 2025 Inmanta
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,10 +16,25 @@ limitations under the License.
 Contact: code@inmanta.com
 """
 
+import pytest
 
-def test_full_deploys(testdir):
-    testdir.copy_example("testhandler")
+import utils
+from pytest_inmanta.core import SUPPORTS_REFERENCE
 
-    result = testdir.runpytest("tests/test_full_deploy.py")
+if not SUPPORTS_REFERENCE:
+    pytest.skip(
+        "Skipping reference tests.",
+        allow_module_level=True,
+    )
+
+
+def test_basic_refs(testdir: pytest.Testdir, deactive_venv) -> None:
+    """
+    Run the references tests.
+    """
+    module_dir = testdir.copy_example("refs")
+    with utils.module_v2_venv(module_dir, editable_install=True) as venv:
+        with utils.activate_venv(venv):
+            result = testdir.runpytest_inprocess("tests/test_refs.py")
 
     result.assert_outcomes(passed=1)

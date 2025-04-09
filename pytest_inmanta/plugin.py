@@ -1,19 +1,19 @@
 """
-    Copyright 2021 Inmanta
+Copyright 2021 Inmanta
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-        http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
-    Contact: code@inmanta.com
+Contact: code@inmanta.com
 """
 
 import collections
@@ -49,7 +49,13 @@ from inmanta.agent import cache
 from inmanta.agent import config as inmanta_config
 from inmanta.agent import handler
 from inmanta.agent.cache import AgentCache
-from inmanta.agent.handler import HandlerAPI, HandlerContext, ResourceHandler
+from inmanta.agent.handler import (
+    HandlerAPI,
+    HandlerContext,
+    LoggerABC,
+    PythonLogger,
+    ResourceHandler,
+)
 from inmanta.const import ResourceState
 from inmanta.data import LogLine
 from inmanta.data.model import AttributeStateChange, ResourceIdStr
@@ -156,11 +162,16 @@ def inmanta_plugins(
 
 @pytest.fixture()
 def project(
-    project_shared: "Project", capsys: "CaptureFixture", set_inmanta_state_dir: None
+    project_shared: "Project", capsys: "CaptureFixture", inmanta_state_dir: str
 ) -> typing.Iterator["Project"]:
     DATA.clear()
     project_shared.clean()
     project_shared.init(capsys)
+
+    # Set the state dir after initializing the project, as it reloads the
+    # config which would overwrite our setting
+    config.state_dir.set(inmanta_state_dir)
+
     yield project_shared
     project_shared.clean()
 
@@ -169,7 +180,7 @@ def project(
 def project_no_plugins(
     project_shared_no_plugins: "Project",
     capsys: "CaptureFixture",
-    set_inmanta_state_dir: None,
+    inmanta_state_dir: str,
 ) -> typing.Iterator["Project"]:
     warnings.warn(
         DeprecationWarning(
@@ -180,6 +191,11 @@ def project_no_plugins(
     DATA.clear()
     project_shared_no_plugins.clean()
     project_shared_no_plugins.init(capsys)
+
+    # Set the state dir after initializing the project, as it reloads the
+    # config which would overwrite our setting
+    config.state_dir.set(inmanta_state_dir)
+
     yield project_shared_no_plugins
     project_shared_no_plugins.clean()
 
@@ -195,7 +211,7 @@ def get_module_data(filename: str) -> str:
 
 @pytest.fixture(scope="session")
 def project_shared(
-    project_factory: typing.Callable[[typing.Dict[str, typing.Any]], "Project"]
+    project_factory: typing.Callable[[typing.Dict[str, typing.Any]], "Project"],
 ) -> Iterator["Project"]:
     """
     A test fixture that creates a new inmanta project with the current module in. The returned object can be used
@@ -207,7 +223,7 @@ def project_shared(
 # Temporary workaround for plugins loading multiple times (inmanta/pytest-inmanta#49)
 @pytest.fixture(scope="session")
 def project_shared_no_plugins(
-    project_factory: typing.Callable[[typing.Dict[str, typing.Any]], "Project"]
+    project_factory: typing.Callable[[typing.Dict[str, typing.Any]], "Project"],
 ) -> Iterator["Project"]:
     """
     A test fixture that creates a new inmanta project with the current module in. The returned object can be used
@@ -258,7 +274,8 @@ def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[obj
                             + alternative_text,
                             parameters.pip_index_url.environment_variable,
                         )
-            return json.loads(repo_info.json())
+
+            return repo_info.model_dump(mode="json")
 
     return [parse_repo(repo) for repo in repo_options]
 
@@ -413,9 +430,7 @@ def project_factory(
             raise
 
     with open(os.path.join(project_dir, "project.yml"), "w+") as fd:
-        # pydantic.BaseModel.dict() doesn't produce data that can be serialized
-        # so we first serialize it as json, then load it and dump it as yaml.
-        yaml.safe_dump(json.loads(project_metadata.json()), fd)
+        yaml.safe_dump(project_metadata.model_dump(mode="json"), fd)
 
     ensure_current_module_install(
         os.path.join(project_dir, "libs"),
@@ -475,12 +490,12 @@ def ensure_current_module_install(v1_modules_dir: str, in_place: bool = False) -
         if installed is None:
             raise Exception(
                 "The module being tested is not installed in the current Python environment. Please install it with"
-                " `inmanta module install -e .` before running the tests."
+                " `pip install -e .` before running the tests."
             )
         if not installed.is_editable():
             LOGGER.warning(
                 "The module being tested is not installed in editable mode. As a result the tests will not pick up any changes"
-                " to the local source files. To install it in editable mode, run `inmanta module install -e .`."
+                " to the local source files. To install it in editable mode, run `pip install -e .`."
             )
 
 
@@ -1127,6 +1142,18 @@ class Project:
         """
         return get_one_resource(self.resources.values(), resource_type, **filter_args)
 
+    def resolve_references(
+        self, resource: Resource, ctx: LoggerABC | None = None
+    ) -> None:
+        """
+        Resolve all references in the resource
+        """
+        if hasattr(resource, "resolve_all_references"):
+            # Pre ISO 8.1 versions don't have this
+            if ctx is None:
+                ctx = PythonLogger(LOGGER)
+            resource.resolve_all_references(ctx)
+
     def deploy(
         self, resource: Resource, dry_run: bool = False, run_as_root: bool = False
     ) -> HandlerContext:
@@ -1140,6 +1167,18 @@ class Project:
         assert h is not None
 
         ctx = handler.HandlerContext(resource, dry_run=dry_run)
+        try:
+            self.resolve_references(resource, ctx)
+        except Exception as e:
+            # Resolver failure
+            ctx.set_resource_state(const.HandlerResourceState.failed)
+            ctx.exception(
+                "An error occurred during deployment of %(resource_id)s (exception: %(exception)s",
+                resource_id=str(resource.id),
+                exception=repr(e),
+            )
+            return ctx
+        # Normal execution
         h.execute(ctx, resource, dry_run)
         self.finalize_context(ctx)
         self.ctx = ctx
@@ -1208,7 +1247,19 @@ class Project:
                 ctx.set_status(ResourceState.skipped)
             else:
                 LOGGER.debug("Start executing %s", resource.id)
-                h.execute(ctx, resource)
+                try:
+                    self.resolve_references(resource, ctx)
+                except Exception as e:
+                    # Resolver failure
+                    ctx.set_resource_state(const.HandlerResourceState.failed)
+                    ctx.exception(
+                        "An error occurred during deployment of %(resource_id)s (exception: %(exception)s",
+                        resource_id=str(resource.id),
+                        exception=repr(e),
+                    )
+                else:
+                    # Normal execution
+                    h.execute(ctx, resource)
                 LOGGER.debug("Done executing %s", resource.id)
             self.finalize_context(ctx)
             self.finalize_handler(h)
@@ -1606,7 +1657,19 @@ license: Test License
         assert h is not None
 
         ctx = handler.HandlerContext(resource, dry_run=dry_run)
-        h.execute(ctx, resource, dry_run)
+        try:
+            self.resolve_references(resource, ctx)
+        except Exception as e:
+            # Resolver failure
+            ctx.set_resource_state(const.HandlerResourceState.failed)
+            ctx.exception(
+                "An error occurred during deployment of %(resource_id)s (exception: %(exception)s",
+                resource_id=str(resource.id),
+                exception=repr(e),
+            )
+        else:
+            # Normal execution
+            h.execute(ctx, resource, dry_run)
         self.finalize_context(ctx)
         self.finalize_handler(h)
 

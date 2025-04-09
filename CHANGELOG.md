@@ -1,3 +1,11 @@
+# v 3.2.0 (2025-04-09)
+Changes in this release:
+- Add support for references
+- Format code using black 25.1.0
+- Make sure to use pydantic v2+ methods
+- Fix configuration of temporary state dir with the project fixture
+- Remove reference to deprecated module install command
+
 # v 3.1.0 (2024-10-10)
 Changes in this release:
 - Allow to use relative path for PathTestParameter

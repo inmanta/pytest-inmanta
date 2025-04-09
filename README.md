@@ -10,7 +10,7 @@ pip install pytest-inmanta
 
 If you want to use `pytest-inmanta` to test a v2 module, make sure to install the module:
 ```bash
-inmanta module install -e .
+pip install -e .
 ```
 
 ## Usage
@@ -191,6 +191,35 @@ A test case, to test this plugin looks like this:
 * **Line 6:** Calls the function `project.get_plugin_function(plugin_name: str): FunctionType`, which returns the plugin
   function named `plugin_name`. As such, this line tests whether `host` is returned when the plugin function
   `hostname` is called with the parameter `fqdn`.
+
+## References
+
+To use pytest-inmanta to test code using References, nothing special is required when using the `deploy_resource_*` endpoints.
+
+However, when inspecting individual resources, some care is required. 
+1. After the `project.compile` call, all attributes containing reference will be `null`.
+2. To get the correct value, use `project.resolve_references(resource)`. This will update the resource in-place.
+
+
+```python
+def test_refs(project):
+    project.compile("""
+    import refs
+
+    ref = refs::create_string_reference(name="test")
+    refs::NullResource(name="T1", agentname="a1", value=ref)
+    """)
+
+    the_resource = project.get_resource("refs::NullResource")
+    # After compile, references are None
+    assert the_resource.value is None
+    project.resolve_references(the_resource)
+    # After resolving, they get their final value
+    assert the_resource.value == "test"
+
+    # The copy stored in the project fixture is not updated!
+    assert project.get_resource("refs::NullResource").value is None
+```
 
 ## Advanced usage
 
