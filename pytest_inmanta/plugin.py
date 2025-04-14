@@ -1435,7 +1435,7 @@ license: Test License
         # Reset logging before compile to avoid leaking objects from previous compiles
         for handler in logging.getLogger().handlers:
             if isinstance(handler, _pytest.logging.LogCaptureHandler):
-                handler.clear()
+                handler.records.clear()
 
         # logging model with line numbers
         def enumerate_model(model: str):
