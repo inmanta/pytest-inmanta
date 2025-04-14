@@ -43,6 +43,7 @@ import pytest
 import yaml
 from tornado import ioloop
 
+import _pytest.logging  # Unsafe import, paired with explicit version constraint on pytest
 import inmanta.ast
 from inmanta import compiler, config, const, module, plugins, protocol
 from inmanta.agent import cache
@@ -1431,6 +1432,10 @@ license: Test License
         :param export: Whether the model should be exported after the compile
         :param no_dedent: Don't remove additional indentation in the model
         """
+        # Reset logging before compile to avoid leaking objects from previous compiles
+        for handler in logging.getLogger().handlers:
+            if isinstance(handler, _pytest.logging.LogCaptureHandler):
+                handler.clear()
 
         # logging model with line numbers
         def enumerate_model(model: str):
