@@ -40,7 +40,15 @@ setup(
     include_package_data=True,
     packages=find_packages(),
     zip_safe=False,
-    install_requires=["pytest", "inmanta-core", "pydantic", "pyyaml"],
+    install_requires=[
+        # Constraint the version of pytest because we have some imports which are
+        # not part of the stable api.  i.e. import _pytest.logging
+        # The version constraint should be increased by dependabot
+        "pytest<8.4",
+        "inmanta-core",
+        "pydantic",
+        "pyyaml",
+    ],
     entry_points={
         "pytest11": ["inmanta = pytest_inmanta.plugin"],
     },
