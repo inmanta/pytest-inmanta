@@ -1,5 +1,6 @@
 # v 3.3.0 (?)
 Changes in this release:
+- Fix memory leak caused by pytest LogCaptureHandler.  Address it by clearing the old in-memory logs before each compile.
 
 # v 3.2.0 (2025-04-09)
 Changes in this release:
