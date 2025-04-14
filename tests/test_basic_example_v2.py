@@ -95,7 +95,7 @@ def test_basic_example(
                 "The module being tested is not installed in editable mode."
                 " As a result the tests will not pick up any changes to the local source files."
                 " To install it in editable mode, run `pip install -e .`."
-                in caplog.messages
+                in caplog.text
             )
 
 
