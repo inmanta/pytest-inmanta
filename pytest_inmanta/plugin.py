@@ -1433,9 +1433,9 @@ license: Test License
         :param no_dedent: Don't remove additional indentation in the model
         """
         # Reset logging before compile to avoid leaking objects from previous compiles
-        for handler in logging.getLogger().handlers:
-            if isinstance(handler, _pytest.logging.LogCaptureHandler):
-                handler.records.clear()
+        for log_handler in logging.getLogger().handlers:
+            if isinstance(log_handler, _pytest.logging.LogCaptureHandler):
+                log_handler.records.clear()
 
         # logging model with line numbers
         def enumerate_model(model: str):
