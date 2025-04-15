@@ -1440,7 +1440,7 @@ license: Test License
             for log_handler in logging.getLogger().handlers:
                 if isinstance(log_handler, _pytest.logging.LogCaptureHandler):
                     log_handler.records.clear()
-        except ImportError:
+        except (ImportError, AttributeError):
             # Nothing to do, hopefully the leak induced by the logs will not trigger to
             # many issues until pytest-inmanta is updated
             pass

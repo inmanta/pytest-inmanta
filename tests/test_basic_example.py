@@ -16,7 +16,22 @@ limitations under the License.
 Contact: code@inmanta.com
 """
 
+import logging
+
 # Note: These tests only function when the pytest output is not modified by plugins such as pytest-sugar!
+
+
+def test_pytest_logging_import():
+    """
+    This test case asserts that some component of pytest unstable/unofficial api don't
+    change in a way that would impact us.  If this test fails, we need to update the
+    log clearing logic at the start of the `Project.compile` method, to avoid significant
+    memory leaks in test suites running many compiles or complex models.
+    """
+    import _pytest.logging
+
+    assert hasattr(_pytest.logging, "LogCaptureHandler")
+    assert issubclass(_pytest.logging.LogCaptureHandler, logging.StreamHandler)
 
 
 def test_basic_example(testdir):
