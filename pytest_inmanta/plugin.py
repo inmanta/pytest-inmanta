@@ -43,7 +43,6 @@ import pytest
 import yaml
 from tornado import ioloop
 
-import _pytest.logging  # Unsafe import, paired with explicit version constraint on pytest
 import inmanta.ast
 from inmanta import compiler, config, const, module, plugins, protocol
 from inmanta.agent import cache
@@ -1432,10 +1431,19 @@ license: Test License
         :param export: Whether the model should be exported after the compile
         :param no_dedent: Don't remove additional indentation in the model
         """
-        # Reset logging before compile to avoid leaking objects from previous compiles
-        for log_handler in logging.getLogger().handlers:
-            if isinstance(log_handler, _pytest.logging.LogCaptureHandler):
-                log_handler.records.clear()
+        try:
+            # Try to import this package, which is not part of pytest's stable api
+            # If the import fails, simply don't clean up the old logs
+            import _pytest.logging
+
+            # Reset logging before compile to avoid leaking objects from previous compiles
+            for log_handler in logging.getLogger().handlers:
+                if isinstance(log_handler, _pytest.logging.LogCaptureHandler):
+                    log_handler.records.clear()
+        except ImportError:
+            # Nothing to do, hopefully the leak induced by the logs will not trigger to
+            # many issues until pytest-inmanta is updated
+            pass
 
         # logging model with line numbers
         def enumerate_model(model: str):

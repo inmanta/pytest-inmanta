@@ -41,10 +41,7 @@ setup(
     packages=find_packages(),
     zip_safe=False,
     install_requires=[
-        # Constraint the version of pytest because we have some imports which are
-        # not part of the stable api.  i.e. import _pytest.logging
-        # The version constraint should be increased by dependabot
-        "pytest<8.4",
+        "pytest",
         "inmanta-core",
         "pydantic",
         "pyyaml",
