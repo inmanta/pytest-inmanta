@@ -70,5 +70,5 @@ class SkipReference(Reference[str]):
 
 
 @plugin
-def create_skip_reference(name: Reference[str] | str) -> Reference[str]:
+def create_skip_reference() -> Reference[str]:
     return SkipReference()

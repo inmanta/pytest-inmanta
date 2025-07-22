@@ -1172,7 +1172,11 @@ class Project:
             self.resolve_references(resource, ctx)
         except SkipResource as e:
             ctx.set_resource_state(const.HandlerResourceState.skipped)
-            ctx.warning("Resource %(resource_id)s was skipped: %(msg)s", resource_id=str(resource.id), msg=repr(e))
+            ctx.warning(
+                "Resource %(resource_id)s was skipped: %(exception)s",
+                resource_id=str(resource.id),
+                exception=repr(e),
+            )
             return ctx
 
         except Exception as e:
