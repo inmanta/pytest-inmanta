@@ -55,6 +55,7 @@ from inmanta.agent.handler import (
     LoggerABC,
     PythonLogger,
     ResourceHandler,
+    SkipResource,
 )
 from inmanta.const import ResourceState
 from inmanta.data import LogLine
@@ -1169,6 +1170,11 @@ class Project:
         ctx = handler.HandlerContext(resource, dry_run=dry_run)
         try:
             self.resolve_references(resource, ctx)
+        except SkipResource as e:
+            ctx.set_resource_state(const.HandlerResourceState.skipped)
+            ctx.warning("Resource %(resource_id)s was skipped: %(msg)s", resource_id=str(resource.id), msg=repr(e))
+            return ctx
+
         except Exception as e:
             # Resolver failure
             ctx.set_resource_state(const.HandlerResourceState.failed)

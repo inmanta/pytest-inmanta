@@ -16,6 +16,7 @@ limitations under the License.
 Contact: code@inmanta.com
 """
 
+import inmanta
 
 def test_refs(project):
     project.compile(
@@ -36,3 +37,20 @@ def test_refs(project):
 
     # The copy stored in the project fixture is not updated!
     assert project.get_resource("refs::NullResource").value is None
+
+def test_skipped_refs(project):
+    project.compile(
+        """
+    import refs
+
+    ref = refs::create_skip_reference()
+    refs::NullResource(name="T1",agentname="a1", value=ref)
+    """
+    )
+
+    the_resource = project.get_resource("refs::NullResource")
+    # After compile, references are None
+    assert the_resource.value is None
+    assert project.deploy_resource(
+        "refs::NullResource", status=inmanta.const.ResourceState.skipped
+    )

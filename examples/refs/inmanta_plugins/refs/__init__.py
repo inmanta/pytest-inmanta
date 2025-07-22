@@ -16,7 +16,7 @@ limitations under the License.
 Contact: code@inmanta.com
 """
 
-from inmanta.agent.handler import LoggerABC
+from inmanta.agent.handler import LoggerABC, SkipResource
 from inmanta.plugins import plugin
 from inmanta.references import Reference, reference
 from inmanta.resources import ManagedResource, PurgeableResource, resource
@@ -49,3 +49,26 @@ def create_string_reference(name: Reference[str] | str) -> Reference[str]:
 @resource("refs::NullResource", agent="agentname", id_attribute="name")
 class Null(ManagedResource, PurgeableResource):
     fields = ("name", "agentname", "fail", "value")
+
+
+@reference("refs::Skip")
+class SkipReference(Reference[str]):
+    """A dummy reference to a string"""
+
+    def __init__(self) -> None:
+        """
+        :param name: The referenced string. Can be either a regular string, or another reference to a string.
+        """
+        super().__init__()
+
+    def resolve(self, logger: LoggerABC) -> str:
+        """Resolve the reference"""
+        raise SkipResource("Skipped")
+
+    def __repr__(self) -> str:
+        return "SkipReference"
+
+
+@plugin
+def create_skip_reference(name: Reference[str] | str) -> Reference[str]:
+    return SkipReference()
