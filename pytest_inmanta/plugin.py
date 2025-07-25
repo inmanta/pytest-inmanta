@@ -1479,7 +1479,15 @@ license: Test License
 
         exporter = Exporter()
 
-        version, resources = exporter.run(types, scopes, no_commit=not export)
+        if "environment_settings" in module.ProjectMetadata.model_fields:
+            # We are running against a new version of inmanta-core that has support
+            # to push environment_settings to the server. Only push environment settings
+            # on export.
+            version, resources = exporter.run(
+                types, scopes, no_commit=not export, export_env_var_settings=export
+            )
+        else:
+            version, resources = exporter.run(types, scopes, no_commit=not export)
 
         for key, blob in exporter._file_store.items():
             self.add_blob(key, blob)
