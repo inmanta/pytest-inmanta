@@ -2,6 +2,7 @@
 Changes in this release:
 - Add support for skip in reference
 - Fix memory leak caused by pytest LogCaptureHandler.  Address it by clearing the old in-memory logs before each compile.
+- Fix incompatibility with versions of inmanta-core that have support to push environment settings to the server.
 
 # v 3.2.0 (2025-04-09)
 Changes in this release:
