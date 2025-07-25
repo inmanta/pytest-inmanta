@@ -1433,7 +1433,13 @@ license: Test License
             # Save the uri for this agent name
             self.agent_map[resource.agentname] = resource.uri
 
-    def compile(self, main: str, export: bool = False, no_dedent: bool = True) -> None:
+    def compile(
+        self,
+        main: str,
+        export: bool = False,
+        no_dedent: bool = True,
+        export_env_var_settings: bool = False,
+    ) -> None:
         """
         Compile the configuration model in main. This method will load all required modules.
 
@@ -1484,7 +1490,7 @@ license: Test License
             # to push environment_settings to the server. Only push environment settings
             # on export.
             version, resources = exporter.run(
-                types, scopes, no_commit=not export, export_env_var_settings=export
+                types, scopes, no_commit=not export, export_env_var_settings=export_env_var_settings
             )
         else:
             version, resources = exporter.run(types, scopes, no_commit=not export)
