@@ -156,9 +156,9 @@ def get_module() -> typing.Tuple[module.Module, str]:
 @pytest.fixture()
 def inmanta_plugins(
     project: "Project",
-) -> typing.Iterator["InmantaPluginsImportLoader"]:
-    importer: InmantaPluginsImporter = InmantaPluginsImporter(project)
-    yield importer.loader
+) -> typing.Iterator[ModuleType]:
+    plugins_package = importlib.import_module(const.PLUGINS_PACKAGE)
+    yield plugins_package
 
 
 @pytest.fixture()
