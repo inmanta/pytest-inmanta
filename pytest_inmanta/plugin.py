@@ -652,10 +652,6 @@ class ProjectLoader:
         # deregister plugins
         plugins.PluginMeta.clear()
 
-        # load the project
-        if hasattr(project, "install_modules"):
-            # more recent versions of core require explicit modules installation (ISO5+)
-            project.install_modules()
         project.load()
 
         # complete the set of registered plugins from the previously registered ones
