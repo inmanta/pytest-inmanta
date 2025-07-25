@@ -1429,7 +1429,13 @@ license: Test License
             # Save the uri for this agent name
             self.agent_map[resource.agentname] = resource.uri
 
-    def compile(self, main: str, export: bool = False, no_dedent: bool = True) -> None:
+    def compile(
+        self,
+        main: str,
+        export: bool = False,
+        no_dedent: bool = True,
+        export_env_var_settings: bool = False,
+    ) -> None:
         """
         Compile the configuration model in main. This method will load all required modules.
 
@@ -1475,7 +1481,18 @@ license: Test License
 
         exporter = Exporter()
 
-        version, resources = exporter.run(types, scopes, no_commit=not export)
+        if "environment_settings" in module.ProjectMetadata.model_fields:
+            # We are running against a new version of inmanta-core that has support
+            # to push environment_settings to the server. Only push environment settings
+            # on export.
+            version, resources = exporter.run(
+                types,
+                scopes,
+                no_commit=not export,
+                export_env_var_settings=export_env_var_settings,
+            )
+        else:
+            version, resources = exporter.run(types, scopes, no_commit=not export)
 
         for key, blob in exporter._file_store.items():
             self.add_blob(key, blob)
