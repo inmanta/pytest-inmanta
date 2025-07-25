@@ -39,7 +39,8 @@ def test_inmanta_plugins_fixture(inmanta_plugins):
     assert inmanta_plugins.testmodule.regular_function() == "imported"
     assert inmanta_plugins.testmodule.submod.submod_loaded is True
     with pytest.raises(
-        AttributeError, match="No inmanta module named non_existant_module"
+        AttributeError,
+        match="module 'inmanta_plugins' has no attribute 'non_existant_module'",
     ):
         inmanta_plugins.non_existant_module
 

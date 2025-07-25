@@ -156,9 +156,9 @@ def get_module() -> typing.Tuple[module.Module, str]:
 @pytest.fixture()
 def inmanta_plugins(
     project: "Project",
-) -> typing.Iterator["InmantaPluginsImportLoader"]:
-    importer: InmantaPluginsImporter = InmantaPluginsImporter(project)
-    yield importer.loader
+) -> typing.Iterator[ModuleType]:
+    plugins_package = importlib.import_module(const.PLUGINS_PACKAGE)
+    yield plugins_package
 
 
 @pytest.fixture()
@@ -652,10 +652,6 @@ class ProjectLoader:
         # deregister plugins
         plugins.PluginMeta.clear()
 
-        # load the project
-        if hasattr(project, "install_modules"):
-            # more recent versions of core require explicit modules installation (ISO5+)
-            project.install_modules()
         project.load()
 
         # complete the set of registered plugins from the previously registered ones
