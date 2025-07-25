@@ -1490,7 +1490,10 @@ license: Test License
             # to push environment_settings to the server. Only push environment settings
             # on export.
             version, resources = exporter.run(
-                types, scopes, no_commit=not export, export_env_var_settings=export_env_var_settings
+                types,
+                scopes,
+                no_commit=not export,
+                export_env_var_settings=export_env_var_settings,
             )
         else:
             version, resources = exporter.run(types, scopes, no_commit=not export)
