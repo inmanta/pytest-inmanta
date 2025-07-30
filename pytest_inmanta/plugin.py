@@ -551,49 +551,6 @@ class MockClient(object):
         return inmanta.protocol.common.Result(200)
 
 
-class InmantaPluginsImportLoader:
-    """
-    Makes inmanta_plugins packages (Python source for inmanta modules) available dynamically so that tests can use them
-    safely without having to refresh imports when the compiler is reset.
-    """
-
-    def __init__(self, importer: "InmantaPluginsImporter") -> None:
-        self._importer: InmantaPluginsImporter = importer
-
-    def __getattr__(self, name: str):
-        submodules: typing.Optional[typing.Dict[str, ModuleType]] = (
-            self._importer.get_submodules(name)
-        )
-        fq_mod_name: str = f"inmanta_plugins.{name}"
-        if submodules is None or fq_mod_name not in submodules:
-            raise AttributeError("No inmanta module named %s" % name)
-        return submodules[fq_mod_name]
-
-
-class InmantaPluginsImporter:
-    def __init__(self, project: "Project") -> None:
-        self.project: Project = project
-        self.loader: InmantaPluginsImportLoader = InmantaPluginsImportLoader(self)
-
-    def get_submodules(
-        self, module_name: str
-    ) -> typing.Optional[typing.Dict[str, ModuleType]]:
-        inmanta_project: module.Project = module.Project.get()
-        if not inmanta_project.loaded:
-            raise Exception(
-                "Dynamically importing from inmanta_plugins requires a loaded inmanta.module.Project. Make sure to use the"
-                " project fixture."
-            )
-        modules: typing.Dict[str, module.Module] = inmanta_project.get_modules()
-        if module_name not in modules:
-            return None
-        result = {}
-        importlib.invalidate_caches()
-        for _, fq_submod_name in modules[module_name].get_plugin_files():
-            result[str(fq_submod_name)] = importlib.import_module(str(fq_submod_name))
-        return result
-
-
 class ProjectLoader:
     """
     Singleton providing methods for managing project loading and associated side effects. Since these operations have global
@@ -604,10 +561,10 @@ class ProjectLoader:
             However, to support top-level Python imports in test cases, pytest-inmanta instructs the project to not clean
             up loaded Python modules when setting a new project as this would force a reload, changing object identities.
             One exception is when working with dynamic modules whose content might change between project loads (for example
-            the unittest module and any module created with Project.create_module). Therefore any dynamic modules are always
+            the unittest module and any module created with Project.create_module). Therefore, any dynamic modules are always
             forcefully cleaned up, forcing a reload when next imported.
         - Python module state: since Python module objects are kept alive (see above), any state kept on those objects is
-            carried over accross compiles. To start each compile from a fresh state, any stateful modules must define one or
+            carried over across compiles. To start each compile from a fresh state, any stateful modules must define one or
             more cleanup functions. This class is responsible for calling these functions when appropriate.
         - plugins: under normal operation, loading a project registers all modules' plugins as a side effect of loading each
             module's Python modules. However, pytest-inmanta does not reload said Python modules (see above). To make sure only
@@ -617,6 +574,7 @@ class ProjectLoader:
     """
 
     _registered_plugins: typing.Dict[str, typing.Type[plugins.Plugin]] = {}
+    # modules created by Project.create_module
     _dynamic_modules: typing.Set[str] = set()
 
     @classmethod
@@ -1020,7 +978,6 @@ class Project:
         * Install the module dependencies
         * Load the project
 
-        :param init: True iff the project should start from a clean slate. Ignored for older (<6) versions of core.
         :return: The newly created module.Project instance.
         """
         with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
@@ -1571,21 +1528,42 @@ license: Test License
         ProjectLoader.register_dynamic_module("unittest")
 
     def _load_plugins(self) -> typing.Dict[str, FunctionType]:
+        """
+        Retrieve all functions defined in plugin files for the module in current directory.
+        """
         mod: module.Module
         mod, _ = get_module()
-        submodules: typing.Optional[typing.Dict[str, ModuleType]] = (
-            InmantaPluginsImporter(self).get_submodules(mod.name)
+        plugin_files: typing.Optional[typing.Dict[str, ModuleType]] = (
+            self._load_module_plugins(mod.name)
         )
         return (
             {}
-            if submodules is None
+            if plugin_files is None
             else {
                 k: v
-                for submod in submodules.values()
+                for submod in plugin_files.values()
                 for k, v in submod.__dict__.items()
                 if isinstance(v, FunctionType)
             }
         )
+
+    def _load_module_plugins(
+        self, module_name: str
+    ) -> typing.Optional[typing.Dict[str, ModuleType]]:
+        inmanta_project: module.Project = module.Project.get()
+        if not inmanta_project.loaded:
+            raise Exception(
+                "Dynamically importing from inmanta_plugins requires a loaded inmanta.module.Project. Make sure to use the"
+                " project fixture."
+            )
+        modules: typing.Dict[str, module.Module] = inmanta_project.get_modules()
+        if module_name not in modules:
+            return None
+        result = {}
+        importlib.invalidate_caches()
+        for _, fq_submod_name in modules[module_name].get_plugin_files():
+            result[str(fq_submod_name)] = importlib.import_module(str(fq_submod_name))
+        return result
 
     def get_plugin_function(self, function_name: str) -> FunctionType:
         if self._plugins is None:
