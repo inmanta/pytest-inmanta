@@ -19,7 +19,6 @@ Contact: code@inmanta.com
 import collections
 import importlib
 import inspect
-import itertools
 import json
 import logging
 import math
@@ -63,11 +62,8 @@ from inmanta.data.model import AttributeStateChange, ResourceIdStr
 from inmanta.env import PackageNotFound
 from inmanta.execute.proxy import DynamicProxy
 from inmanta.export import Exporter, ResourceDict, cfg_env
+from inmanta.module import ProjectPipConfig
 from inmanta.resources import Resource
-from pytest_inmanta.core import (
-    SUPPORTS_LEGACY_PROJECT_PIP_INDEX,
-    SUPPORTS_PROJECT_PIP_INDEX,
-)
 from pytest_inmanta.test_parameter.parameter import ValueSetBy
 
 PIP_NO_SOURCE_WARNING = (
@@ -85,9 +81,6 @@ if typing.TYPE_CHECKING:
         def mktemp(self, path: str) -> py.path.local:
             pass
 
-
-if SUPPORTS_LEGACY_PROJECT_PIP_INDEX:
-    from inmanta.module import ProjectPipConfig
 
 import pytest_inmanta.parameters as parameters
 from pytest_inmanta.handler import DATA
@@ -131,14 +124,7 @@ def get_module() -> typing.Tuple[module.Module, str]:
 
     def find_module(path: str) -> typing.Optional[typing.Tuple[module.Module, str]]:
         mod: typing.Optional[module.Module]
-        if hasattr(module.Module, "from_path"):
-            mod = module.Module.from_path(path)
-        else:
-            # older versions of inmanta-core
-            try:
-                mod = module.Module(project=None, path=path)
-            except module.InvalidModuleException:
-                mod = None
+        mod = module.Module.from_path(path)
         if mod is not None:
             return mod, path
         parent: str = os.path.dirname(path)
@@ -157,6 +143,11 @@ def get_module() -> typing.Tuple[module.Module, str]:
 def inmanta_plugins(
     project: "Project",
 ) -> typing.Iterator[ModuleType]:
+    warnings.warn(
+        DeprecationWarning(
+            "The inmanta_plugins fixture is deprecated. Import the inmanta_plugins module instead."
+        )
+    )
     plugins_package = importlib.import_module(const.PLUGINS_PACKAGE)
     yield plugins_package
 
@@ -255,26 +246,25 @@ def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[obj
             # there might be only one part or part might be just "https"
             except (IndexError, pydantic.ValidationError):
                 repo_info = module.ModuleRepoInfo(url=repo_str)
-            if SUPPORTS_LEGACY_PROJECT_PIP_INDEX:
-                if repo_info.type == module.ModuleRepoType.package:
-                    alternative_text: str = (
-                        "is now deprecated and will raise a warning during compilation."
-                        " Use the --pip-index-url <index_url> pytest option instead or set"
-                        " the %s environment variable to address these warnings. "
+            if repo_info.type == module.ModuleRepoType.package:
+                alternative_text: str = (
+                    "is now deprecated and will raise a warning during compilation."
+                    " Use the --pip-index-url <index_url> pytest option instead or set"
+                    " the %s environment variable to address these warnings. "
+                )
+                if inm_mod_repo._value_set_using == ValueSetBy.ENV_VARIABLE:
+                    LOGGER.warning(
+                        "Setting a package source through the %s environment variable "
+                        + alternative_text,
+                        inm_mod_repo.environment_variable,
+                        parameters.pip_index_url.environment_variable,
                     )
-                    if inm_mod_repo._value_set_using == ValueSetBy.ENV_VARIABLE:
-                        LOGGER.warning(
-                            "Setting a package source through the %s environment variable "
-                            + alternative_text,
-                            inm_mod_repo.environment_variable,
-                            parameters.pip_index_url.environment_variable,
-                        )
-                    elif inm_mod_repo._value_set_using == ValueSetBy.CLI:
-                        LOGGER.warning(
-                            "Setting a package source through the --module-repo <index_url> cli option with type `package` "
-                            + alternative_text,
-                            parameters.pip_index_url.environment_variable,
-                        )
+                elif inm_mod_repo._value_set_using == ValueSetBy.CLI:
+                    LOGGER.warning(
+                        "Setting a package source through the --module-repo <index_url> cli option with type `package` "
+                        + alternative_text,
+                        parameters.pip_index_url.environment_variable,
+                    )
 
             return repo_info.model_dump(mode="json")
 
@@ -334,70 +324,34 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
     if in_place:
         modulepath.append(str(Path(CURDIR).parent))
 
-    if SUPPORTS_PROJECT_PIP_INDEX:
-        # Backward compat: translate repo url to index url
-        index_urls = list(index_urls) + repos_urls
-        if index_urls:
-            index_url = index_urls[0]
-            extra_index_url = index_urls[1:]
-        else:
-            index_url = None
-            extra_index_url = []
-
-        pip_config: ProjectPipConfig = ProjectPipConfig(
-            index_url=index_url,
-            extra_index_url=extra_index_url,
-            use_system_config=pip_use_system_config,
-            pre=pip_pre,
-        )
-
-        if not pip_config.has_source():
-            LOGGER.warning(PIP_NO_SOURCE_WARNING)
-
-        return module.ProjectMetadata(
-            name="testcase",
-            description="Project for testcase",
-            repo=repos,
-            modulepath=modulepath,
-            downloadpath="libs",
-            install_mode=parameters.inm_install_mode.resolve(request.config).value,
-            pip=pip_config,
-        )
-    elif SUPPORTS_LEGACY_PROJECT_PIP_INDEX:
-        # On newer versions of core we set the pip.index_url of the project.yml file
-        pip_config: ProjectPipConfig = ProjectPipConfig(
-            # This ensures no duplicates are returned and insertion order is preserved.
-            # i.e. the left-most index will be passed to pip as --index-url and the others as --extra-index-url
-            index_urls=list(
-                {value: None for value in itertools.chain(index_urls, repos_urls)}
-            )
-        )
-        return module.ProjectMetadata(
-            name="testcase",
-            description="Project for testcase",
-            repo=repos,
-            modulepath=modulepath,
-            downloadpath="libs",
-            install_mode=parameters.inm_install_mode.resolve(request.config).value,
-            pip=pip_config,
-        )
+    # Backward compat: translate repo url to index url
+    index_urls = list(index_urls) + repos_urls
+    if index_urls:
+        index_url = index_urls[0]
+        extra_index_url = index_urls[1:]
     else:
-        if index_urls:
-            LOGGER.warning(
-                "Setting a project-wide pip index is not supported on this version of inmanta-core. "
-                "The provided index will be used as a v2 package source"
-            )
-        v2_source_repos = [
-            {"url": index_url, "type": "package"} for index_url in index_urls
-        ]
-        return module.ProjectMetadata(
-            name="testcase",
-            description="Project for testcase",
-            repo=list(repos) + v2_source_repos,
-            modulepath=modulepath,
-            downloadpath="libs",
-            install_mode=parameters.inm_install_mode.resolve(request.config).value,
-        )
+        index_url = None
+        extra_index_url = []
+
+    pip_config: ProjectPipConfig = ProjectPipConfig(
+        index_url=index_url,
+        extra_index_url=extra_index_url,
+        use_system_config=pip_use_system_config,
+        pre=pip_pre,
+    )
+
+    if not pip_config.has_source():
+        LOGGER.warning(PIP_NO_SOURCE_WARNING)
+
+    return module.ProjectMetadata(
+        name="testcase",
+        description="Project for testcase",
+        repo=repos,
+        modulepath=modulepath,
+        downloadpath="libs",
+        install_mode=parameters.inm_install_mode.resolve(request.config).value,
+        pip=pip_config,
+    )
 
 
 @pytest.fixture(scope="session")
@@ -561,7 +515,7 @@ class ProjectLoader:
             However, to support top-level Python imports in test cases, pytest-inmanta instructs the project to not clean
             up loaded Python modules when setting a new project as this would force a reload, changing object identities.
             One exception is when working with dynamic modules whose content might change between project loads (for example
-            the unittest module and any module created with Project.create_module). Therefore, any dynamic modules are always
+            the unittest module and any module created with Project.create_module). Therefore any dynamic modules are always
             forcefully cleaned up, forcing a reload when next imported.
         - Python module state: since Python module objects are kept alive (see above), any state kept on those objects is
             carried over across compiles. To start each compile from a fresh state, any stateful modules must define one or
@@ -598,14 +552,7 @@ class ProjectLoader:
         # reset modules' state
         cls._reset_module_state()
 
-        # For supported versions of core, don't clean up loaded modules between invocations to keep top-level imports valid
-        signature_set: inspect.Signature = inspect.Signature.from_callable(
-            module.Project.set
-        )
-        extra_kwargs_set = (
-            {"clean": False} if "clean" in signature_set.parameters.keys() else {}
-        )
-        module.Project.set(project, **extra_kwargs_set)
+        module.Project.set(project, clean=False)
 
         # deregister plugins
         plugins.PluginMeta.clear()
@@ -1533,37 +1480,23 @@ license: Test License
         """
         mod: module.Module
         mod, _ = get_module()
-        plugin_files: typing.Optional[typing.Dict[str, ModuleType]] = (
-            self._load_module_plugins(mod.name)
-        )
-        return (
-            {}
-            if plugin_files is None
-            else {
-                k: v
-                for submod in plugin_files.values()
-                for k, v in submod.__dict__.items()
-                if isinstance(v, FunctionType)
-            }
-        )
 
-    def _load_module_plugins(
-        self, module_name: str
-    ) -> typing.Optional[typing.Dict[str, ModuleType]]:
         inmanta_project: module.Project = module.Project.get()
-        if not inmanta_project.loaded:
-            raise Exception(
-                "Dynamically importing from inmanta_plugins requires a loaded inmanta.module.Project. Make sure to use the"
-                " project fixture."
-            )
+        assert inmanta_project.loaded
+
         modules: typing.Dict[str, module.Module] = inmanta_project.get_modules()
-        if module_name not in modules:
-            return None
-        result = {}
-        importlib.invalidate_caches()
-        for _, fq_submod_name in modules[module_name].get_plugin_files():
-            result[str(fq_submod_name)] = importlib.import_module(str(fq_submod_name))
-        return result
+
+        plugin_functions: typing.Dict[str, FunctionType] = {}
+
+        if mod.name in modules:
+            importlib.invalidate_caches()
+            for _, fq_submod_name in modules[mod.name].get_plugin_files():
+                submod = importlib.import_module(str(fq_submod_name))
+                for k, v in submod.__dict__.items():
+                    if isinstance(v, FunctionType):
+                        plugin_functions[k] = v
+
+        return plugin_functions
 
     def get_plugin_function(self, function_name: str) -> FunctionType:
         if self._plugins is None:
