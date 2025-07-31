@@ -404,7 +404,6 @@ def project_factory(
         elif inm_no_strict_deps_check._value_set_using == ValueSetBy.CLI:
             LOGGER.warning(
                 f"The %s option is deprecated. %s",
-                "Setting a package source through the --module-repo <index_url> cli option with type `package` "
                 inm_no_strict_deps_check.argument,
                 reason,
             )
