@@ -34,7 +34,7 @@ from dataclasses import dataclass
 from itertools import chain
 from pathlib import Path
 from textwrap import dedent
-from types import FunctionType, ModuleType
+from types import FunctionType
 from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple
 
 import pydantic
@@ -393,17 +393,19 @@ def project_factory(
     def create_project(**kwargs: object):
         load_plugins = not inm_no_load_plugins.resolve(request.config)
 
-        reason: str = "Strict dependency checking is no longer relevant and therefore always disabled"
+        reason: str = (
+            "Strict dependency checking is no longer relevant and therefore always disabled"
+        )
         inm_no_strict_deps_check.resolve(request.config)
         if inm_no_strict_deps_check._value_set_using == ValueSetBy.ENV_VARIABLE:
             LOGGER.warning(
-                f"The %s environment variable is deprecated. %s",
+                "The %s environment variable is deprecated. %s",
                 inm_no_strict_deps_check.environment_variable,
                 reason,
             )
         elif inm_no_strict_deps_check._value_set_using == ValueSetBy.CLI:
             LOGGER.warning(
-                f"The %s option is deprecated. %s",
+                "The %s option is deprecated. %s",
                 inm_no_strict_deps_check.argument,
                 reason,
             )
@@ -522,6 +524,7 @@ class InmantaPluginsImportLoader:
     Makes inmanta_plugins packages (Python source for inmanta modules) available dynamically so that tests can use them
     safely without having to refresh imports when the compiler is reset.
     """
+
     def __getattr__(self, name: str):
         fq_mod_name: str = f"inmanta_plugins.{name}"
         return importlib.import_module(fq_mod_name)
