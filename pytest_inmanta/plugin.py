@@ -345,7 +345,6 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
     return module.ProjectMetadata(
         name="testcase",
         description="Project for testcase",
-        repo=repos,
         modulepath=modulepath,
         downloadpath="libs",
         install_mode=parameters.inm_install_mode.resolve(request.config).value,
