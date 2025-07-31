@@ -142,14 +142,13 @@ def get_module() -> typing.Tuple[module.Module, str]:
 @pytest.fixture()
 def inmanta_plugins(
     project: "Project",
-) -> typing.Iterator[ModuleType]:
+) -> typing.Iterator[InmantaPluginsImportLoader]:
     warnings.warn(
         DeprecationWarning(
             "The inmanta_plugins fixture is deprecated. Import the inmanta_plugins module instead."
         )
     )
-    plugins_package = importlib.import_module(const.PLUGINS_PACKAGE)
-    yield plugins_package
+    yield InmantaPluginsImportLoader()
 
 
 @pytest.fixture()
@@ -518,6 +517,16 @@ class MockClient(object):
         """
         self.discovered_resources.extend(discovered_resources)
         return inmanta.protocol.common.Result(200)
+
+
+class InmantaPluginsImportLoader:
+    """
+    Makes inmanta_plugins packages (Python source for inmanta modules) available dynamically so that tests can use them
+    safely without having to refresh imports when the compiler is reset.
+    """
+    def __getattr__(self, name: str):
+        fq_mod_name: str = f"inmanta_plugins.{name}"
+        return importlib.import_module(fq_mod_name)
 
 
 class ProjectLoader:
