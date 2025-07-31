@@ -142,7 +142,7 @@ def get_module() -> typing.Tuple[module.Module, str]:
 @pytest.fixture()
 def inmanta_plugins(
     project: "Project",
-) -> typing.Iterator[InmantaPluginsImportLoader]:
+) -> typing.Iterator["InmantaPluginsImportLoader"]:
     warnings.warn(
         DeprecationWarning(
             "The inmanta_plugins fixture is deprecated. Import the inmanta_plugins module instead."
