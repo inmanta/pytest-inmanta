@@ -394,9 +394,24 @@ def project_factory(
 
     def create_project(**kwargs: object):
         load_plugins = not inm_no_load_plugins.resolve(request.config)
-        no_strict_deps_check = inm_no_strict_deps_check.resolve(request.config)
+
+        reason: str = "Strict dependency checking is no longer relevant and therefore always disabled"
+        inm_no_strict_deps_check.resolve(request.config)
+        if inm_no_strict_deps_check._value_set_using == ValueSetBy.ENV_VARIABLE:
+            LOGGER.warning(
+                f"The %s environment variable is deprecated. %s",
+                inm_no_strict_deps_check.environment_variable,
+                reason,
+            )
+        elif inm_no_strict_deps_check._value_set_using == ValueSetBy.CLI:
+            LOGGER.warning(
+                f"The %s option is deprecated. %s",
+                "Setting a package source through the --module-repo <index_url> cli option with type `package` "
+                inm_no_strict_deps_check.argument,
+                reason,
+            )
+
         extended_kwargs: typing.Dict[str, object] = {
-            "no_strict_deps_check": no_strict_deps_check,
             "load_plugins": load_plugins,
             "env_path": env_dir,
             **kwargs,
@@ -851,7 +866,6 @@ class Project:
         project_dir: str,
         env_path: str,
         load_plugins: typing.Optional[bool] = True,
-        no_strict_deps_check: typing.Optional[bool] = False,
     ) -> None:
         """
         :param project_dir: Directory containing the Inmanta project.
@@ -860,7 +874,6 @@ class Project:
         """
         self._test_project_dir = project_dir
         self._env_path = env_path
-        self.no_strict_deps_check = no_strict_deps_check
         self._stdout: typing.Optional[str] = None
         self._stderr: typing.Optional[str] = None
         self.types: typing.Optional[typing.Dict[str, inmanta.ast.Type]] = None
@@ -942,7 +955,7 @@ class Project:
         )
 
         if "strict_deps_check" in signature_init.parameters.keys():
-            extra_kwargs_init["strict_deps_check"] = not self.no_strict_deps_check
+            extra_kwargs_init["strict_deps_check"] = False
 
         test_project = module.Project(
             self._test_project_dir,

@@ -299,11 +299,13 @@ class TestParameter(Generic[ParameterType]):
         option = config.getoption(self.argument, default=None)
         if option is not None:
             # A value is set, and it is not the default one
+            self._value_set_using = ValueSetBy.CLI
             return self.validate(option)
 
         env_var = os.getenv(self.environment_variable)
         if env_var is not None:
             # A value is set
+            self._value_set_using = ValueSetBy.ENV_VARIABLE
             return self.validate(env_var)
 
         if self.legacy is not None:
@@ -314,6 +316,7 @@ class TestParameter(Generic[ParameterType]):
                     f"The usage of {self.legacy.argument} is deprecated, "
                     f"use {self.argument} instead"
                 )
+                self._value_set_using = ValueSetBy.CLI
                 return val
             except ParameterNotSetException:
                 pass
@@ -327,10 +330,12 @@ class TestParameter(Generic[ParameterType]):
                     f"The usage of {self.legacy_environment_variable} is deprecated, "
                     f"use {self.environment_variable} instead"
                 )
+                self._value_set_using = ValueSetBy.ENV_VARIABLE
                 return self.validate(env_var)
 
         default = self.get_default_value(config)
         if default is not None:
+            self._value_set_using = ValueSetBy.DEFAULT_VALUE
             return default
 
         raise ParameterNotSetException(self)
