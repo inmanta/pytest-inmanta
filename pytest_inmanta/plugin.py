@@ -123,8 +123,7 @@ def get_module() -> typing.Tuple[module.Module, str]:
     """
 
     def find_module(path: str) -> typing.Optional[typing.Tuple[module.Module, str]]:
-        mod: typing.Optional[module.Module]
-        mod = module.Module.from_path(path)
+        mod: typing.Optional[module.Module] = module.Module.from_path(path)
         if mod is not None:
             return mod, path
         parent: str = os.path.dirname(path)
