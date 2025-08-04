@@ -1,5 +1,6 @@
 # v 4.0.0 (?)
 Changes in this release:
+- No longer install dependencies for test projects. Modules used in testing should now be added as dev dependencies, like any other package required during testing.
 - Add support for skip in reference
 - Fix memory leak caused by pytest LogCaptureHandler.  Address it by clearing the old in-memory logs before each compile.
 - Fix incompatibility with versions of inmanta-core that have support to push environment settings to the server.
