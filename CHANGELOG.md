@@ -1,4 +1,4 @@
-# v 3.3.0 (?)
+# v 4.0.0 (?)
 Changes in this release:
 - Add support for skip in reference
 - Fix memory leak caused by pytest LogCaptureHandler.  Address it by clearing the old in-memory logs before each compile.
