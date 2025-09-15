@@ -49,6 +49,7 @@ from inmanta.agent import config as inmanta_config
 from inmanta.agent import handler
 from inmanta.agent.cache import AgentCache
 from inmanta.agent.handler import (
+    Commander,
     HandlerAPI,
     HandlerContext,
     LoggerABC,
@@ -62,8 +63,9 @@ from inmanta.data.model import AttributeStateChange, ResourceIdStr
 from inmanta.env import PackageNotFound
 from inmanta.execute.proxy import DynamicProxy
 from inmanta.export import Exporter, ResourceDict, cfg_env
+from inmanta.loader import get_inmanta_module_name
 from inmanta.module import ProjectPipConfig
-from inmanta.resources import Resource
+from inmanta.resources import Resource, resource
 from pytest_inmanta.test_parameter.parameter import ValueSetBy
 
 PIP_NO_SOURCE_WARNING = (
@@ -95,6 +97,13 @@ from pytest_inmanta.test_parameter import (
     ParameterNotSetException,
     TestParameterRegistry,
 )
+
+try:
+    from inmanta.references import mutator, reference
+
+    has_references = True
+except ImportError:
+    has_references = False
 
 try:
     """
@@ -554,6 +563,7 @@ class ProjectLoader:
     _registered_plugins: typing.Dict[str, typing.Type[plugins.Plugin]] = {}
     # modules created by Project.create_module
     _dynamic_modules: typing.Set[str] = set()
+    _all_previous_modules: typing.Set[str] = set()
 
     @classmethod
     def reset(cls) -> None:
@@ -585,6 +595,7 @@ class ProjectLoader:
 
         # complete the set of registered plugins from the previously registered ones
         cls._register_plugins(project)
+        cls._unregister_old(project)
 
     @classmethod
     def _refresh_registered_plugins(cls) -> None:
@@ -611,6 +622,41 @@ class ProjectLoader:
                 and loaded_mod_ns_pattern.match(fq_plugin_name)
             ):
                 plugins.PluginMeta.add_function(plugin)
+
+    @classmethod
+    def _unregister_old(cls, project: module.Project):
+        """
+        Resources, handlers and references are not unloaded or re-registered
+
+        When not importing a module on a second run we need to de-register them
+        to prevent the exporter from failing when it tries to export them.
+        """
+        modules_now = set(project.modules.keys())
+        to_unload = cls._all_previous_modules - modules_now
+        LOGGER.debug("Unloading modules %s", to_unload)
+        for mod in to_unload:
+            for k, instance in list(resource.get_resources()):
+                module_name = get_inmanta_module_name(instance.__module__)
+                if module_name.startswith(mod):
+                    del resource._resources[k]
+
+            for k, instance in list(Commander.get_providers()):
+                module_name = get_inmanta_module_name(instance.__module__)
+                if module_name.startswith(mod):
+                    del Commander.get_handlers()[k]
+
+            if has_references:
+                for k, instance in list(reference.get_references()):
+                    module_name = get_inmanta_module_name(instance.__module__)
+                    if module_name.startswith(mod):
+                        del reference._reference_classes[k]
+
+                for k, instance in list(mutator.get_mutators()):
+                    module_name = get_inmanta_module_name(instance.__module__)
+                    if module_name.startswith(mod):
+                        del mutator._mutator_classes[k]
+
+        cls._all_previous_modules = modules_now
 
     @classmethod
     def register_dynamic_module(cls, module_name: str) -> None:
