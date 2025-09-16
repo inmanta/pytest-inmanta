@@ -627,6 +627,7 @@ class ProjectLoader:
     def _unregister_old(cls, project: module.Project):
         """
         Resources, handlers and references are not unloaded or re-registered
+        by default in-between runs.
 
         When not importing a module on a second run we need to de-register them
         to prevent the exporter from failing when it tries to export them.
