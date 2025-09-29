@@ -581,6 +581,10 @@ class ProjectLoader:
         # deregister plugins
         plugins.PluginMeta.clear()
 
+        # Reset the compiler state
+        if hasattr(compiler, "reset"):
+            compiler.reset()
+
         project.load()
 
         # complete the set of registered plugins from the previously registered ones
@@ -1584,6 +1588,8 @@ license: Test License
             initpy=get_module_data("init.py"),
         )
         ProjectLoader.clear_dynamic_modules()
+        if hasattr(compiler, "reset"):
+            compiler.reset()
         os.chdir(CURDIR)
         sys.executable = SYS_EXECUTABLE
 
