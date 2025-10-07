@@ -581,10 +581,6 @@ class LegacyProjectLoader:
         # deregister plugins
         plugins.PluginMeta.clear()
 
-        # Reset the compiler state
-        if hasattr(compiler, "reset"):
-            compiler.reset()
-
         project.load()
 
         # complete the set of registered plugins from the previously registered ones
@@ -662,11 +658,13 @@ class LegacyProjectLoader:
                     if func_name.startswith("inmanta_reset_state") and callable(func):
                         func()
 
+
 try:
     ProjectLoader = compiler.ProjectLoader
 except AttributeError:
     # Ensure backwards compatibility
     ProjectLoader = LegacyProjectLoader
+
 
 def get_resources_matching(
     resources: "collections.abc.Iterable[Resource]",
@@ -1593,8 +1591,6 @@ license: Test License
             initpy=get_module_data("init.py"),
         )
         ProjectLoader.clear_dynamic_modules()
-        if hasattr(compiler, "reset"):
-            compiler.reset()
         os.chdir(CURDIR)
         sys.executable = SYS_EXECUTABLE
 
