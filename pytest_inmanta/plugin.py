@@ -529,7 +529,7 @@ class InmantaPluginsImportLoader:
         return importlib.import_module(fq_mod_name)
 
 
-class ProjectLoader:
+class LegacyProjectLoader:
     """
     Singleton providing methods for managing project loading and associated side effects. Since these operations have global
     side effects, managing them calls for a centralized manager rather than managing them on the Project instance level.
@@ -657,6 +657,13 @@ class ProjectLoader:
                 for func_name, func in mod.__dict__.items():
                     if func_name.startswith("inmanta_reset_state") and callable(func):
                         func()
+
+
+try:
+    ProjectLoader = compiler.ProjectLoader
+except AttributeError:
+    # Ensure backwards compatibility
+    ProjectLoader = LegacyProjectLoader
 
 
 def get_resources_matching(
