@@ -12,7 +12,7 @@ with io.open(os.path.join(cwd, "README.md"), encoding="utf-8") as fd:
 
 setup(
     name="pytest-inmanta",
-    version="3.2.0",
+    version="4.0.0",
     description=(
         "A py.test plugin providing fixtures to simplify inmanta modules testing."
     ),
@@ -40,7 +40,12 @@ setup(
     include_package_data=True,
     packages=find_packages(),
     zip_safe=False,
-    install_requires=["pytest", "inmanta-core", "pydantic", "pyyaml"],
+    install_requires=[
+        "pytest",
+        "inmanta-core",
+        "pydantic",
+        "pyyaml",
+    ],
     entry_points={
         "pytest11": ["inmanta = pytest_inmanta.plugin"],
     },

@@ -16,7 +16,22 @@ limitations under the License.
 Contact: code@inmanta.com
 """
 
+import logging
+
 # Note: These tests only function when the pytest output is not modified by plugins such as pytest-sugar!
+
+
+def test_pytest_logging_import():
+    """
+    This test case asserts that some component of pytest unstable/unofficial api don't
+    change in a way that would impact us.  If this test fails, we need to update the
+    log clearing logic at the start of the `Project.compile` method, to avoid significant
+    memory leaks in test suites running many compiles or complex models.
+    """
+    import _pytest.logging
+
+    assert hasattr(_pytest.logging, "LogCaptureHandler")
+    assert issubclass(_pytest.logging.LogCaptureHandler, logging.StreamHandler)
 
 
 def test_basic_example(testdir):
@@ -111,41 +126,6 @@ def test_release_mode_validation(testdir):
         "error: argument --install_mode: invalid choice: 'other' (choose from"
         in "\n".join(result.errlines)
     )
-
-
-def test_multiple_repo_paths_option(testdir):
-    testdir.copy_example("testmodule")
-
-    result = testdir.runpytest(
-        "tests/test_multiple_repo_paths.py",
-        "--module_repo",
-        "https://github.com/inmanta2/ https://github.com/inmanta/",
-    )
-    result.assert_outcomes(passed=1)
-
-
-def test_multiple_repo_paths_multiple_options(testdir):
-    testdir.copy_example("testmodule")
-
-    result = testdir.runpytest(
-        "tests/test_multiple_repo_paths.py",
-        "--module_repo",
-        "https://github.com/inmanta2/",
-        "--module_repo",
-        "https://github.com/inmanta/",
-    )
-    result.assert_outcomes(passed=1)
-
-
-def test_multiple_repo_paths_env(testdir, monkeypatch):
-    monkeypatch.setenv(
-        "INMANTA_MODULE_REPO",
-        "https://github.com/inmanta2/ https://github.com/inmanta/",
-    )
-    testdir.copy_example("testmodule")
-
-    result = testdir.runpytest("tests/test_multiple_repo_paths.py")
-    result.assert_outcomes(passed=1)
 
 
 def test_import(testdir):

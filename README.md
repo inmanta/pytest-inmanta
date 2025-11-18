@@ -205,12 +205,13 @@ However, when inspecting individual resources, some care is required.
 def test_refs(project):
     project.compile("""
     import refs
+    import std::testing
 
     ref = refs::create_string_reference(name="test")
-    refs::NullResource(name="T1", agentname="a1", value=ref)
+    std::testing::NullResource(name="T1", agentname="a1", value=ref)
     """)
 
-    the_resource = project.get_resource("refs::NullResource")
+    the_resource = project.get_resource("std::testing::NullResource")
     # After compile, references are None
     assert the_resource.value is None
     project.resolve_references(the_resource)
@@ -218,7 +219,7 @@ def test_refs(project):
     assert the_resource.value == "test"
 
     # The copy stored in the project fixture is not updated!
-    assert project.get_resource("refs::NullResource").value is None
+    assert project.get_resource("std::testing::NullResource").value is None
 ```
 
 ## Advanced usage

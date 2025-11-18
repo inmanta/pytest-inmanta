@@ -37,4 +37,4 @@ def test_basic_refs(testdir: pytest.Testdir, deactive_venv) -> None:
         with utils.activate_venv(venv):
             result = testdir.runpytest_inprocess("tests/test_refs.py")
 
-    result.assert_outcomes(passed=1)
+    result.assert_outcomes(passed=2)
