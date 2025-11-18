@@ -105,7 +105,11 @@ try:
 except ImportError:
     pass
 
+# This global is a duplicate of pytest_inmanta.test_parameter.path_parameter.CURDIR
+# We duplicate it instead of importing it to avoid potential import loop
+# issues: https://inmanta.slack.com/archives/CKRF0C8R3/p1763461693025479?thread_ts=1763455711.987169&cid=CKRF0C8R3
 CURDIR = os.getcwd()
+
 LOGGER = logging.getLogger()
 SYS_EXECUTABLE = sys.executable
 
