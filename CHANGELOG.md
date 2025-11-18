@@ -1,4 +1,4 @@
-# v 4.0.0 (?)
+# v 4.0.0 (2025-11-18)
 Changes in this release:
 - No longer install dependencies for test projects. Modules used in testing should now be added as dev dependencies, like any other package required during testing.
 - Add support for skip in reference
