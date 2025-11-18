@@ -20,8 +20,12 @@ import os
 from pathlib import Path
 from typing import Optional, Union
 
-import pytest_inmanta.plugin
 from pytest_inmanta.test_parameter.parameter import DynamicDefault, TestParameter
+
+# This global is a duplicate of pytest_inmanta.plugin.CURDIR
+# We duplicate it instead of importing it to avoid potential import loop
+# issues: https://inmanta.slack.com/archives/CKRF0C8R3/p1763461693025479?thread_ts=1763455711.987169&cid=CKRF0C8R3
+CURDIR = os.getcwd()
 
 
 def abspath(path: str, *, source: str) -> str:
@@ -91,9 +95,7 @@ class PathTestParameter(TestParameter[Path]):
         # will be changed by `Project.set()`, meaning that if the test option is resolved after
         # the fixture is called, the relative path would point to a different place making it way
         # harder to use said option.
-        path = Path(
-            abspath(str(raw_value), source=pytest_inmanta.plugin.CURDIR)
-        ).absolute()
+        path = Path(abspath(str(raw_value), source=CURDIR)).absolute()
 
         if self.exists is None:
             # We don't need the file to exist, nothing to check here
