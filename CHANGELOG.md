@@ -5,6 +5,7 @@ Changes in this release:
 - Fix memory leak caused by pytest LogCaptureHandler.  Address it by clearing the old in-memory logs before each compile.
 - Fix incompatibility with versions of inmanta-core that have support to push environment settings to the server.
 - Reset the compiler state between two consecutive compiles
+- Fix potential import loop when using test parameters
 
 # v 3.2.0 (2025-04-09)
 Changes in this release:
