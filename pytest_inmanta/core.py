@@ -18,8 +18,7 @@ Contact: code@inmanta.com
 
 from typing import Optional
 
-import pkg_resources
-from pkg_resources import DistributionNotFound
+import importlib.metadata
 
 from packaging import version
 
@@ -29,11 +28,9 @@ Version of the inmanta-core package. None if it is not installed.
 """
 
 try:
-    CORE_VERSION = version.Version(
-        pkg_resources.get_distribution("inmanta-core").version
-    )
-except DistributionNotFound:
-    CORE_VERSION = None
+    INMANTA_CORE_VERSION = version.Version(importlib.metadata.version("inmanta-core"))
+except importlib.metadata.PackageNotFoundError:
+    INMANTA_CORE_VERSION = None
 
 
 SUPPORTS_MODULES_V2: bool = (
