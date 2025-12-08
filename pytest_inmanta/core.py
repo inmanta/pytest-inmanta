@@ -28,9 +28,9 @@ Version of the inmanta-core package. None if it is not installed.
 """
 
 try:
-    INMANTA_CORE_VERSION = version.Version(importlib.metadata.version("inmanta-core"))
+    CORE_VERSION = version.Version(importlib.metadata.version("inmanta-core"))
 except importlib.metadata.PackageNotFoundError:
-    INMANTA_CORE_VERSION = None
+    CORE_VERSION = None
 
 
 SUPPORTS_MODULES_V2: bool = (
