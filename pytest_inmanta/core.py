@@ -16,9 +16,8 @@ limitations under the License.
 Contact: code@inmanta.com
 """
 
-from typing import Optional
-
 import importlib.metadata
+from typing import Optional
 
 from packaging import version
 
