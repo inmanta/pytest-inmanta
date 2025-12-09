@@ -1,5 +1,6 @@
 # v 4.1.0 (?)
 Changes in this release:
+- Dropped the pkg_resources package
 
 # v 4.0.0 (2025-11-18)
 Changes in this release:
