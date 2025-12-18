@@ -43,7 +43,7 @@ def test_model_inspection(project):
     namesinar = [a.name for a in ar]
     assert sorted(namesinar) == ["r", "r2"]
 
-    with pytest.raises(inmanta.ast.NotFoundException):
+    with pytest.raises(AttributeError):
         named["a"].xx
 
     assert not named["b"].resource
