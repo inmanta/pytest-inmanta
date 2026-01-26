@@ -29,14 +29,12 @@ def test_subtle_get_resource(project: Project):
         - Only one instance exists in the resources of the project
     """
     # First, let's test the old behaviour: the returned resource has an incorrect type
-    project.compile(
-        """
+    project.compile("""
     import unittest
 
     unittest::Resource(name="res", desired_value="x")
     unittest::ResourceA(name="fakeres", desired_value="fakex")
-    """
-    )
+    """)
 
     # will not find anything in normal mode, but will in strict mode
     assert project.get_resource("unittest::Resource", name="fakeres") is None
@@ -61,9 +59,7 @@ def test_subtle_get_resource(project: Project):
         project.get_resource("unittest::Resource", strict_mode=True)
 
     # And let's make sure that if the resource doesn't exist, `None` is returned
-    project.compile(
-        """
+    project.compile("""
     import unittest
-    """
-    )
+    """)
     assert project.get_resource("unittest::ResourceA", strict_mode=True) is None

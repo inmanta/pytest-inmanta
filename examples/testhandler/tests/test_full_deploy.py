@@ -23,8 +23,7 @@ from pytest_inmanta.handler import DATA
 
 
 def test_full_deploy(project):
-    project.compile(
-        """
+    project.compile("""
         import unittest
 
         r1 = unittest::Resource(name="first", desired_value="x", requires=ac1)
@@ -37,8 +36,7 @@ def test_full_deploy(project):
         unittest::Resource(name="skip_to", desired_value="x", requires=[rs,rf])
 
         ac1 = std::AgentConfig(agentname="test", autostart=true)
-        """
-    )
+        """)
 
     results = project.deploy_all()
     results.assert_all(ResourceState.deployed)

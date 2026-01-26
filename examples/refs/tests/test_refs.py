@@ -20,14 +20,12 @@ import inmanta
 
 
 def test_refs(project):
-    project.compile(
-        """
+    project.compile("""
     import refs
 
     ref = refs::create_string_reference(name="test")
     refs::NullResource(name="T1",agentname="a1", value=ref)
-    """
-    )
+    """)
 
     the_resource = project.get_resource("refs::NullResource")
     # After compile, references are None
@@ -41,16 +39,14 @@ def test_refs(project):
 
 
 def test_skipped_refs(project):
-    project.compile(
-        """
+    project.compile("""
     import refs
     import unittest
 
     ref = refs::create_skip_reference()
 
     unittest::Resource(name="res", desired_value=ref)
-    """
-    )
+    """)
 
     the_resource = project.get_resource("unittest::Resource")
     # After compile, references are None
