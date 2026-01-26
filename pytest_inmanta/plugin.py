@@ -1333,12 +1333,10 @@ class Project:
             fd.write(initpy)
 
         with open(os.path.join(module_dir, "module.yml"), "w+") as fd:
-            fd.write(
-                f"""name: {name}
+            fd.write(f"""name: {name}
 version: 0.1
 license: Test License
-            """
-            )
+            """)
 
         ProjectLoader.register_dynamic_module(name)
 
@@ -1414,7 +1412,7 @@ license: Test License
         # flush io capture buffer
         self._capsys.readouterr()
 
-        (types, scopes) = compiler.do_compile(refs={"facts": self._facts})
+        types, scopes = compiler.do_compile(refs={"facts": self._facts})
 
         exporter = Exporter()
 

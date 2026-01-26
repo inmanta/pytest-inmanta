@@ -69,13 +69,11 @@ def test_inmanta_plugins_fixture_dynamic(project, inmanta_plugins):
 
 def test_inmanta_plugins_except(project, inmanta_plugins):
     with pytest.raises(ExplicitPluginException) as exception_info:
-        project.compile(
-            """
+        project.compile("""
     import testmodule
 
     testmodule::raise_exception()
-            """
-        )
+            """)
     assert isinstance(
         exception_info.value.__cause__, inmanta_plugins.testmodule.TestException
     )

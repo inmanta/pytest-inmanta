@@ -3,7 +3,6 @@ import os
 import io
 from setuptools import setup, find_packages
 
-
 cwd = os.path.abspath(os.path.dirname(__file__))
 
 with io.open(os.path.join(cwd, "README.md"), encoding="utf-8") as fd:

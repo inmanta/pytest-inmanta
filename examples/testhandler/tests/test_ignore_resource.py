@@ -22,15 +22,13 @@ def test_ignore_resource(project):
     Ensure that instances of the unittest::IgnoreResource resources are not exported.
     These resources raise an IgnoreResourceException on export.
     """
-    project.compile(
-        """
+    project.compile("""
     import unittest
 
     unittest::Resource(name="res", desired_value="x")
     unittest::IgnoreResource(name="res_ignore", desired_value="y")
     unittest::IgnoreResourceInIdAttr(name="res_ignore_2", desired_value="z")
-    """
-    )
+    """)
 
     assert project.get_one_resource("unittest::Resource") is not None
     assert project.get_one_resource("unittest::IgnoreResource") is None
