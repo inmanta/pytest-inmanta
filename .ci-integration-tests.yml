@@ -1,6 +1,4 @@
-pipeline_template: ci/inmanta-tools/Jenkinsfile-integration-tests
-repo_name: pytest-inmanta
-directories_to_lint:
-    - examples
-    - pytest_inmanta
-    - tests
+pipeline_template: ci/inmanta-tools/Jenkinsfile-integration-tests-2
+mypy-mode: fail
+pyupgrade_mode: fail
+pyupgrade_python_version: py313
