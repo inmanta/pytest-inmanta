@@ -2,6 +2,7 @@
 .DEFAULT_GOAL := all
 isort = isort pytest_inmanta tests examples
 black = black pytest_inmanta tests examples
+flake8 = flake8 pytest_inmanta tests examples
 
 .PHONY: install
 install:
@@ -12,11 +13,11 @@ install:
 format:
 	$(isort)
 	$(black)
+	$(flake8)
 
 .PHONY: pep8
 pep8:
-	pip install -c requirements.txt pep8-naming flake8-black flake8-isort
-	flake8 pytest_inmanta tests examples
+	$(flake8)
 
 .PHONY: mypy mypy-diff mypy-save
 RUN_MYPY=MYPYPATH=stubs:src python -m mypy --soft-error-limit=-1 --html-report mypy -p pytest_inmanta

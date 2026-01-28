@@ -1,3 +1,5 @@
 inmanta-module-std
 pip2pi==0.8.2
 types-PyYAML
+inmanta-dev-dependencies==2.187.0; python_version <= '3.11'
+inmanta-dev-dependencies==2.189.0; python_version > '3.11'
