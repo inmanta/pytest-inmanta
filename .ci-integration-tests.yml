@@ -1,4 +1,4 @@
 pipeline_template: ci/inmanta-tools/Jenkinsfile-integration-tests-2
-mypy-mode: fail
+mypy_mode: fail
 pyupgrade_mode: fail
 pyupgrade_python_version: py313
