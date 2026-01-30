@@ -44,7 +44,6 @@ setup(
         "inmanta-core",
         "pydantic",
         "pyyaml",
-        "inmanta-dev-dependencies"
     ],
     entry_points={
         "pytest11": ["inmanta = pytest_inmanta.plugin"],
