@@ -19,7 +19,6 @@ format:
 pep8:
 	$(flake8)
 
-.PHONY: mypy mypy-diff mypy-save
 RUN_MYPY=python -m mypy --html-report mypy -p pytest_inmanta
 mypy_baseline = python -m mypy_baseline
 
