@@ -38,10 +38,10 @@ dependencies = [
 "Source" = "https://github.com/inmanta/pytest-inmanta"
 
 [project.entry-points.pytest11]
-pytest-inmanta = "pytest_inmanta.plugin"
+inmanta = "pytest_inmanta.plugin"
 
 [tool.setuptools]
-packages = { find = { where = ["pytest_inmanta"] } }
+packages = { find = { where = ["."] } }
 
 [tool.bumpversion]
 current_version = "4.1.0.dev0"
