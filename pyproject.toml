@@ -1,0 +1,81 @@
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pytest-inmanta"
+version = "4.1.0"
+description = "A py.test plugin providing fixtures to simplify inmanta modules testing."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+keywords = ["pytest", "inmanta"]
+authors = [{ name = "Inmanta", email = "code@inmanta.com" }]
+
+# For a list of valid classifiers, see https://pypi.org/classifiers/
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Plugins",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Testing",
+]
+
+dependencies = [
+    "pytest",
+    "inmanta-core",
+    "pydantic",
+    "pyyaml",
+]
+
+[project.urls]
+"Homepage" = "https://inmanta.com"
+"Bug Reports" = "https://github.com/inmanta/pytest-inmanta/issues"
+"Source" = "https://github.com/inmanta/pytest-inmanta"
+
+[project.entry-points.pytest11]
+inmanta = "pytest_inmanta.plugin"
+
+[tool.setuptools]
+packages = { find = { where = ["."] } }
+
+[tool.setuptools.package-data]
+pytest_inmanta = ["module/*", "py.typed"]
+
+[tool.bumpversion]
+current_version = "4.1.0.dev0"
+tag = false
+commit = false
+parse = """
+    ^(?P<major>0|[1-9]\\d*)\\.
+    (?P<minor>0|[1-9]\\d*)\\.
+    (?P<patch>0|[1-9]\\d*)
+    (?:
+        .(?P<tag>dev0)
+    )?$
+"""
+serialize = [
+    "{major}.{minor}.{patch}.{tag}",
+    "{major}.{minor}.{patch}",
+]
+
+[tool.bumpversion.parts.tag]
+values = ["dev0", ""]
+optional_value = ""
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = "^version = \"{current_version}\""
+regex = true
+replace = "version = \"{new_version}\""
+serialize = ["{major}.{minor}.{patch}"]
+
+[[tool.bumpversion.files]]
+filename = "setup.cfg"
+serialize = ["{tag}"]
+search = "tag_build = {current_version}"
+replace = "tag_build = {new_version}"
+
