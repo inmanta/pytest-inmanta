@@ -43,6 +43,9 @@ inmanta = "pytest_inmanta.plugin"
 [tool.setuptools]
 packages = { find = { where = ["."] } }
 
+[tool.setuptools.package-data]
+pytest_inmanta = ["module/*", "py.typed"]
+
 [tool.bumpversion]
 current_version = "4.1.0.dev0"
 tag = false
