@@ -29,7 +29,7 @@ import pytest
 import pytest_inmanta.plugin
 from inmanta import env, loader, plugins
 from inmanta.loader import PluginModuleFinder
-from libpip2pi.commands import dir2pi
+from inmanta.vendor import libpip2pi
 
 # be careful not to import any core>=6 objects directly
 from pytest_inmanta.core import SUPPORTS_MODULES_V2
@@ -126,5 +126,5 @@ def examples_v2_package_index(pytestconfig) -> Iterator[str]:
                 ],
                 cwd=str(module_dir),
             )
-        dir2pi(argv=["dir2pi", artifact_dir])
+        libpip2pi.dir2pi(artifact_dir)
         yield os.path.join(artifact_dir, "simple")
