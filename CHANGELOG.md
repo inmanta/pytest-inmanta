@@ -1,6 +1,7 @@
 # v 4.1.0 (?)
 Changes in this release:
-- Dropped the pkg_resources package
+- Dropped the pkg_resources package.
+- Use the vendored version of the pip2pi package in core when available.
 
 # v 4.0.0 (2025-11-18)
 Changes in this release:
