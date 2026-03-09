@@ -67,6 +67,11 @@ class ResourceHandler(ResourceHandler):
         self, ctx: HandlerContext, changes: dict, resource: ResourceResource
     ) -> None:
         ctx.warning("Oh no!")
+        ctx.warning(
+            "Resource %(resource)s UPDATE_RESOURCE",
+            resource=resource.id.resource_version_str(),
+            not_resource=resource.id.resource_version_str(),
+        )
         raise Exception()
 
 
