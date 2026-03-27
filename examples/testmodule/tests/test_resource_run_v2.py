@@ -42,7 +42,6 @@ def test_basic_run_v2(project):
 
     with pytest.raises(AssertionError):
         project.deploy_resource_v2("testmodule::Fail")
-    raise ZeroDivisionError
 
 
 def test_dryrun(project: Project):
