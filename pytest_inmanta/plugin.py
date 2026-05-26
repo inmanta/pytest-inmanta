@@ -72,16 +72,6 @@ PIP_NO_SOURCE_WARNING = (
     "one of the environment variables PIP_INDEX_URL or INMANTA_PIP_USE_SYSTEM_CONFIG"
 )
 
-if typing.TYPE_CHECKING:
-    # Local type stub for mypy that works with both pytest < 7 and pytest >=7
-    # https://docs.pytest.org/en/7.1.x/_modules/_pytest/legacypath.html#TempdirFactory
-    import py
-
-    class TempdirFactory:
-        def mktemp(self, path: str) -> py.path.local:
-            pass
-
-
 import pytest_inmanta.parameters as parameters
 from pytest_inmanta.handler import DATA
 from pytest_inmanta.parameters import (
@@ -1756,14 +1746,14 @@ class DeployResultV2:
 
 
 @pytest.fixture(scope="function")
-def inmanta_state_dir(tmpdir_factory: "TempdirFactory") -> Iterator[str]:
+def inmanta_state_dir(tmp_path_factory: "pytest.TempPathFactory") -> Iterator[str]:
     """
     This fixture can be overridden in the conftest of any individual project
     in order to set the Inmanta state directory at the desired level.
     """
-    inmanta_state_dir = tmpdir_factory.mktemp("inmanta_state_dir")
+    inmanta_state_dir = tmp_path_factory.mktemp("inmanta_state_dir")
     yield str(inmanta_state_dir)
-    inmanta_state_dir.remove()
+    shutil.rmtree(inmanta_state_dir)
 
 
 @pytest.fixture

@@ -53,7 +53,6 @@ pytest_inmanta/plugin.py:0: error: Item "None" of "CaptureFixture[Any] | None" h
 pytest_inmanta/plugin.py:0: error: Item "None" of "Client | None" has no attribute "discovered_resources"  [union-attr]
 pytest_inmanta/plugin.py:0: error: Item "None" of "ResourceState | None" has no attribute "value"  [union-attr]
 pytest_inmanta/plugin.py:0: error: List comprehension has incompatible type List[str | tuple[object, ...] | int | float | DynamicProxy | Reference[str | float | int | bool | DataclassInstance | None] | None]; expected List[DynamicProxy]  [misc]
-pytest_inmanta/plugin.py:0: error: Skipping analyzing "py": module is installed, but missing library stubs or py.typed marker  [import-untyped]
 pytest_inmanta/plugin.py:0: error: The return type of a generator function should be "Generator" or one of its supertypes  [misc]
 pytest_inmanta/plugin.py:0: error: The return type of a generator function should be "Generator" or one of its supertypes  [misc]
 pytest_inmanta/plugin.py:0: error: Too few arguments  [call-arg]
@@ -69,7 +68,6 @@ pytest_inmanta/plugin.py:0: error: Value of type "object" is not indexable  [ind
 pytest_inmanta/plugin.py:0: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
 pytest_inmanta/plugin.py:0: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
 pytest_inmanta/plugin.py:0: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
-pytest_inmanta/plugin.py:0: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
 pytest_inmanta/plugin.py:0: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
 pytest_inmanta/plugin.py:0: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
 pytest_inmanta/test_parameter/list_parameter.py:0: error: Incompatible types in assignment (expression has type "ValueSetBy", variable has type "str | None")  [assignment]
