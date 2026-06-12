@@ -1,5 +1,6 @@
 # v 4.1.0 (?)
 Changes in this release:
+- Pick up pre-release versions of inmanta-core in CI when available.
 - Dropped the pkg_resources package.
 - Use the vendored version of the pip2pi package in core when available.
 

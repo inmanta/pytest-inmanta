@@ -1,4 +1,7 @@
 inmanta-module-std
+# Explicit pre-release marker so `uv pip install --prerelease explicit` picks up
+# inmanta-core dev builds when available, without imposing a version floor.
+inmanta-core>=0.0.0.dev0
 pip2pi==0.8.2
 types-PyYAML
 inmanta-dev-dependencies
