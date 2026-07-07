@@ -122,7 +122,7 @@ This method also asserts that the dryruns and deploys pass the sanity checks abo
 It returns a `DeployResultCollection` that aggregates the `Results` from the dryruns and the deploy.
 
 ```python
-    resutls = project.dryrun_and_deploy_all(assert_create_or_delete=True)
+    results = project.dryrun_and_deploy_all(assert_create_or_delete=True)
     results.first_dryrun.assert_all(ResourceState.dry)
     results.deploy.assert_all(ResourceState.deployed)
     results.last_dryrun.assert_all(ResourceState.dry)
