@@ -2,6 +2,7 @@
 Changes in this release:
 - Dropped the pkg_resources package.
 - Use the vendored version of the pip2pi package in core when available.
+- Fix compatibility with pytest 9.2.
 
 # v 4.0.0 (2025-11-18)
 Changes in this release:
