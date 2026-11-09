@@ -1,6 +1,6 @@
 # Changelog
 
-## v4.1.0 - ?
+## v4.1.0 - 2026-11-09
 
 - Dropped the pkg_resources package.
 - Use the vendored version of the pip2pi package in core when available.
