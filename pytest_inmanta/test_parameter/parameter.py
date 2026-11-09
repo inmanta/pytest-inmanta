@@ -97,6 +97,9 @@ class TestParameterRegistry:
             # False depending on the action and whether the flag is set or not, this makes it impossible to use
             # environment variables for the option.
             default=None,
+            # Legacy options (e.g. --install_mode) share their dest with their replacement (e.g. --install-mode),
+            # pytest>=9.2 only allows this when the dest is passed explicitly.
+            dest=test_parameter.argument.lstrip("-").replace("-", "_"),
         )
         if test_parameter.choices is not None:
             kwargs["choices"] = test_parameter.choices
