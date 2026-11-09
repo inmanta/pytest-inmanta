@@ -1,5 +1,8 @@
 # Changelog
 
+## v4.1.1 - ?
+
+
 ## v4.1.0 - 2026-11-09
 
 - Dropped the pkg_resources package.
