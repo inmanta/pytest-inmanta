@@ -1435,8 +1435,9 @@ license: Test License
 
         # Newer versions of the orchestrator don't check the requires relationships for cycles
         # in the exporter, but on the server. pytest-inmanta doesn't interact with an actual
-        # server, so the cycle detection is done here.
-        RequiresCycleDetector.from_resources(resources.values()).ensure_no_cycle()
+        # server, so the cycle detection is done here for those versions.
+        if CORE_DEPENDENCY_CYCLE_EXCEPTION is None:
+            RequiresCycleDetector.from_resources(resources.values()).ensure_no_cycle()
 
         for key, blob in exporter._file_store.items():
             self.add_blob(key, blob)
