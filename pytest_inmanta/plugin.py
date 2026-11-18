@@ -73,6 +73,7 @@ PIP_NO_SOURCE_WARNING = (
 )
 
 import pytest_inmanta.parameters as parameters
+from pytest_inmanta.core import CORE_DEPENDENCY_CYCLE_EXCEPTION
 from pytest_inmanta.handler import DATA
 from pytest_inmanta.parameters import (
     inm_mod_in_place,
@@ -80,6 +81,10 @@ from pytest_inmanta.parameters import (
     inm_no_load_plugins,
     inm_no_strict_deps_check,
     inm_venv,
+)
+from pytest_inmanta.requires_cycle import (
+    DependencyCycleException,
+    RequiresCycleDetector,
 )
 from pytest_inmanta.test_parameter import (
     ParameterNotSetException,
@@ -1406,18 +1411,32 @@ license: Test License
 
         exporter = Exporter()
 
-        if "environment_settings" in module.ProjectMetadata.model_fields:
-            # We are running against a new version of inmanta-core that has support
-            # to push environment_settings to the server. Only push environment settings
-            # on export.
-            version, resources = exporter.run(
-                types,
-                scopes,
-                no_commit=not export,
-                export_env_var_settings=export_env_var_settings,
-            )
-        else:
-            version, resources = exporter.run(types, scopes, no_commit=not export)
+        try:
+            if "environment_settings" in module.ProjectMetadata.model_fields:
+                # We are running against a new version of inmanta-core that has support
+                # to push environment_settings to the server. Only push environment settings
+                # on export.
+                version, resources = exporter.run(
+                    types,
+                    scopes,
+                    no_commit=not export,
+                    export_env_var_settings=export_env_var_settings,
+                )
+            else:
+                version, resources = exporter.run(types, scopes, no_commit=not export)
+        except Exception as e:
+            # This except block can be removed when all iso versions of which the exporter
+            # detects cycles in the requires relationships are EOL.
+            if CORE_DEPENDENCY_CYCLE_EXCEPTION is not None and isinstance(
+                e, CORE_DEPENDENCY_CYCLE_EXCEPTION
+            ):
+                raise DependencyCycleException.from_core_exception(e) from e
+            raise
+
+        # Newer versions of the orchestrator don't check the requires relationships for cycles
+        # in the exporter, but on the server. pytest-inmanta doesn't interact with an actual
+        # server, so the cycle detection is done here.
+        RequiresCycleDetector.from_resources(resources.values()).ensure_no_cycle()
 
         for key, blob in exporter._file_store.items():
             self.add_blob(key, blob)
