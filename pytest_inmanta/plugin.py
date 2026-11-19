@@ -73,6 +73,7 @@ PIP_NO_SOURCE_WARNING = (
 )
 
 import pytest_inmanta.parameters as parameters
+from pytest_inmanta import dynamic_modules
 from pytest_inmanta.handler import DATA
 from pytest_inmanta.parameters import (
     inm_mod_in_place,
@@ -182,6 +183,13 @@ def project_no_plugins(
 
     yield project_shared_no_plugins
     project_shared_no_plugins.clean()
+
+
+def _v1_dynamic_modules() -> bool:
+    """
+    Whether dynamic modules are written as V1 modules instead of fake editable V2 installs.
+    """
+    return os.environ.get("PYTEST_INMANTA_DYNAMIC_MODULES") == "v1"
 
 
 def get_module_data(filename: str) -> str:
@@ -897,6 +905,8 @@ class Project:
         )
         self._should_load_plugins: typing.Optional[bool] = load_plugins
         self._plugins: typing.Optional[typing.Dict[str, FunctionType]] = None
+        if not _v1_dynamic_modules():
+            dynamic_modules.INSTALLER_INSTANCE.use_project(project_dir)
         self._load()
         self._capsys: typing.Optional["CaptureFixture"] = None
         self.ctx: typing.Optional[HandlerContext] = None
@@ -952,6 +962,9 @@ class Project:
         """
         with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
             fd.write(model)
+
+        if not _v1_dynamic_modules():
+            dynamic_modules.INSTALLER_INSTANCE.prune()
 
         signature_init: inspect.Signature = inspect.Signature.from_callable(
             module.Project.__init__
@@ -1310,6 +1323,17 @@ class Project:
 
     def create_module(self, name: str, initcf: str = "", initpy: str = "") -> None:
         module_dir = os.path.join(self._test_project_dir, "libs", name)
+        if _v1_dynamic_modules():
+            self._create_v1_module(module_dir, name, initcf, initpy)
+        else:
+            dynamic_modules.write_module(module_dir, name, initcf, initpy)
+            dynamic_modules.INSTALLER_INSTANCE.install(self._env_path, name, module_dir)
+
+        ProjectLoader.register_dynamic_module(name)
+
+    def _create_v1_module(
+        self, module_dir: str, name: str, initcf: str, initpy: str
+    ) -> None:
         os.mkdir(module_dir)
         os.mkdir(os.path.join(module_dir, "model"))
         os.mkdir(os.path.join(module_dir, "files"))
@@ -1327,8 +1351,6 @@ class Project:
 version: 0.1
 license: Test License
             """)
-
-        ProjectLoader.register_dynamic_module(name)
 
     def _load(self) -> None:
         """
@@ -1486,6 +1508,8 @@ license: Test License
         """
         This method can be used to register mock templates or files in the virtual "unittest" module.
         """
+        if not _v1_dynamic_modules():
+            subdir = dynamic_modules.module_subdir("unittest", subdir)
         dir_name = os.path.join(self._test_project_dir, "libs", "unittest", subdir)
         if not os.path.exists(dir_name):
             os.mkdir(dir_name)
