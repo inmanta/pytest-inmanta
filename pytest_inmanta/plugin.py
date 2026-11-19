@@ -906,7 +906,7 @@ class Project:
         self._should_load_plugins: typing.Optional[bool] = load_plugins
         self._plugins: typing.Optional[typing.Dict[str, FunctionType]] = None
         if not _v1_dynamic_modules():
-            dynamic_modules.INSTALLER_INSTANCE.use_project(project_dir)
+            dynamic_modules.FINDER.use_project(project_dir)
         self._load()
         self._capsys: typing.Optional["CaptureFixture"] = None
         self.ctx: typing.Optional[HandlerContext] = None
@@ -964,7 +964,7 @@ class Project:
             fd.write(model)
 
         if not _v1_dynamic_modules():
-            dynamic_modules.INSTALLER_INSTANCE.prune()
+            dynamic_modules.FINDER.prune()
 
         signature_init: inspect.Signature = inspect.Signature.from_callable(
             module.Project.__init__
@@ -1327,7 +1327,7 @@ class Project:
             self._create_v1_module(module_dir, name, initcf, initpy)
         else:
             dynamic_modules.write_module(module_dir, name, initcf, initpy)
-            dynamic_modules.INSTALLER_INSTANCE.install(self._env_path, name, module_dir)
+            dynamic_modules.FINDER.install(name, module_dir)
 
         ProjectLoader.register_dynamic_module(name)
 

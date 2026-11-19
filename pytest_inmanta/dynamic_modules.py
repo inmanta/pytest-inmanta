@@ -15,36 +15,32 @@ limitations under the License.
 
 Contact: code@inmanta.com
 
-Dynamic test modules: V2 module trees written by the tests themselves, made visible to the compiler as editable installs
-without running pip.
+Dynamic test modules: V2 module trees written by the tests themselves, made visible to the compiler as editable modules
+without installing them.
 
-A fake editable install writes the two things core looks at to find an editable V2 module:
+A finder at the front of ``sys.meta_path`` resolves ``inmanta_plugins.<name>`` to the plugin package of the module's tree,
+``<source dir>/inmanta_plugins/<name>``. That is all core needs to load an editable V2 module: it takes the source root two
+levels up from the package's ``__init__.py``, next to ``setup.cfg``, and reads the version from ``setup.cfg``. Nothing is
+written into the venv, so there is nothing to clean up and test runs that share a venv don't see each other's modules.
 
-* an install record, ``inmanta_module_<name>-<version>.dist-info``, in the venv's site-packages. ``importlib.metadata``
-  reads the version from it, and its ``direct_url.json`` marks the install as editable.
-* an import path for ``inmanta_plugins.<name>``: a symlink at ``<site-packages>/inmanta_plugins/<name>`` to the module's
-  plugin package. Core resolves the symlink and finds the module's source root two levels up. The install record lists
-  the symlink, so ``pip uninstall`` removes it too.
-
-A module is uninstalled when the test project changes or its source directory is removed, and everything written into
-the venv is removed when the process exits. A venv can't be shared by test runs that run at the same time: a run refuses
-to take over a module that another live run installed.
+A module is dropped when the test project changes or its source directory is removed.
 """
 
-import atexit
-import configparser
-import dataclasses
-import importlib
-import json
+import importlib.abc
+import importlib.machinery
+import importlib.metadata
+import importlib.util
 import os
 import pathlib
 import shutil
+import sys
+import types
 import typing
+from collections import abc
 
-from inmanta import env
+from inmanta import const
 
 DYNAMIC_MODULE_VERSION = "0.1.0"
-INSTALLER = "pytest-inmanta"
 
 SETUP_CFG = """\
 [metadata]
@@ -94,219 +90,95 @@ def module_subdir(name: str, subdir: str) -> str:
     return subdir
 
 
-@dataclasses.dataclass(frozen=True)
-class FakeInstall:
+class DynamicModuleFinder(importlib.abc.MetaPathFinder):
     """
-    One dynamic module installed by a FakeEditableInstaller.
+    Finds the plugin packages of dynamic modules.
 
-    :param site_dir: The site-packages dir of the venv the module is installed in.
-    :param source_dir: The root of the module's V2 tree.
-    :param link: The symlink to the module's plugin package, in site_dir.
-    :param dist_info: The install record written for the module in site_dir.
-    """
+    It only answers for the top-level package ``inmanta_plugins.<name>`` of a registered module. That package's
+    ``__path__`` is its directory, so Python's own path finder handles its submodules.
 
-    site_dir: str
-    source_dir: str
-    link: str
-    dist_info: str
-
-
-def _pid_alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        # The process exists but belongs to another user
-        return True
-    return True
-
-
-def _installer_pid(installer_file: pathlib.Path) -> typing.Optional[int]:
-    """
-    Return the PID of the pytest-inmanta process that wrote an install record, or None if pytest-inmanta didn't write it.
-    """
-    if not installer_file.exists():
-        return None
-    words = installer_file.read_text().split()
-    if len(words) != 2 or words[0] != INSTALLER or not words[1].isdigit():
-        return None
-    return int(words[1])
-
-
-class FakeEditableInstaller:
-    """
-    Installs dynamic modules in editable mode by writing the install record and the import path directly.
-
-    One instance serves the whole process. It installs each module from a given source directory only once, so recreating
-    a module tree at the same path, as the project fixture does for the unittest module, costs nothing.
-
-    A module stays installed only while it belongs to the current test project: use_project drops the modules of another
-    project, and prune drops the modules whose source directory is gone.
+    One instance serves the whole process. Registering a module again from the same source directory, as the project
+    fixture does for the unittest module, changes nothing.
     """
 
     def __init__(self) -> None:
         self._project_dir: typing.Optional[str] = None
-        # module name -> install
-        self._installs: dict[str, FakeInstall] = {}
-        # inmanta_plugins dirs this installer created in a site-packages dir
-        self._created_dirs: set[str] = set()
-        # A forked child inherits the exit hook, but the files belong to this process
-        self._owner_pid: int = os.getpid()
-        atexit.register(self.cleanup)
+        # module name -> source dir
+        self._sources: dict[str, str] = {}
+
+    def _ensure_on_meta_path(self) -> None:
+        # Something that restores sys.meta_path from a snapshot can drop this finder
+        if self not in sys.meta_path:
+            sys.meta_path.insert(0, self)
+
+    def install(self, name: str, source_dir: str) -> None:
+        """
+        Make the V2 module tree at `source_dir` the source of module `name`.
+        """
+        source_dir = os.path.realpath(source_dir)
+        previous: typing.Optional[str] = self._sources.get(name)
+        if previous == source_dir:
+            self._ensure_on_meta_path()
+            return
+        try:
+            importlib.metadata.distribution(f"inmanta-module-{name.replace('_', '-')}")
+        except importlib.metadata.PackageNotFoundError:
+            pass
+        else:
+            raise Exception(
+                f"Module {name} is already installed. A dynamic test module can't share its name with an installed module."
+            )
+        if previous is not None:
+            # A rewritten file of the same size in the same second could be served from stale bytecode
+            shutil.rmtree(
+                os.path.join(source_dir, const.PLUGINS_PACKAGE, name, "__pycache__"),
+                ignore_errors=True,
+            )
+        self._sources[name] = source_dir
+        self._ensure_on_meta_path()
 
     def use_project(self, project_dir: str) -> None:
         """
-        Make `project_dir` the current test project: uninstall every dynamic module whose source is outside of it.
+        Make `project_dir` the current test project: drop every dynamic module whose source is outside of it.
         """
         project_dir = os.path.realpath(project_dir)
         if project_dir == self._project_dir:
             return
         self._project_dir = project_dir
-        for name, install in list(self._installs.items()):
-            if not install.source_dir.startswith(project_dir + os.sep):
-                self._uninstall(name)
+        for name, source_dir in list(self._sources.items()):
+            if not source_dir.startswith(project_dir + os.sep):
+                del self._sources[name]
 
     def prune(self) -> None:
         """
-        Uninstall every dynamic module whose source directory no longer exists.
+        Drop every dynamic module whose source directory no longer exists.
         """
-        for name, install in list(self._installs.items()):
-            if not os.path.isdir(install.source_dir):
-                self._uninstall(name)
+        for name, source_dir in list(self._sources.items()):
+            if not os.path.isdir(source_dir):
+                del self._sources[name]
+        self._ensure_on_meta_path()
 
-    def _uninstall(self, name: str) -> None:
-        install = self._installs.pop(name)
-        if os.path.islink(install.link):
-            os.unlink(install.link)
-        shutil.rmtree(install.dist_info, ignore_errors=True)
-        importlib.invalidate_caches()
-
-    def install(self, env_path: str, name: str, source_dir: str) -> None:
-        """
-        Make the V2 module tree at `source_dir` the editable install of module `name` in the venv at `env_path`.
-        """
-        # With --venv, env_path is a symlink inside the project dir, which is removed before the cleanup runs
-        site_dir = os.path.realpath(
-            env.PythonEnvironment.get_site_dir_for_env_path(env_path)
+    def find_spec(
+        self,
+        fullname: str,
+        path: typing.Optional[abc.Sequence[str]],
+        target: typing.Optional[types.ModuleType] = None,
+    ) -> typing.Optional[importlib.machinery.ModuleSpec]:
+        prefix = f"{const.PLUGINS_PACKAGE}."
+        if not fullname.startswith(prefix):
+            return None
+        name = fullname[len(prefix) :]
+        source_dir: typing.Optional[str] = self._sources.get(name)
+        if source_dir is None:
+            return None
+        package_dir = os.path.join(source_dir, const.PLUGINS_PACKAGE, name)
+        init = os.path.join(package_dir, "__init__.py")
+        if not os.path.isfile(init):
+            return None
+        # A standard spec: core treats a module whose package is loaded by its V1 loader as a V1 module
+        return importlib.util.spec_from_file_location(
+            fullname, init, submodule_search_locations=[package_dir]
         )
-        source_dir = os.path.realpath(source_dir)
-        previous: typing.Optional[FakeInstall] = self._installs.get(name)
-        if previous is not None:
-            if previous.site_dir == site_dir and previous.source_dir == source_dir:
-                return
-            self._uninstall(name)
-
-        dist_name = f"inmanta_module_{name.replace('-', '_')}"
-        self._remove_previous_install(site_dir, name, dist_name)
-
-        plugins_dir = os.path.join(site_dir, "inmanta_plugins")
-        if not os.path.isdir(plugins_dir):
-            os.mkdir(plugins_dir)
-            self._created_dirs.add(plugins_dir)
-        plugin_dir = os.path.join(source_dir, "inmanta_plugins", name)
-        link = os.path.join(plugins_dir, name)
-        os.symlink(plugin_dir, link)
-        if previous is not None:
-            # A rewritten file of the same size in the same second could be served from stale bytecode
-            shutil.rmtree(os.path.join(plugin_dir, "__pycache__"), ignore_errors=True)
-
-        dist_info = self._write_dist_info(site_dir, name, dist_name, source_dir)
-        self._installs[name] = FakeInstall(
-            site_dir=site_dir, source_dir=source_dir, link=link, dist_info=dist_info
-        )
-        # Also makes the inmanta_plugins namespace package pick up an inmanta_plugins dir created after it was imported
-        importlib.invalidate_caches()
-
-    def _remove_previous_install(
-        self, site_dir: str, name: str, dist_name: str
-    ) -> None:
-        """
-        Remove what a previous fake install of module `name` left in site_dir: one of this process, or of a pytest-inmanta
-        process that is no longer running. Raise if the module was installed by another tool or by another live process.
-        """
-        for existing in pathlib.Path(site_dir).glob(f"{dist_name}-*.dist-info"):
-            owner: typing.Optional[int] = _installer_pid(existing / "INSTALLER")
-            if owner is None:
-                raise Exception(
-                    f"Module {name} is already installed in {site_dir}. "
-                    "A dynamic test module can't share its name with an installed module."
-                )
-            if owner != os.getpid() and _pid_alive(owner):
-                raise Exception(
-                    f"Dynamic module {name} is in use in {site_dir} by another pytest-inmanta process (pid {owner}). "
-                    "Test runs that run at the same time can't share a venv."
-                )
-            shutil.rmtree(existing)
-
-        link = os.path.join(site_dir, "inmanta_plugins", name)
-        if os.path.islink(link):
-            os.unlink(link)
-        elif os.path.exists(link):
-            raise Exception(
-                f"Module {name} is already installed in {site_dir}. "
-                "A dynamic test module can't share its name with an installed module."
-            )
-
-    def _write_dist_info(
-        self, site_dir: str, name: str, dist_name: str, source_dir: str
-    ) -> str:
-        config = configparser.ConfigParser()
-        config.read(os.path.join(source_dir, "setup.cfg"))
-        version: str = config.get(
-            "metadata", "version", fallback=DYNAMIC_MODULE_VERSION
-        )
-        requires: list[str] = [
-            line.strip()
-            for line in config.get(
-                "options", "install_requires", fallback=""
-            ).splitlines()
-            if line.strip()
-        ]
-
-        dist_info = pathlib.Path(site_dir) / f"{dist_name}-{version}.dist-info"
-        dist_info.mkdir()
-        metadata = [
-            "Metadata-Version: 2.1",
-            f"Name: inmanta-module-{name.replace('_', '-')}",
-            f"Version: {version}",
-            *(f"Requires-Dist: {req}" for req in requires),
-        ]
-        files: dict[str, str] = {
-            "METADATA": "\n".join(metadata) + "\n",
-            "INSTALLER": f"{INSTALLER} {os.getpid()}\n",
-            "direct_url.json": json.dumps(
-                {
-                    "url": pathlib.Path(source_dir).as_uri(),
-                    "dir_info": {"editable": True},
-                }
-            ),
-        }
-        for file_name, content in files.items():
-            (dist_info / file_name).write_text(content)
-        record = [
-            f"inmanta_plugins/{name},,",
-            *(f"{dist_info.name}/{file_name},," for file_name in [*files, "RECORD"]),
-        ]
-        (dist_info / "RECORD").write_text("\n".join(record) + "\n")
-        return str(dist_info)
-
-    def cleanup(self) -> None:
-        """
-        Remove everything this installer wrote outside of the module source trees.
-        """
-        if os.getpid() != self._owner_pid:
-            return
-        for name in list(self._installs):
-            self._uninstall(name)
-        for path in self._created_dirs:
-            try:
-                os.rmdir(path)
-            except OSError:
-                # Not empty: something else installed a module in it since
-                pass
-        self._created_dirs.clear()
-        self._project_dir = None
 
 
-INSTALLER_INSTANCE = FakeEditableInstaller()
+FINDER = DynamicModuleFinder()

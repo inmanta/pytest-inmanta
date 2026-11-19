@@ -16,8 +16,6 @@ limitations under the License.
 Contact: code@inmanta.com
 """
 
-import importlib.metadata
-import json
 import os
 
 from inmanta import module
@@ -82,7 +80,3 @@ def test_dynamic_module_is_editable_v2(project) -> None:
         os.path.join(unittest_dir, "inmanta_plugins", "unittest", "extra.py")
     )
     assert os.path.exists(os.path.join(unittest_dir, "templates", "t.j2"))
-
-    dist = importlib.metadata.distribution("inmanta-module-editablecheck")
-    direct_url = json.loads(dist.read_text("direct_url.json"))
-    assert direct_url["dir_info"] == {"editable": True}
