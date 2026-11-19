@@ -101,7 +101,7 @@ def test_install_and_cleanup(installer, env_path, tmp_path) -> None:
     A dynamic module is importable and installed until the cleanup, which leaves nothing in the venv. This holds for the
     first module in a venv without an inmanta_plugins dir, created after the inmanta_plugins package was imported.
     """
-    import inmanta_plugins
+    inmanta_plugins = importlib.import_module("inmanta_plugins")
 
     site_dir = pathlib.Path(env.PythonEnvironment.get_site_dir_for_env_path(env_path))
     assert not (site_dir / "inmanta_plugins").exists()
