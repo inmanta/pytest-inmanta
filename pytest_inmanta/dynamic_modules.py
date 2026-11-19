@@ -22,9 +22,9 @@ A fake editable install writes the two things core looks at to find an editable 
 
 * an install record, ``inmanta_module_<name>-<version>.dist-info``, in the venv's site-packages. ``importlib.metadata``
   reads the version from it, and its ``direct_url.json`` marks the install as editable.
-* an import path for ``inmanta_plugins.<name>``: a symlink in a staging directory to the module's plugin package. One
-  ``.pth`` file in site-packages puts the staging directory on ``sys.path``. Core resolves the symlink and finds the module's
-  source root two levels up.
+* an import path for ``inmanta_plugins.<name>``: a symlink at ``<site-packages>/inmanta_plugins/<name>`` to the module's
+  plugin package. Core resolves the symlink and finds the module's source root two levels up. The install record lists
+  the symlink, so ``pip uninstall`` removes it too.
 
 A module is uninstalled when the test project changes or its source directory is removed, and everything written into
 the venv is removed when the process exits. A venv can't be shared by test runs that run at the same time: a run refuses
@@ -39,16 +39,12 @@ import json
 import os
 import pathlib
 import shutil
-import site
-import sys
-import tempfile
 import typing
 
 from inmanta import env
 
 DYNAMIC_MODULE_VERSION = "0.1.0"
 INSTALLER = "pytest-inmanta"
-PTH_PREFIX = "pytest-inmanta-modules-"
 
 SETUP_CFG = """\
 [metadata]
@@ -105,11 +101,13 @@ class FakeInstall:
 
     :param site_dir: The site-packages dir of the venv the module is installed in.
     :param source_dir: The root of the module's V2 tree.
+    :param link: The symlink to the module's plugin package, in site_dir.
     :param dist_info: The install record written for the module in site_dir.
     """
 
     site_dir: str
     source_dir: str
+    link: str
     dist_info: str
 
 
@@ -148,45 +146,14 @@ class FakeEditableInstaller:
     """
 
     def __init__(self) -> None:
-        self._staging_dir: typing.Optional[str] = None
         self._project_dir: typing.Optional[str] = None
         # module name -> install
         self._installs: dict[str, FakeInstall] = {}
-        self._pth_files: set[str] = set()
+        # inmanta_plugins dirs this installer created in a site-packages dir
+        self._created_dirs: set[str] = set()
         # A forked child inherits the exit hook, but the files belong to this process
         self._owner_pid: int = os.getpid()
         atexit.register(self.cleanup)
-
-    def _get_staging_dir(self) -> str:
-        if self._staging_dir is None:
-            self._staging_dir = tempfile.mkdtemp(prefix="pytest-inmanta-modules-")
-            os.mkdir(os.path.join(self._staging_dir, "inmanta_plugins"))
-        return self._staging_dir
-
-    def _link_path(self, name: str) -> str:
-        return os.path.join(self._get_staging_dir(), "inmanta_plugins", name)
-
-    def _ensure_import_path(self, site_dir: str) -> None:
-        staging_dir = self._get_staging_dir()
-        pth_file = os.path.join(site_dir, f"{PTH_PREFIX}{os.getpid()}.pth")
-        if pth_file not in self._pth_files:
-            self._remove_stale_pth_files(site_dir)
-            with open(pth_file, "w") as fd:
-                fd.write(staging_dir + "\n")
-            self._pth_files.add(pth_file)
-        # The .pth file is only read at interpreter startup or by addsitedir, so this process needs the entry itself.
-        site.addsitedir(site_dir)
-        if staging_dir not in sys.path:
-            sys.path.append(staging_dir)
-
-    def _remove_stale_pth_files(self, site_dir: str) -> None:
-        """
-        Remove the .pth files left in site_dir by pytest-inmanta processes that are no longer running.
-        """
-        for pth_file in pathlib.Path(site_dir).glob(f"{PTH_PREFIX}*.pth"):
-            pid = pth_file.stem[len(PTH_PREFIX) :]
-            if pid.isdigit() and not _pid_alive(int(pid)):
-                pth_file.unlink(missing_ok=True)
 
     def use_project(self, project_dir: str) -> None:
         """
@@ -210,9 +177,8 @@ class FakeEditableInstaller:
 
     def _uninstall(self, name: str) -> None:
         install = self._installs.pop(name)
-        link = self._link_path(name)
-        if os.path.lexists(link):
-            os.unlink(link)
+        if os.path.islink(install.link):
+            os.unlink(install.link)
         shutil.rmtree(install.dist_info, ignore_errors=True)
         importlib.invalidate_caches()
 
@@ -231,25 +197,34 @@ class FakeEditableInstaller:
                 return
             self._uninstall(name)
 
-        self._ensure_import_path(site_dir)
+        dist_name = f"inmanta_module_{name.replace('-', '_')}"
+        self._remove_previous_install(site_dir, name, dist_name)
 
+        plugins_dir = os.path.join(site_dir, "inmanta_plugins")
+        if not os.path.isdir(plugins_dir):
+            os.mkdir(plugins_dir)
+            self._created_dirs.add(plugins_dir)
         plugin_dir = os.path.join(source_dir, "inmanta_plugins", name)
-        link = self._link_path(name)
-        if os.path.lexists(link):
-            os.unlink(link)
+        link = os.path.join(plugins_dir, name)
         os.symlink(plugin_dir, link)
         if previous is not None:
             # A rewritten file of the same size in the same second could be served from stale bytecode
             shutil.rmtree(os.path.join(plugin_dir, "__pycache__"), ignore_errors=True)
 
-        dist_info = self._write_dist_info(site_dir, name, source_dir)
+        dist_info = self._write_dist_info(site_dir, name, dist_name, source_dir)
         self._installs[name] = FakeInstall(
-            site_dir=site_dir, source_dir=source_dir, dist_info=dist_info
+            site_dir=site_dir, source_dir=source_dir, link=link, dist_info=dist_info
         )
+        # Also makes the inmanta_plugins namespace package pick up an inmanta_plugins dir created after it was imported
         importlib.invalidate_caches()
 
-    def _write_dist_info(self, site_dir: str, name: str, source_dir: str) -> str:
-        dist_name = f"inmanta_module_{name.replace('-', '_')}"
+    def _remove_previous_install(
+        self, site_dir: str, name: str, dist_name: str
+    ) -> None:
+        """
+        Remove what a previous fake install of module `name` left in site_dir: one of this process, or of a pytest-inmanta
+        process that is no longer running. Raise if the module was installed by another tool or by another live process.
+        """
         for existing in pathlib.Path(site_dir).glob(f"{dist_name}-*.dist-info"):
             owner: typing.Optional[int] = _installer_pid(existing / "INSTALLER")
             if owner is None:
@@ -264,6 +239,18 @@ class FakeEditableInstaller:
                 )
             shutil.rmtree(existing)
 
+        link = os.path.join(site_dir, "inmanta_plugins", name)
+        if os.path.islink(link):
+            os.unlink(link)
+        elif os.path.exists(link):
+            raise Exception(
+                f"Module {name} is already installed in {site_dir}. "
+                "A dynamic test module can't share its name with an installed module."
+            )
+
+    def _write_dist_info(
+        self, site_dir: str, name: str, dist_name: str, source_dir: str
+    ) -> str:
         config = configparser.ConfigParser()
         config.read(os.path.join(source_dir, "setup.cfg"))
         version: str = config.get(
@@ -297,7 +284,10 @@ class FakeEditableInstaller:
         }
         for file_name, content in files.items():
             (dist_info / file_name).write_text(content)
-        record = [f"{dist_info.name}/{file_name},," for file_name in [*files, "RECORD"]]
+        record = [
+            f"inmanta_plugins/{name},,",
+            *(f"{dist_info.name}/{file_name},," for file_name in [*files, "RECORD"]),
+        ]
         (dist_info / "RECORD").write_text("\n".join(record) + "\n")
         return str(dist_info)
 
@@ -309,15 +299,13 @@ class FakeEditableInstaller:
             return
         for name in list(self._installs):
             self._uninstall(name)
-        for path in self._pth_files:
+        for path in self._created_dirs:
             try:
-                os.remove(path)
-            except FileNotFoundError:
+                os.rmdir(path)
+            except OSError:
+                # Not empty: something else installed a module in it since
                 pass
-        if self._staging_dir is not None:
-            shutil.rmtree(self._staging_dir, ignore_errors=True)
-        self._pth_files.clear()
-        self._staging_dir = None
+        self._created_dirs.clear()
         self._project_dir = None
 
 

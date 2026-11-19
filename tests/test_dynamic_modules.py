@@ -50,12 +50,17 @@ def installer(
 
 
 @pytest.fixture
-def env_path(tmp_path: pathlib.Path) -> str:
+def env_path(
+    installer: dynamic_modules.FakeEditableInstaller, tmp_path: pathlib.Path
+) -> str:
     """
-    A directory laid out like a venv, as far as the installer is concerned.
+    A directory laid out like a venv, as far as the installer is concerned, whose site-packages dir is on sys.path, as for
+    an active venv. It has no inmanta_plugins dir yet.
     """
     path = tmp_path / "venv"
-    os.makedirs(env.PythonEnvironment.get_site_dir_for_env_path(str(path)))
+    site_dir = env.PythonEnvironment.get_site_dir_for_env_path(str(path))
+    os.makedirs(site_dir)
+    sys.path.append(site_dir)
     return str(path)
 
 
@@ -93,17 +98,30 @@ def is_importable(name: str) -> bool:
 
 def test_install_and_cleanup(installer, env_path, tmp_path) -> None:
     """
-    A dynamic module is importable and installed until the cleanup, which leaves nothing in the venv.
+    A dynamic module is importable and installed until the cleanup, which leaves nothing in the venv. This holds for the
+    first module in a venv without an inmanta_plugins dir, created after the inmanta_plugins package was imported.
     """
+    import inmanta_plugins
+
+    site_dir = pathlib.Path(env.PythonEnvironment.get_site_dir_for_env_path(env_path))
+    assert not (site_dir / "inmanta_plugins").exists()
+    # The namespace path is computed while the venv has no inmanta_plugins dir yet
+    assert str(site_dir / "inmanta_plugins") not in list(inmanta_plugins.__path__)
     installer.use_project(str(tmp_path / "project"))
-    create(installer, env_path, tmp_path / "project", "dyninstall")
+    module_dir = create(installer, env_path, tmp_path / "project", "dyninstall")
     assert is_importable("dyninstall")
     assert is_installed("dyninstall")
+    link = site_dir / "inmanta_plugins" / "dyninstall"
+    assert os.readlink(link) == str(module_dir / "inmanta_plugins" / "dyninstall")
+    record = importlib.metadata.distribution("inmanta-module-dyninstall").read_text(
+        "RECORD"
+    )
+    assert record is not None and "inmanta_plugins/dyninstall,," in record.splitlines()
 
     installer.cleanup()
     assert not is_importable("dyninstall")
     assert not is_installed("dyninstall")
-    assert os.listdir(env.PythonEnvironment.get_site_dir_for_env_path(env_path)) == []
+    assert os.listdir(site_dir) == []
 
 
 def test_project_change_uninstalls_other_projects_modules(
@@ -155,6 +173,9 @@ def test_module_of_live_process_is_not_taken_over(
         dist_info = pathlib.Path(site_dir) / "inmanta_module_dynshared-0.1.0.dist-info"
         dist_info.mkdir()
         (dist_info / "INSTALLER").write_text(f"pytest-inmanta {other.pid}\n")
+        link = pathlib.Path(site_dir) / "inmanta_plugins" / "dynshared"
+        link.parent.mkdir()
+        link.symlink_to(tmp_path / "other-run" / "inmanta_plugins" / "dynshared")
         installer.use_project(str(tmp_path / "project"))
         with pytest.raises(
             Exception, match=f"another pytest-inmanta process \\(pid {other.pid}\\)"
@@ -167,6 +188,10 @@ def test_module_of_live_process_is_not_taken_over(
     shutil.rmtree(tmp_path / "project" / "libs" / "dynshared")
     create(installer, env_path, tmp_path / "project", "dynshared")
     assert (dist_info / "INSTALLER").read_text() == f"pytest-inmanta {os.getpid()}\n"
+    assert os.readlink(link) == str(
+        tmp_path / "project" / "libs" / "dynshared" / "inmanta_plugins" / "dynshared"
+    )
+    assert is_importable("dynshared")
 
 
 def test_module_of_other_installer_is_not_replaced(
@@ -187,15 +212,16 @@ def test_module_of_other_installer_is_not_replaced(
     assert dist_info.is_dir()
 
 
-def test_stale_pth_files_are_removed(installer, env_path, tmp_path) -> None:
+def test_installed_package_dir_is_not_replaced(installer, env_path, tmp_path) -> None:
     """
-    The .pth file of a pytest-inmanta process that is no longer running is removed.
+    A dynamic module can't replace a plugin package that is installed as a real directory.
     """
     site_dir = pathlib.Path(env.PythonEnvironment.get_site_dir_for_env_path(env_path))
-    dead = subprocess.Popen([sys.executable, "-c", "pass"])
-    dead.wait()
-    stale = site_dir / f"pytest-inmanta-modules-{dead.pid}.pth"
-    stale.write_text("/does/not/exist\n")
+    package_dir = site_dir / "inmanta_plugins" / "dynpackage"
+    package_dir.mkdir(parents=True)
     installer.use_project(str(tmp_path / "project"))
-    create(installer, env_path, tmp_path / "project", "dynpth")
-    assert not stale.exists()
+    with pytest.raises(
+        Exception, match="can't share its name with an installed module"
+    ):
+        create(installer, env_path, tmp_path / "project", "dynpackage")
+    assert package_dir.is_dir() and not package_dir.is_symlink()
