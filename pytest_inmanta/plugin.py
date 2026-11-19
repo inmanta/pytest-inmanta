@@ -905,6 +905,8 @@ class Project:
         )
         self._should_load_plugins: typing.Optional[bool] = load_plugins
         self._plugins: typing.Optional[typing.Dict[str, FunctionType]] = None
+        if not _v1_dynamic_modules():
+            dynamic_modules.INSTALLER_INSTANCE.use_project(project_dir)
         self._load()
         self._capsys: typing.Optional["CaptureFixture"] = None
         self.ctx: typing.Optional[HandlerContext] = None
@@ -960,6 +962,9 @@ class Project:
         """
         with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
             fd.write(model)
+
+        if not _v1_dynamic_modules():
+            dynamic_modules.INSTALLER_INSTANCE.prune()
 
         signature_init: inspect.Signature = inspect.Signature.from_callable(
             module.Project.__init__
