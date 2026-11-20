@@ -25,6 +25,7 @@ import typing
 
 import pytest
 
+from inmanta import module
 from pytest_inmanta import dynamic_modules
 
 
@@ -144,3 +145,15 @@ def test_installed_module_name_is_refused(finder, tmp_path) -> None:
         Exception, match="can't share its name with an installed module"
     ):
         create(finder, tmp_path / "project", name)
+
+
+def test_module_name_with_underscore(tmp_path) -> None:
+    """
+    A dynamic module whose name contains an underscore has valid V2 metadata.
+    """
+    module_dir = tmp_path / "libs" / "dyn_underscore"
+    module_dir.parent.mkdir(parents=True)
+    dynamic_modules.write_module(str(module_dir), "dyn_underscore", "", "")
+    loaded = module.Module.from_path(str(module_dir))
+    assert isinstance(loaded, module.ModuleV2)
+    assert loaded.name == "dyn_underscore"

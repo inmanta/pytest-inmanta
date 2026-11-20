@@ -38,13 +38,13 @@ import types
 import typing
 from collections import abc
 
-from inmanta import const
+from inmanta import const, module
 
 DYNAMIC_MODULE_VERSION = "0.1.0"
 
 SETUP_CFG = """\
 [metadata]
-name = inmanta-module-{name}
+name = {package_name}
 version = {version}
 license = Test License
 
@@ -74,7 +74,10 @@ def write_module(module_dir: str, name: str, initcf: str, initpy: str) -> None:
     (root / "model" / "_init.cf").write_text(initcf)
     (plugin_dir / "__init__.py").write_text(initpy)
     (root / "setup.cfg").write_text(
-        SETUP_CFG.format(name=name, version=DYNAMIC_MODULE_VERSION)
+        SETUP_CFG.format(
+            package_name=module.ModuleV2Source.get_package_name_for(name),
+            version=DYNAMIC_MODULE_VERSION,
+        )
     )
     (root / "pyproject.toml").write_text(PYPROJECT_TOML)
 
@@ -121,7 +124,9 @@ class DynamicModuleFinder(importlib.abc.MetaPathFinder):
             self._ensure_on_meta_path()
             return
         try:
-            importlib.metadata.distribution(f"inmanta-module-{name.replace('_', '-')}")
+            importlib.metadata.distribution(
+                module.ModuleV2Source.get_package_name_for(name)
+            )
         except importlib.metadata.PackageNotFoundError:
             pass
         else:
