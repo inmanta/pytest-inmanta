@@ -72,7 +72,13 @@ build-backend = "setuptools.build_meta"
 
 def write_module(module_dir: str, name: str, initcf: str, initpy: str) -> None:
     """
-    Write a V2 module tree for module `name` in `module_dir`, which must not exist yet.
+    Write a V2 module tree with an empty files/ and templates/ directory.
+
+    :param module_dir: The root directory of the tree. It must not exist yet, its parent must.
+    :param name: The name of the module.
+    :param initcf: The content of the module's model/_init.cf.
+    :param initpy: The content of the module's plugin package, inmanta_plugins/<name>/__init__.py.
+    :raises FileExistsError: `module_dir` already exists.
     """
     root = pathlib.Path(module_dir)
     root.mkdir()
@@ -94,6 +100,12 @@ def write_module(module_dir: str, name: str, initcf: str, initpy: str) -> None:
 def module_subdir(name: str, subdir: str) -> str:
     """
     Map a V1 module subdirectory to its place in a V2 module tree.
+
+    :param name: The name of the module.
+    :param subdir: A subdirectory of a V1 module tree, relative to its root, with "/" as separator. For example "plugins",
+        "plugins/sub" or "templates".
+    :return: The same subdirectory in a V2 module tree, relative to its root. "plugins" maps to "inmanta_plugins/<name>";
+        any other subdirectory is unchanged.
     """
     if subdir == "plugins":
         return os.path.join("inmanta_plugins", name)
@@ -109,8 +121,7 @@ class DynamicModuleFinder(importlib.abc.MetaPathFinder):
     It only answers for the top-level package ``inmanta_plugins.<name>`` of a registered module. That package's
     ``__path__`` is its directory, so Python's own path finder handles its submodules.
 
-    One instance serves the whole process. Registering a module again from the same source directory, as the project
-    fixture does for the unittest module, changes nothing.
+    One instance serves the whole process.
     """
 
     def __init__(self) -> None:
@@ -125,7 +136,12 @@ class DynamicModuleFinder(importlib.abc.MetaPathFinder):
 
     def install(self, name: str, source_dir: str) -> None:
         """
-        Make the V2 module tree at `source_dir` the source of module `name`.
+        Make the V2 module tree at `source_dir` the source of module `name`. Registering a module again from the same
+        source directory changes nothing.
+
+        :param name: The name of the module.
+        :param source_dir: The root directory of the module's tree, as written by `write_module`.
+        :raises Exception: A module with this name is installed in the venv.
         """
         source_dir = os.path.realpath(source_dir)
         if self._sources.get(name) != source_dir:
@@ -145,6 +161,8 @@ class DynamicModuleFinder(importlib.abc.MetaPathFinder):
     def use_project(self, project_dir: str) -> None:
         """
         Make `project_dir` the current test project: drop every dynamic module whose source is outside of it.
+
+        :param project_dir: The root directory of the test project.
         """
         project_dir = os.path.realpath(project_dir)
         if project_dir == self._project_dir:
@@ -156,7 +174,9 @@ class DynamicModuleFinder(importlib.abc.MetaPathFinder):
 
     def is_dynamic(self, name: str) -> bool:
         """
-        Whether `name` is a registered dynamic module.
+        Whether a dynamic module is registered under this name.
+
+        :param name: The name of a module.
         """
         return name in self._sources
 
