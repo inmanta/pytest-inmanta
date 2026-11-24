@@ -2,6 +2,8 @@
 
 ## v4.1.1 - ?
 
+- Fix compatibility with versions of inmanta-core that no longer support V1 modules.
+
 
 ## v4.1.0 - 2026-11-09
 

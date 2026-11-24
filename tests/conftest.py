@@ -28,7 +28,6 @@ import pytest
 
 import pytest_inmanta.plugin
 from inmanta import env, loader, plugins
-from inmanta.loader import PluginModuleFinder
 
 # be careful not to import any core>=6 objects directly
 from pytest_inmanta.core import SUPPORTS_MODULES_V2
@@ -89,8 +88,10 @@ def deactive_venv():
     # stay compatible with older versions of core: don't call the function if it doesn't exist
     if hasattr(env, "mock_process_env"):
         env.mock_process_env(python_path=sys.executable)
-    if hasattr(PluginModuleFinder, "reset"):
-        PluginModuleFinder.reset()
+    # Cores without V1 support have no PluginModuleFinder
+    plugin_module_finder = getattr(loader, "PluginModuleFinder", None)
+    if plugin_module_finder is not None and hasattr(plugin_module_finder, "reset"):
+        plugin_module_finder.reset()
     plugins.PluginMeta.clear()
     loader.unload_inmanta_plugins()
 
