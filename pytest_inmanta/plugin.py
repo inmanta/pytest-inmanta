@@ -37,7 +37,6 @@ from textwrap import dedent
 from types import FunctionType
 from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple
 
-import pydantic
 import pytest
 import yaml
 from tornado import ioloop
@@ -217,48 +216,42 @@ def project_shared_no_plugins(
     yield project_factory(load_plugins=False)
 
 
-def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[object]:
+def get_project_repos(
+    repo_options: typing.Sequence[str],
+) -> typing.Sequence[dict[str, str]]:
     """
-    Returns the list of repos for the project as a serializable object. For recent versions of core, includes repo types.
+    Returns the list of repos for the project, each as a dict with a type and a url.
 
-    :param repo_options: The desired repos as plain strings in the form "[<type>:]<url>". If type is omitted, defaults to git
-        for backwards compatibility. Explicitly passing type is only supported for inmanta versions that accept type in the
-        project metadata.
+    :param repo_options: The desired repos as plain strings in the form "[<type>:]<url>", where type is git or package.
+        If type is omitted, it defaults to git.
     """
 
-    def parse_repo(repo_str: str) -> object:
-        parts: typing.Sequence[str] = repo_str.split(":", maxsplit=1)
-        if not hasattr(module, "ModuleRepoType"):
-            # compatibility mode
-            return repo_str
-        else:
-            repo_info: module.ModuleRepoInfo
-            try:
-                repo_info = module.ModuleRepoInfo(url=parts[1], type=parts[0])
-            # there might be only one part or part might be just "https"
-            except (IndexError, pydantic.ValidationError):
-                repo_info = module.ModuleRepoInfo(url=repo_str)
-            if repo_info.type == module.ModuleRepoType.package:
-                alternative_text: str = (
-                    "is now deprecated and will raise a warning during compilation."
-                    " Use the --pip-index-url <index_url> pytest option instead or set"
-                    " the %s environment variable to address these warnings. "
+    def parse_repo(repo_str: str) -> dict[str, str]:
+        repo_type, _, url = repo_str.partition(":")
+        if repo_type not in ("git", "package") or not url:
+            # There is no type, or the colon is part of the url, e.g. "https://..."
+            repo_type, url = "git", repo_str
+        if repo_type == "package":
+            alternative_text: str = (
+                "is now deprecated and will raise a warning during compilation."
+                " Use the --pip-index-url <index_url> pytest option instead or set"
+                " the %s environment variable to address these warnings. "
+            )
+            if inm_mod_repo._value_set_using == ValueSetBy.ENV_VARIABLE:
+                LOGGER.warning(
+                    "Setting a package source through the %s environment variable "
+                    + alternative_text,
+                    inm_mod_repo.environment_variable,
+                    parameters.pip_index_url.environment_variable,
                 )
-                if inm_mod_repo._value_set_using == ValueSetBy.ENV_VARIABLE:
-                    LOGGER.warning(
-                        "Setting a package source through the %s environment variable "
-                        + alternative_text,
-                        inm_mod_repo.environment_variable,
-                        parameters.pip_index_url.environment_variable,
-                    )
-                elif inm_mod_repo._value_set_using == ValueSetBy.CLI:
-                    LOGGER.warning(
-                        "Setting a package source through the --module-repo <index_url> cli option with type `package` "
-                        + alternative_text,
-                        parameters.pip_index_url.environment_variable,
-                    )
+            elif inm_mod_repo._value_set_using == ValueSetBy.CLI:
+                LOGGER.warning(
+                    "Setting a package source through the --module-repo <index_url> cli option with type `package` "
+                    + alternative_text,
+                    parameters.pip_index_url.environment_variable,
+                )
 
-            return repo_info.model_dump(mode="json")
+        return {"type": repo_type, "url": url}
 
     return [parse_repo(repo) for repo in repo_options]
 
@@ -292,7 +285,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
     that should be used there (i.e. set the agent_install_dependency_modules option)
     """
     repo_options = inm_mod_repo.resolve(request.config)
-    repos: typing.Sequence[object] = get_project_repos(
+    repos: typing.Sequence[dict[str, str]] = get_project_repos(
         chain.from_iterable(
             repo.split(" ")
             for repo in (
@@ -302,11 +295,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
     )
 
     index_urls: Sequence[str] = parameters.pip_index_url.resolve(request.config)
-    repos_urls: List[str] = [
-        repo["url"]
-        for repo in repos
-        if repo["type"] == module.ModuleRepoType.package.value
-    ]
+    repos_urls: List[str] = [repo["url"] for repo in repos if repo["type"] == "package"]
 
     pip_use_system_config = parameters.pip_use_system_config.resolve(request.config)
     pip_pre = parameters.pip_pre.resolve(request.config)

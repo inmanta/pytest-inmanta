@@ -16,9 +16,9 @@ limitations under the License.
 Contact: code@inmanta.com
 """
 
+import enum
 import os
 
-from inmanta.module import InstallMode
 from pytest_inmanta.test_parameter import (
     BooleanTestParameter,
     EnumTestParameter,
@@ -96,6 +96,16 @@ inm_mod_repo = ListTestParameter(
     group=param_group,
     legacy=inm_mod_repo_legacy,
 )
+
+
+class InstallMode(str, enum.Enum):
+    """
+    Values of the install_mode key of the test project's project.yml.
+    """
+
+    release = "release"
+    prerelease = "prerelease"
+    master = "master"
 
 
 # This is the legacy install mode option

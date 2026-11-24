@@ -17,6 +17,8 @@ Contact: code@inmanta.com
 """
 
 import pathlib
+import subprocess
+import sys
 
 import pytest
 
@@ -52,3 +54,47 @@ def test_v2_module_under_test_on_core_without_v1(
     with pytest.raises(Exception, match="The module being tested is not installed"):
         pytest_inmanta.plugin.ensure_current_module_install(str(tmp_path))
     assert list(tmp_path.iterdir()) == []
+
+
+def test_plugin_loads_on_core_without_v1_project_settings() -> None:
+    """
+    The plugin loads on a core without InstallMode, ModuleRepoType and ModuleRepoInfo.
+    """
+    code = (
+        "import inmanta.module as m;"
+        " del m.InstallMode, m.ModuleRepoType, m.ModuleRepoInfo;"
+        " import pytest_inmanta.plugin"
+    )
+    subprocess.run([sys.executable, "-c", code], check=True)
+
+
+@pytest.mark.parametrize(
+    "repo, expected",
+    [
+        (
+            "package:https://pypi.org/simple",
+            {"type": "package", "url": "https://pypi.org/simple"},
+        ),
+        (
+            "git:https://github.com/inmanta/",
+            {"type": "git", "url": "https://github.com/inmanta/"},
+        ),
+        (
+            "https://github.com/inmanta/",
+            {"type": "git", "url": "https://github.com/inmanta/"},
+        ),
+        (
+            "other:https://example.com",
+            {"type": "git", "url": "other:https://example.com"},
+        ),
+    ],
+)
+def test_module_repo_parsing_on_core_without_repo_types(
+    monkeypatch: pytest.MonkeyPatch, repo: str, expected: dict[str, str]
+) -> None:
+    """
+    The --module-repo values are parsed without core's ModuleRepoType and ModuleRepoInfo.
+    """
+    monkeypatch.delattr(module, "ModuleRepoType")
+    monkeypatch.delattr(module, "ModuleRepoInfo")
+    assert pytest_inmanta.plugin.get_project_repos([repo]) == [expected]
