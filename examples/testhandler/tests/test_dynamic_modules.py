@@ -16,6 +16,7 @@ limitations under the License.
 Contact: code@inmanta.com
 """
 
+import logging
 import os
 
 from inmanta import module
@@ -56,14 +57,17 @@ def test_create_module_reload(project, inmanta_plugins) -> None:
     assert inmanta_plugins.mycustommodule.X == 42
 
 
-def test_dynamic_module_is_editable_v2(project) -> None:
+def test_dynamic_module_is_editable_v2(project, caplog) -> None:
     """
-    Verify that a dynamic module is loaded as an editable V2 module whose source is its tree in libs/.
+    Verify that a dynamic module is loaded as an editable V2 module whose source is its tree in libs/, without a warning
+    that it is also a V1 module.
     """
     project.create_module("editablecheck", "x = 1", "X = 0")
     project.add_mock_file("plugins", "extra.py", "Y = 1")
     project.add_mock_file("templates", "t.j2", "hello")
-    project.compile("import editablecheck\nimport unittest")
+    with caplog.at_level(logging.WARNING):
+        project.compile("import editablecheck\nimport unittest")
+    assert "installed as a V1 module and a V2 module" not in caplog.text
 
     module_dir = os.path.join(project._test_project_dir, "libs", "editablecheck")
     loaded = module.Project.get().modules

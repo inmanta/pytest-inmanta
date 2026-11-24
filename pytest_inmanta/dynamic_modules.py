@@ -24,14 +24,19 @@ levels up from the package's ``__init__.py``, next to ``setup.cfg``, and reads t
 written into the venv, so there is nothing to clean up and test runs that share a venv don't see each other's modules.
 
 A module is dropped when the test project changes or its source directory is removed.
+
+The trees live in the project's ``libs/`` directory, which is also where core looks for V1 modules. Core warns on every
+compile that such a module is installed both as a V1 and a V2 module. That warning is dropped for dynamic modules.
 """
 
 import importlib.abc
 import importlib.machinery
 import importlib.metadata
 import importlib.util
+import logging
 import os
 import pathlib
+import shutil
 import sys
 import types
 import typing
@@ -40,6 +45,11 @@ from collections import abc
 from inmanta import const, module
 
 DYNAMIC_MODULE_VERSION = "0.1.0"
+
+# Logged by core's inmanta.module when a module is found both in libs/ and as an installed V2 module
+V1_AND_V2_WARNING = (
+    "Module %s is installed as a V1 module and a V2 module: V1 will be ignored."
+)
 
 SETUP_CFG = """\
 [metadata]
@@ -144,13 +154,34 @@ class DynamicModuleFinder(importlib.abc.MetaPathFinder):
             if not source_dir.startswith(project_dir + os.sep):
                 del self._sources[name]
 
+    def is_dynamic(self, name: str) -> bool:
+        """
+        Whether `name` is a registered dynamic module.
+        """
+        return name in self._sources
+
     def prune(self) -> None:
         """
-        Drop every dynamic module whose source directory no longer exists.
+        Prepare the dynamic modules for a compile. Drop every dynamic module whose source directory no longer exists.
+
+        Remove the bytecode of the other ones. Python reuses a module's bytecode when the source file has the same size
+        and the same modification time in whole seconds, so a test that rewrites a plugin file would otherwise run the old
+        code.
         """
         for name, source_dir in list(self._sources.items()):
             if not os.path.isdir(source_dir):
                 del self._sources[name]
+                continue
+            for dirpath, dirnames, _ in os.walk(
+                os.path.join(source_dir, const.PLUGINS_PACKAGE, name)
+            ):
+                if "__pycache__" in dirnames:
+                    dirnames.remove("__pycache__")
+                    shutil.rmtree(
+                        os.path.join(dirpath, "__pycache__"), ignore_errors=True
+                    )
+        # Python caches directory listings: make sure plugin files added since the previous compile are found
+        importlib.invalidate_caches()
         self._ensure_on_meta_path()
 
     def find_spec(
@@ -176,4 +207,24 @@ class DynamicModuleFinder(importlib.abc.MetaPathFinder):
         )
 
 
+class V1AndV2WarningFilter(logging.Filter):
+    """
+    Drops core's warning that a module is installed both as a V1 and a V2 module, when that module is a dynamic module.
+    """
+
+    def __init__(self, finder: DynamicModuleFinder) -> None:
+        super().__init__()
+        self._finder = finder
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if (
+            record.msg != V1_AND_V2_WARNING
+            or not isinstance(record.args, tuple)
+            or len(record.args) != 1
+        ):
+            return True
+        return not self._finder.is_dynamic(str(record.args[0]))
+
+
 FINDER = DynamicModuleFinder()
+logging.getLogger(module.__name__).addFilter(V1AndV2WarningFilter(FINDER))

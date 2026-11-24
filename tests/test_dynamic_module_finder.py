@@ -18,6 +18,8 @@ Contact: code@inmanta.com
 
 import importlib
 import importlib.metadata
+import logging
+import os
 import pathlib
 import shutil
 import sys
@@ -74,8 +76,8 @@ def test_module_is_importable_from_its_tree(finder, tmp_path) -> None:
     (module_dir / "inmanta_plugins" / "dynimport" / "sub.py").write_text("Y = 2")
 
     assert is_importable("dynimport")
-    module = sys.modules["inmanta_plugins.dynimport"]
-    assert module.__file__ == str(
+    plugin_package = sys.modules["inmanta_plugins.dynimport"]
+    assert plugin_package.__file__ == str(
         module_dir / "inmanta_plugins" / "dynimport" / "__init__.py"
     )
     assert importlib.import_module("inmanta_plugins.dynimport.sub").Y == 2
@@ -134,17 +136,13 @@ def test_installed_module_name_is_refused(finder, tmp_path) -> None:
     """
     A dynamic module can't take the name of an installed module.
     """
-    installed = next(
-        dist.metadata["Name"]
-        for dist in importlib.metadata.distributions()
-        if dist.metadata["Name"].startswith("inmanta-module-")
-    )
-    name = installed[len("inmanta-module-") :].replace("-", "_")
+    # std is a dependency of pytest-inmanta
+    importlib.metadata.distribution("inmanta-module-std")
     finder.use_project(str(tmp_path / "project"))
     with pytest.raises(
         Exception, match="can't share its name with an installed module"
     ):
-        create(finder, tmp_path / "project", name)
+        create(finder, tmp_path / "project", "std")
 
 
 def test_module_name_with_underscore(tmp_path) -> None:
@@ -157,3 +155,44 @@ def test_module_name_with_underscore(tmp_path) -> None:
     loaded = module.Module.from_path(str(module_dir))
     assert isinstance(loaded, module.ModuleV2)
     assert loaded.name == "dyn_underscore"
+
+
+def test_rewritten_plugin_file_is_reloaded(finder, tmp_path) -> None:
+    """
+    A plugin file rewritten with the same size and modification time is loaded again from source after prune.
+    """
+    finder.use_project(str(tmp_path / "project"))
+    module_dir = create(finder, tmp_path / "project", "dynrewrite")
+    assert importlib.import_module("inmanta_plugins.dynrewrite").X == 1
+
+    init = module_dir / "inmanta_plugins" / "dynrewrite" / "__init__.py"
+    stat = init.stat()
+    init.write_text("X = 2")
+    os.utime(init, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+    del sys.modules["inmanta_plugins.dynrewrite"]
+
+    finder.prune()
+    assert importlib.import_module("inmanta_plugins.dynrewrite").X == 2
+
+
+def test_v1_and_v2_warning_filter(finder, tmp_path) -> None:
+    """
+    Core's warning that a module is installed as a V1 and a V2 module is dropped for dynamic modules only.
+    """
+    finder.use_project(str(tmp_path / "project"))
+    create(finder, tmp_path / "project", "dynwarning")
+    log_filter = dynamic_modules.V1AndV2WarningFilter(finder)
+
+    def record(name: str) -> logging.LogRecord:
+        return logging.LogRecord(
+            "inmanta.module",
+            logging.WARNING,
+            __file__,
+            0,
+            dynamic_modules.V1_AND_V2_WARNING,
+            (name,),
+            None,
+        )
+
+    assert not log_filter.filter(record("dynwarning"))
+    assert log_filter.filter(record("othermodule"))
