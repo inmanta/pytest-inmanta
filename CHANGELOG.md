@@ -2,6 +2,12 @@
 
 ## v4.1.1 - ?
 
+- Create the modules of `Project.create_module`, including the `unittest` module, as V2 modules. They are loaded as editable modules from their tree in `libs/`, without installing them in the venv.
+
+### Updating
+- A test that writes into the tree of a dynamic module directly must use the V2 layout: the plugins of module `<name>` live in `libs/<name>/inmanta_plugins/<name>/` instead of `libs/<name>/plugins/`. `Project.add_mock_file("plugins", ...)` maps to the new location.
+- A dynamic module can't take the name of a module installed in the venv.
+
 
 ## v4.1.0 - 2026-11-09
 

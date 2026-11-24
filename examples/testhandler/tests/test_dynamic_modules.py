@@ -18,6 +18,8 @@ Contact: code@inmanta.com
 
 import os
 
+from inmanta import module
+
 
 def test_unittest_reload(project, inmanta_plugins) -> None:
     """
@@ -43,7 +45,8 @@ def test_create_module_reload(project, inmanta_plugins) -> None:
             project._test_project_dir,
             "libs",
             "mycustommodule",
-            "plugins",
+            "inmanta_plugins",
+            "mycustommodule",
             "__init__.py",
         ),
         "w",
@@ -51,3 +54,29 @@ def test_create_module_reload(project, inmanta_plugins) -> None:
         fd.write("X = 42")
     project.compile("import mycustommodule")
     assert inmanta_plugins.mycustommodule.X == 42
+
+
+def test_dynamic_module_is_editable_v2(project) -> None:
+    """
+    Verify that a dynamic module is loaded as an editable V2 module whose source is its tree in libs/.
+    """
+    project.create_module("editablecheck", "x = 1", "X = 0")
+    project.add_mock_file("plugins", "extra.py", "Y = 1")
+    project.add_mock_file("templates", "t.j2", "hello")
+    project.compile("import editablecheck\nimport unittest")
+
+    module_dir = os.path.join(project._test_project_dir, "libs", "editablecheck")
+    loaded = module.Project.get().modules
+    mod = loaded["editablecheck"]
+    assert isinstance(mod, module.ModuleV2)
+    assert mod.is_editable()
+    assert os.path.realpath(mod.path) == os.path.realpath(module_dir)
+    assert str(mod.version) == "0.1.0"
+
+    unittest_mod = loaded["unittest"]
+    assert isinstance(unittest_mod, module.ModuleV2)
+    unittest_dir = os.path.join(project._test_project_dir, "libs", "unittest")
+    assert os.path.exists(
+        os.path.join(unittest_dir, "inmanta_plugins", "unittest", "extra.py")
+    )
+    assert os.path.exists(os.path.join(unittest_dir, "templates", "t.j2"))
