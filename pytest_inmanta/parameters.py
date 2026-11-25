@@ -16,12 +16,10 @@ limitations under the License.
 Contact: code@inmanta.com
 """
 
-import enum
 import os
 
 from pytest_inmanta.test_parameter import (
     BooleanTestParameter,
-    EnumTestParameter,
     ListTestParameter,
     ParameterNotSetException,
     PathTestParameter,
@@ -74,57 +72,6 @@ inm_no_strict_deps_check = BooleanTestParameter(
     usage="[Deprecated] No effect",
     default=False,
     group=param_group,
-)
-
-
-# This is the legacy module repo option
-# TODO remove this in next major version bump
-inm_mod_repo_legacy = ListTestParameter(
-    argument="--module_repo",
-    environment_variable="INMANTA_MODULE_REPO",
-    usage=(
-        "Location to download modules from."
-        "Can be specified multiple times to add multiple locations"
-    ),
-)
-
-inm_mod_repo = ListTestParameter(
-    argument="--module-repo",
-    environment_variable=inm_mod_repo_legacy.environment_variable,
-    usage=inm_mod_repo_legacy.usage,
-    default=["https://github.com/inmanta/"],
-    group=param_group,
-    legacy=inm_mod_repo_legacy,
-)
-
-
-class InstallMode(str, enum.Enum):
-    """
-    Values of the install_mode key of the test project's project.yml.
-    """
-
-    release = "release"
-    prerelease = "prerelease"
-    master = "master"
-
-
-# This is the legacy install mode option
-# TODO remove this in next major version bump
-inm_install_mode_legacy = EnumTestParameter(
-    argument="--install_mode",
-    environment_variable="INMANTA_INSTALL_MODE",
-    usage="Install mode for v1 modules downloaded during this test",
-    enum=InstallMode,
-)
-
-inm_install_mode = EnumTestParameter(
-    argument="--install-mode",
-    environment_variable=inm_install_mode_legacy.environment_variable,
-    usage=inm_install_mode_legacy.usage,
-    enum=inm_install_mode_legacy.enum,
-    default=InstallMode.release,
-    group=param_group,
-    legacy=inm_install_mode_legacy,
 )
 
 

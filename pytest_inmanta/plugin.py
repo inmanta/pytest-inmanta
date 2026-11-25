@@ -31,7 +31,6 @@ import typing
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
-from itertools import chain
 from pathlib import Path
 from textwrap import dedent
 from types import FunctionType
@@ -75,7 +74,6 @@ import pytest_inmanta.parameters as parameters
 from pytest_inmanta.handler import DATA
 from pytest_inmanta.parameters import (
     inm_mod_in_place,
-    inm_mod_repo,
     inm_no_load_plugins,
     inm_no_strict_deps_check,
     inm_venv,
@@ -216,46 +214,6 @@ def project_shared_no_plugins(
     yield project_factory(load_plugins=False)
 
 
-def get_project_repos(
-    repo_options: typing.Sequence[str],
-) -> typing.Sequence[dict[str, str]]:
-    """
-    Returns the list of repos for the project, each as a dict with a type and a url.
-
-    :param repo_options: The desired repos as plain strings in the form "[<type>:]<url>", where type is git or package.
-        If type is omitted, it defaults to git.
-    """
-
-    def parse_repo(repo_str: str) -> dict[str, str]:
-        repo_type, _, url = repo_str.partition(":")
-        if repo_type not in ("git", "package") or not url:
-            # There is no type, or the colon is part of the url, e.g. "https://..."
-            repo_type, url = "git", repo_str
-        if repo_type == "package":
-            alternative_text: str = (
-                "is now deprecated and will raise a warning during compilation."
-                " Use the --pip-index-url <index_url> pytest option instead or set"
-                " the %s environment variable to address these warnings. "
-            )
-            if inm_mod_repo._value_set_using == ValueSetBy.ENV_VARIABLE:
-                LOGGER.warning(
-                    "Setting a package source through the %s environment variable "
-                    + alternative_text,
-                    inm_mod_repo.environment_variable,
-                    parameters.pip_index_url.environment_variable,
-                )
-            elif inm_mod_repo._value_set_using == ValueSetBy.CLI:
-                LOGGER.warning(
-                    "Setting a package source through the --module-repo <index_url> cli option with type `package` "
-                    + alternative_text,
-                    parameters.pip_index_url.environment_variable,
-                )
-
-        return {"type": repo_type, "url": url}
-
-    return [parse_repo(repo) for repo in repo_options]
-
-
 @pytest.fixture(scope="session")
 def project_dir() -> str:
     """
@@ -284,18 +242,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
     This fixture can be overwritten in specific modules to modify the project.yml file
     that should be used there (i.e. set the agent_install_dependency_modules option)
     """
-    repo_options = inm_mod_repo.resolve(request.config)
-    repos: typing.Sequence[dict[str, str]] = get_project_repos(
-        chain.from_iterable(
-            repo.split(" ")
-            for repo in (
-                repo_options if isinstance(repo_options, list) else [repo_options]
-            )
-        )
-    )
-
     index_urls: Sequence[str] = parameters.pip_index_url.resolve(request.config)
-    repos_urls: List[str] = [repo["url"] for repo in repos if repo["type"] == "package"]
 
     pip_use_system_config = parameters.pip_use_system_config.resolve(request.config)
     pip_pre = parameters.pip_pre.resolve(request.config)
@@ -305,8 +252,6 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
     if in_place:
         modulepath.append(str(Path(CURDIR).parent))
 
-    # Backward compat: translate repo url to index url
-    index_urls = list(index_urls) + repos_urls
     if index_urls:
         index_url = index_urls[0]
         extra_index_url = index_urls[1:]
@@ -329,7 +274,6 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
         description="Project for testcase",
         modulepath=modulepath,
         downloadpath="libs",
-        install_mode=parameters.inm_install_mode.resolve(request.config).value,
         pip=pip_config,
     )
 
@@ -860,8 +804,7 @@ class DeployResultCollection:
 class Project:
     """
     This class provides a TestCase class for creating module unit tests. It uses the current module and loads required
-    modules from the provided repositories. Additional repositories can be provided by setting the INMANTA_MODULE_REPO
-    environment variable. Repositories are separated with spaces.
+    modules from the configured pip indexes.
     """
 
     def __init__(

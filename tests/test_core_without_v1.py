@@ -66,35 +66,3 @@ def test_plugin_loads_on_core_without_v1_project_settings() -> None:
         " import pytest_inmanta.plugin"
     )
     subprocess.run([sys.executable, "-c", code], check=True)
-
-
-@pytest.mark.parametrize(
-    "repo, expected",
-    [
-        (
-            "package:https://pypi.org/simple",
-            {"type": "package", "url": "https://pypi.org/simple"},
-        ),
-        (
-            "git:https://github.com/inmanta/",
-            {"type": "git", "url": "https://github.com/inmanta/"},
-        ),
-        (
-            "https://github.com/inmanta/",
-            {"type": "git", "url": "https://github.com/inmanta/"},
-        ),
-        (
-            "other:https://example.com",
-            {"type": "git", "url": "other:https://example.com"},
-        ),
-    ],
-)
-def test_module_repo_parsing_on_core_without_repo_types(
-    monkeypatch: pytest.MonkeyPatch, repo: str, expected: dict[str, str]
-) -> None:
-    """
-    The --module-repo values are parsed without core's ModuleRepoType and ModuleRepoInfo.
-    """
-    monkeypatch.delattr(module, "ModuleRepoType")
-    monkeypatch.delattr(module, "ModuleRepoInfo")
-    assert pytest_inmanta.plugin.get_project_repos([repo]) == [expected]
