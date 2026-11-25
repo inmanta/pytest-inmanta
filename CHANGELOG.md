@@ -2,6 +2,7 @@
 
 ## v4.1.1 - ?
 
+- Describe where the documentation of this repo goes in the product documentation.
 
 ## v4.1.0 - 2026-11-09
 
