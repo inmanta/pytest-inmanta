@@ -1475,7 +1475,7 @@ class Project:
         This method can be used to register mock templates or files in the virtual "unittest" module.
         The "plugins" subdir refers to the module's plugin package, inmanta_plugins/unittest.
         """
-        subdir = dynamic_modules.module_subdir("unittest", subdir)
+        subdir = dynamic_modules.v1_to_v2_subdir("unittest", subdir)
         dir_name = os.path.join(self._test_project_dir, "libs", "unittest", subdir)
         if not os.path.exists(dir_name):
             os.mkdir(dir_name)

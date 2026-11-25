@@ -97,21 +97,21 @@ def write_module(module_dir: str, name: str, initcf: str, initpy: str) -> None:
     (root / "pyproject.toml").write_text(PYPROJECT_TOML)
 
 
-def module_subdir(name: str, subdir: str) -> str:
+def v1_to_v2_subdir(name: str, v1_subdir: str) -> str:
     """
     Map a V1 module subdirectory to its place in a V2 module tree.
 
     :param name: The name of the module.
-    :param subdir: A subdirectory of a V1 module tree, relative to its root, with "/" as separator. For example "plugins",
-        "plugins/sub" or "templates".
+    :param v1_subdir: A subdirectory of a V1 module tree, relative to its root, with "/" as separator. For example
+        "plugins", "plugins/sub" or "templates".
     :return: The same subdirectory in a V2 module tree, relative to its root. "plugins" maps to "inmanta_plugins/<name>";
         any other subdirectory is unchanged.
     """
-    if subdir == "plugins":
+    if v1_subdir == "plugins":
         return os.path.join("inmanta_plugins", name)
-    if subdir.startswith("plugins/"):
-        return os.path.join("inmanta_plugins", name, subdir[len("plugins") + 1 :])
-    return subdir
+    if v1_subdir.startswith("plugins/"):
+        return os.path.join("inmanta_plugins", name, v1_subdir[len("plugins") + 1 :])
+    return v1_subdir
 
 
 class DynamicModuleFinder(importlib.abc.MetaPathFinder):
@@ -184,9 +184,9 @@ class DynamicModuleFinder(importlib.abc.MetaPathFinder):
         """
         Prepare the dynamic modules for a compile. Drop every dynamic module whose source directory no longer exists.
 
-        Remove the bytecode of the other ones. Python reuses a module's bytecode when the source file has the same size
-        and the same modification time in whole seconds, so a test that rewrites a plugin file would otherwise run the old
-        code.
+        Remove the bytecode of the other ones. Python checks cached bytecode only against the size of the source file and
+        its modification time, rounded down to the second. A test that rewrites a plugin file in the same second as the
+        previous compile, without changing its size, would otherwise run the old code.
         """
         for name, source_dir in list(self._sources.items()):
             if not os.path.isdir(source_dir):

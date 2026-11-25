@@ -46,7 +46,7 @@ def finder(
             del sys.modules[name]
 
 
-def create(
+def create_module(
     finder: dynamic_modules.DynamicModuleFinder,
     project_dir: pathlib.Path,
     name: str,
@@ -72,7 +72,7 @@ def test_module_is_importable_from_its_tree(finder, tmp_path) -> None:
     A dynamic module's plugin package and its submodules are imported from its tree in libs/, without installing it.
     """
     finder.use_project(str(tmp_path / "project"))
-    module_dir = create(finder, tmp_path / "project", "dynimport")
+    module_dir = create_module(finder, tmp_path / "project", "dynimport")
     (module_dir / "inmanta_plugins" / "dynimport" / "sub.py").write_text("Y = 2")
 
     assert is_importable("dynimport")
@@ -91,7 +91,7 @@ def test_project_change_drops_other_projects_modules(finder, tmp_path) -> None:
     """
     project1 = tmp_path / "project1"
     finder.use_project(str(project1))
-    create(finder, project1, "dynproject")
+    create_module(finder, project1, "dynproject")
     assert is_importable("dynproject")
 
     project2 = tmp_path / "project2"
@@ -100,7 +100,7 @@ def test_project_change_drops_other_projects_modules(finder, tmp_path) -> None:
     assert (project1 / "libs" / "dynproject").is_dir()
     assert not is_importable("dynproject")
 
-    create(finder, project2, "dynproject")
+    create_module(finder, project2, "dynproject")
     assert is_importable("dynproject")
 
 
@@ -109,12 +109,12 @@ def test_removed_module_is_not_importable(finder, tmp_path) -> None:
     A dynamic module whose tree was removed can't be imported, and prune drops it.
     """
     finder.use_project(str(tmp_path / "project"))
-    module_dir = create(finder, tmp_path / "project", "dynprune")
+    module_dir = create_module(finder, tmp_path / "project", "dynprune")
     shutil.rmtree(module_dir)
     assert not is_importable("dynprune")
 
     finder.prune()
-    create(finder, tmp_path / "project", "dynprune")
+    create_module(finder, tmp_path / "project", "dynprune")
     assert is_importable("dynprune")
 
 
@@ -123,7 +123,7 @@ def test_finder_returns_to_meta_path(finder, tmp_path) -> None:
     The finder puts itself back at the front of sys.meta_path if something removed it.
     """
     finder.use_project(str(tmp_path / "project"))
-    create(finder, tmp_path / "project", "dynmetapath")
+    create_module(finder, tmp_path / "project", "dynmetapath")
     sys.meta_path.remove(finder)
     assert not is_importable("dynmetapath")
 
@@ -142,7 +142,7 @@ def test_installed_module_name_is_refused(finder, tmp_path) -> None:
     with pytest.raises(
         Exception, match="can't share its name with an installed module"
     ):
-        create(finder, tmp_path / "project", "std")
+        create_module(finder, tmp_path / "project", "std")
 
 
 def test_module_name_with_underscore(tmp_path) -> None:
@@ -162,7 +162,7 @@ def test_rewritten_plugin_file_is_reloaded(finder, tmp_path) -> None:
     A plugin file rewritten with the same size and modification time is loaded again from source after prune.
     """
     finder.use_project(str(tmp_path / "project"))
-    module_dir = create(finder, tmp_path / "project", "dynrewrite")
+    module_dir = create_module(finder, tmp_path / "project", "dynrewrite")
     assert importlib.import_module("inmanta_plugins.dynrewrite").X == 1
 
     init = module_dir / "inmanta_plugins" / "dynrewrite" / "__init__.py"
@@ -180,10 +180,10 @@ def test_v1_and_v2_warning_filter(finder, tmp_path) -> None:
     Core's warning that a module is installed as a V1 and a V2 module is dropped for dynamic modules only.
     """
     finder.use_project(str(tmp_path / "project"))
-    create(finder, tmp_path / "project", "dynwarning")
+    create_module(finder, tmp_path / "project", "dynwarning")
     log_filter = dynamic_modules.V1AndV2WarningFilter(finder)
 
-    def record(name: str) -> logging.LogRecord:
+    def get_record(name: str) -> logging.LogRecord:
         return logging.LogRecord(
             "inmanta.module",
             logging.WARNING,
@@ -194,5 +194,5 @@ def test_v1_and_v2_warning_filter(finder, tmp_path) -> None:
             None,
         )
 
-    assert not log_filter.filter(record("dynwarning"))
-    assert log_filter.filter(record("othermodule"))
+    assert not log_filter.filter(get_record("dynwarning"))
+    assert log_filter.filter(get_record("othermodule"))
