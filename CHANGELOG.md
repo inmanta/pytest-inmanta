@@ -1,6 +1,6 @@
 # Changelog
 
-## v4.1.1 - ?
+## v5.0.0 - ?
 
 - Create the modules of `Project.create_module`, including the `unittest` module, as V2 modules. They are loaded as editable modules from their tree in `libs/`, without installing them in the venv.
 
@@ -8,6 +8,10 @@
 - A test that writes into the tree of a dynamic module directly must use the V2 layout: the plugins of module `<name>` live in `libs/<name>/inmanta_plugins/<name>/` instead of `libs/<name>/plugins/`. `Project.add_mock_file("plugins", ...)` maps to the new location.
 - A dynamic module can't take the name of a module installed in the venv.
 
+## v4.1.1 - ?
+
+- A compile with the project fixture raises a `pytest_inmanta.requires_cycle.DependencyCycleException` when the requires relationships of the resources contain a cycle, also for versions of inmanta-core that only check for cycles on the server.
+- Describe where the documentation of this repo goes in the product documentation.
 
 ## v4.1.0 - 2026-11-09
 

@@ -44,6 +44,16 @@ def test_basic_example(testdir):
     result.assert_outcomes(passed=1)
 
 
+def test_requires_cycle(testdir):
+    """Ensure that a compile raises an exception when the requires relationships contain a cycle."""
+
+    testdir.copy_example("testmodule")
+
+    result = testdir.runpytest("tests/test_requires_cycle.py")
+
+    result.assert_outcomes(passed=3)
+
+
 def test_dryrun_example(testdir):
     testdir.copy_example("testmodule")
 
