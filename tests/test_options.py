@@ -17,35 +17,22 @@ Contact: code@inmanta.com
 """
 
 import os
-import shutil
 import uuid
 
-import pytest_inmanta
 
+def test_removed_option_environment_variable_warning(testdir, monkeypatch):
+    """
+    A warning is shown when the environment variable of a removed option is set.
+    """
+    testdir.copy_example("testmodulev2")
+    monkeypatch.setenv("INMANTA_MODULE_REPO", "package:https://example.com/simple")
 
-def test_module_in_place(testdir):
-    """Make sure the run in place option works"""
+    result = testdir.runpytest("--collect-only")
 
-    # copy_example copies what is IN the given directory, not the directory itself...
-    testdir.copy_example("testmodule")
-    # Moving module to make sure we can run in place,
-    # by making sure the module name in module.yml is in it's parent path
-    os.mkdir("testmodule")
-    shutil.move("model", "testmodule/model")
-    shutil.move("module.yml", "testmodule/module.yml")
-    shutil.move("plugins", "testmodule/plugins")
-    shutil.move("tests", "testmodule/tests")
-
-    os.chdir("testmodule")
-    path = os.getcwd()
-    assert not os.path.exists(os.path.join(path, "testfile"))
-    pytest_inmanta.plugin.CURDIR = path
-
-    result = testdir.runpytest("tests/test_location.py", "--use-module-in-place")
-
-    result.assert_outcomes(passed=1)
-
-    assert os.path.exists(os.path.join(path, "testfile"))
+    assert (
+        "The INMANTA_MODULE_REPO environment variable is set, but pytest-inmanta ignores it."
+        " Use --pip-index-url or PIP_INDEX_URL to set the package indexes."
+    ) in result.stdout.str()
 
 
 def test_not_existing_venv_option(testdir, tmpdir):

@@ -31,7 +31,6 @@ import typing
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
-from pathlib import Path
 from textwrap import dedent
 from types import FunctionType
 from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple
@@ -74,7 +73,6 @@ import pytest_inmanta.parameters as parameters
 from pytest_inmanta.core import CORE_DEPENDENCY_CYCLE_EXCEPTION
 from pytest_inmanta.handler import DATA
 from pytest_inmanta.parameters import (
-    inm_mod_in_place,
     inm_no_load_plugins,
     inm_no_strict_deps_check,
     inm_venv,
@@ -110,6 +108,25 @@ DEFAULT = object()
 
 def pytest_addoption(parser: "Parser") -> None:
     TestParameterRegistry.pytest_addoption(parser)
+
+
+# Environment variables of options that pytest-inmanta no longer has, with what to do instead
+REMOVED_ENVIRONMENT_VARIABLES: typing.Mapping[str, str] = {
+    "INMANTA_MODULE_REPO": "Use --pip-index-url or PIP_INDEX_URL to set the package indexes.",
+    "INMANTA_INSTALL_MODE": "Use --pip-pre or PIP_PRE to allow pre-releases.",
+    "INMANTA_USE_MODULE_IN_PLACE": "A V1 module under test is always copied into the test project.",
+}
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    for variable, instead in REMOVED_ENVIRONMENT_VARIABLES.items():
+        if variable in os.environ:
+            config.issue_config_time_warning(
+                pytest.PytestConfigWarning(
+                    f"The {variable} environment variable is set, but pytest-inmanta ignores it. {instead}"
+                ),
+                stacklevel=2,
+            )
 
 
 def get_module() -> typing.Tuple[module.Module, str]:
@@ -252,11 +269,6 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
     pip_use_system_config = parameters.pip_use_system_config.resolve(request.config)
     pip_pre = parameters.pip_pre.resolve(request.config)
 
-    modulepath = ["libs"]
-    in_place = inm_mod_in_place.resolve(request.config)
-    if in_place:
-        modulepath.append(str(Path(CURDIR).parent))
-
     if index_urls:
         index_url = index_urls[0]
         extra_index_url = index_urls[1:]
@@ -277,7 +289,7 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
     return module.ProjectMetadata(
         name="testcase",
         description="Project for testcase",
-        modulepath=modulepath,
+        modulepath=["libs"],
         downloadpath="libs",
         pip=pip_config,
     )
@@ -316,10 +328,7 @@ def project_factory(
     with open(os.path.join(project_dir, "project.yml"), "w+") as fd:
         yaml.safe_dump(project_metadata.model_dump(mode="json"), fd)
 
-    ensure_current_module_install(
-        os.path.join(project_dir, "libs"),
-        in_place=inm_mod_in_place.resolve(request.config),
-    )
+    ensure_current_module_install(os.path.join(project_dir, "libs"))
 
     def create_project(**kwargs: object):
         load_plugins = not inm_no_load_plugins.resolve(request.config)
@@ -367,7 +376,7 @@ def project_factory(
     sys.path = _sys_path
 
 
-def ensure_current_module_install(v1_modules_dir: str, in_place: bool = False) -> None:
+def ensure_current_module_install(v1_modules_dir: str) -> None:
     """
     Ensures that the current module is installed: if it is a v1 module, adds it to the modules path, otherwise verifies that it
     has been installed.
@@ -381,12 +390,11 @@ def ensure_current_module_install(v1_modules_dir: str, in_place: bool = False) -
         hasattr(module, "ModuleV1")
         and isinstance(mod, module.ModuleV1)
     ):
-        if not in_place:
-            shutil.copytree(
-                path,
-                os.path.join(v1_modules_dir, mod.name),
-                ignore=shutil.ignore_patterns("__pycache__"),
-            )
+        shutil.copytree(
+            path,
+            os.path.join(v1_modules_dir, mod.name),
+            ignore=shutil.ignore_patterns("__pycache__"),
+        )
     else:
         installed: typing.Optional[module.ModuleV2] = module.ModuleV2Source(
             urls=[]

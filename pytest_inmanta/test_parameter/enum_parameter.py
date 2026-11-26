@@ -31,12 +31,16 @@ class EnumTestParameter(TestParameter[E]):
 
     .. code-block:: python
 
-        inm_install_mode = EnumTestParameter(
-            argument="--install_mode",
-            environment_variable="INMANTA_INSTALL_MODE",
-            usage="Install mode for modules downloaded during this test",
-            enum=InstallMode,
-            default=InstallMode.release,
+        class Color(enum.Enum):
+            red = "red"
+            blue = "blue"
+
+        color = EnumTestParameter(
+            argument="--color",
+            environment_variable="INMANTA_COLOR",
+            usage="The color to use in this test",
+            enum=Color,
+            default=Color.red,
             group=param_group,
         )
 

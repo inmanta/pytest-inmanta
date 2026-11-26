@@ -32,16 +32,10 @@ class BooleanTestParameter(TestParameter[bool]):
 
     .. code-block:: python
 
-        inm_mod_in_place = BooleanTestParameter(
-            argument="--use-module-in-place",
-            environment_variable="INMANTA_USE_MODULE_IN_PLACE",
-            usage=(
-                "tell pytest-inmanta to run with the module in place, useful for debugging. "
-                "Makes inmanta add the parent directory of your module directory to it's directory path, "
-                "instead of copying your module to a temporary libs directory. "
-                "It allows testing the current module against specific versions of dependent modules. "
-                "Using this option can speed up the tests, because the module dependencies are not downloaded multiple times."
-            ),
+        inm_no_load_plugins = BooleanTestParameter(
+            argument="--no-load-plugins",
+            environment_variable="INMANTA_NO_LOAD_PLUGINS",
+            usage="Don't load plugins in the Project class",
             group=param_group,
         )
 

@@ -3,11 +3,12 @@
 ## v5.0.0 - ?
 
 - Fix compatibility with versions of inmanta-core that no longer support V1 modules.
-- Remove the `--install-mode` and `--module-repo` options, with their `--install_mode` and `--module_repo` spellings. They only served V1 modules.
+- Remove the `--install-mode`, `--module-repo` and `--use-module-in-place` options, with the `--install_mode` and `--module_repo` spellings. They only served V1 modules.
+- Warn when the environment variable of a removed option is set.
 
 ### Updating
 
-- Remove `--install-mode`, `--module-repo`, `INMANTA_INSTALL_MODE` and `INMANTA_MODULE_REPO` from your test setup: the options are rejected and the environment variables are ignored. Use `--pip-pre` to allow pre-releases and `--pip-index-url` to set package indexes.
+- Remove `--install-mode`, `--module-repo`, `--use-module-in-place`, `INMANTA_INSTALL_MODE`, `INMANTA_MODULE_REPO` and `INMANTA_USE_MODULE_IN_PLACE` from your test setup: the options are rejected and the environment variables are ignored, with a warning. Use `--pip-pre` to allow pre-releases and `--pip-index-url` to set package indexes. A V1 module under test is always copied into the test project.
 
 ## v4.1.1 - ?
 
