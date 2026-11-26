@@ -2,6 +2,7 @@
 
 ## v4.1.1 - ?
 
+- A compile with the project fixture raises a `pytest_inmanta.requires_cycle.DependencyCycleException` when the requires relationships of the resources contain a cycle, also for versions of inmanta-core that only check for cycles on the server.
 - Describe where the documentation of this repo goes in the product documentation.
 
 ## v4.1.0 - 2026-11-09

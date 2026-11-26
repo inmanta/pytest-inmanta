@@ -28,6 +28,20 @@ file = std::ConfigFile(host=host, path="/tmp/test", content="1234")
         """)
 ```
 
+The compile raises a `pytest_inmanta.requires_cycle.DependencyCycleException` when the requires relationships of the
+resources contain a cycle. The `cycle` attribute of the exception holds the ids of the resources that form the cycle.
+
+```python
+def test_cycle(project):
+    with pytest.raises(DependencyCycleException) as exc_info:
+        project.compile("""
+import testmodule
+r1 = testmodule::Resource(agent="a", name="r1", key="k", value="v")
+r1.requires += r1
+        """)
+    assert exc_info.value.cycle == ["testmodule::Resource[a,name=r1]", "testmodule::Resource[a,name=r1]"]
+```
+
 The fixture also provides access to the model internals
 
 ```python

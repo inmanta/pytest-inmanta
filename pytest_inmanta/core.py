@@ -19,6 +19,7 @@ Contact: code@inmanta.com
 import importlib.metadata
 from typing import Optional
 
+import inmanta.export
 from packaging import version
 
 CORE_VERSION: Optional[version.Version]
@@ -42,3 +43,11 @@ try:
     SUPPORTS_REFERENCE = True
 except ImportError:
     SUPPORTS_REFERENCE = False
+
+CORE_DEPENDENCY_CYCLE_EXCEPTION: Optional[type[Exception]] = getattr(
+    inmanta.export, "DependencyCycleException", None
+)
+"""
+The exception raised by the exporter of inmanta-core when the requires relationships of the resources
+contain a cycle. None when the exporter of the installed inmanta-core version doesn't detect cycles.
+"""
