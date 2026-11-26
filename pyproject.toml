@@ -79,3 +79,10 @@ serialize = ["{tag}"]
 search = "tag_build = {current_version}"
 replace = "tag_build = {new_version}"
 
+[tool.inmanta-sphinx.docs]
+# where the docs of this repo go in the product documentation
+[[tool.inmanta-sphinx.docs.pages]]
+path = "README.md"
+type = "howto"
+group = "test"
+title = "Test a module with pytest-inmanta"
