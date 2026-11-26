@@ -9,6 +9,10 @@
 
 - Remove `--install-mode`, `--module-repo`, `INMANTA_INSTALL_MODE` and `INMANTA_MODULE_REPO` from your test setup: the options are rejected and the environment variables are ignored. Use `--pip-pre` to allow pre-releases and `--pip-index-url` to set package indexes.
 
+## v4.1.1 - ?
+
+- A compile with the project fixture raises a `pytest_inmanta.requires_cycle.DependencyCycleException` when the requires relationships of the resources contain a cycle, also for versions of inmanta-core that only check for cycles on the server.
+- Describe where the documentation of this repo goes in the product documentation.
 
 ## v4.1.0 - 2026-11-09
 
