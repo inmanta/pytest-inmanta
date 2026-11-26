@@ -31,3 +31,14 @@ def test_dryrun(testdir):
     result = testdir.runpytest("tests/test_dryrun.py")
 
     result.assert_outcomes(passed=8)
+
+
+def test_dynamic_modules(testdir):
+    """
+    Modules created by the tests, and the unittest module, are loaded as editable V2 modules from their tree in libs/.
+    """
+    testdir.copy_example("testhandler")
+
+    result = testdir.runpytest("tests/test_dynamic_modules.py")
+
+    result.assert_outcomes(passed=3)
