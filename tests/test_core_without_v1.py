@@ -17,8 +17,6 @@ Contact: code@inmanta.com
 """
 
 import pathlib
-import subprocess
-import sys
 
 import pytest
 
@@ -56,7 +54,9 @@ def test_v2_module_under_test_on_core_without_v1(
     assert list(tmp_path.iterdir()) == []
 
 
-def test_plugin_loads_on_core_without_v1_project_settings() -> None:
+def test_plugin_loads_on_core_without_v1_project_settings(
+    testdir: pytest.Testdir,
+) -> None:
     """
     The plugin loads on a core without InstallMode, ModuleRepoType and ModuleRepoInfo.
     """
@@ -65,4 +65,5 @@ def test_plugin_loads_on_core_without_v1_project_settings() -> None:
         " del m.InstallMode, m.ModuleRepoType, m.ModuleRepoInfo;"
         " import pytest_inmanta.plugin"
     )
-    subprocess.run([sys.executable, "-c", code], check=True)
+    result = testdir.runpython_c(code)
+    assert result.ret == 0
