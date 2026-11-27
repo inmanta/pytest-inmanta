@@ -17,8 +17,8 @@ Contact: code@inmanta.com
 """
 
 
-def test_full_deploys(testdir):
-    testdir.copy_example("testhandler")
+def test_full_deploys(testdir, copy_example_module):
+    copy_example_module("testhandler")
 
     result = testdir.runpytest("tests/test_full_deploy.py")
 

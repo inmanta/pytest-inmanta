@@ -34,88 +34,88 @@ def test_pytest_logging_import():
     assert issubclass(_pytest.logging.LogCaptureHandler, logging.StreamHandler)
 
 
-def test_basic_example(testdir):
+def test_basic_example(testdir, copy_example_module):
     """Make sure that our plugin works."""
 
-    testdir.copy_example("testmodule")
+    copy_example_module("testmodule")
 
     result = testdir.runpytest("tests/test_resource_run.py")
 
     result.assert_outcomes(passed=1)
 
 
-def test_requires_cycle(testdir):
+def test_requires_cycle(testdir, copy_example_module):
     """Ensure that a compile raises an exception when the requires relationships contain a cycle."""
 
-    testdir.copy_example("testmodule")
+    copy_example_module("testmodule")
 
     result = testdir.runpytest("tests/test_requires_cycle.py")
 
     result.assert_outcomes(passed=3)
 
 
-def test_dryrun_example(testdir):
-    testdir.copy_example("testmodule")
+def test_dryrun_example(testdir, copy_example_module):
+    copy_example_module("testmodule")
 
     result = testdir.runpytest("tests/test_dryrun.py")
 
     result.assert_outcomes(passed=1)
 
 
-def test_run_sync(testdir):
+def test_run_sync(testdir, copy_example_module):
     """Make sure that the run_sync mock works."""
 
-    testdir.copy_example("testsync")
+    copy_example_module("testsync")
 
     result = testdir.runpytest("tests/test_stuff.py")
 
     result.assert_outcomes(passed=1)
 
 
-def test_run_reflection(testdir):
+def test_run_reflection(testdir, copy_example_module):
     """Make sure that the run_sync mock works."""
 
-    testdir.copy_example("testmodule")
+    copy_example_module("testmodule")
 
     result = testdir.runpytest("tests/test_reflection.py")
 
     result.assert_outcomes(passed=1)
 
 
-def test_run_capture(testdir):
+def test_run_capture(testdir, copy_example_module):
     """Make sure that the run_sync mock works."""
 
-    testdir.copy_example("testmodule")
+    copy_example_module("testmodule")
 
     result = testdir.runpytest("tests/test_capture.py")
 
     result.assert_outcomes(passed=1)
 
 
-def test_fixture_reset(testdir):
+def test_fixture_reset(testdir, copy_example_module):
     """Make sure that the run_sync mock works."""
 
-    testdir.copy_example("testmodule")
+    copy_example_module("testmodule")
 
     result = testdir.runpytest("tests/test_reset.py")
 
     result.assert_outcomes(passed=2)
 
 
-def test_badlog(testdir):
+def test_badlog(testdir, copy_example_module):
     """Make sure that the run_sync mock works."""
 
-    testdir.copy_example("testmodule")
+    copy_example_module("testmodule")
 
     result = testdir.runpytest("tests/test_BadLog.py")
 
     result.assert_outcomes(xfailed=1)
 
 
-def test_resource_bad_id_attribute(testdir):
+def test_resource_bad_id_attribute(testdir, copy_example_module):
     """Make sure a deprecation warning is shown if an id_attribute called 'id' is found."""
 
-    testdir.copy_example("testmodule")
+    copy_example_module("testmodule")
 
     result = testdir.runpytest("tests/test_resource_bad_id_attribute.py")
 
@@ -126,20 +126,20 @@ def test_resource_bad_id_attribute(testdir):
     ) in result.stdout.str()
 
 
-def test_import(testdir):
+def test_import(testdir, copy_example_module):
     """Make sure that importing functions works."""
 
-    testdir.copy_example("testmodule")
+    copy_example_module("testmodule")
 
     result = testdir.runpytest("tests/test_import.py")
 
     result.assert_outcomes(passed=5)
 
 
-def test_project_no_plugins(testdir):
+def test_project_no_plugins(testdir, copy_example_module):
     """Make sure that using the project_no_plugins shows a warning."""
 
-    testdir.copy_example("testmodule")
+    copy_example_module("testmodule")
 
     result = testdir.runpytest("tests/test_project_no_plugins.py")
 
@@ -150,30 +150,30 @@ def test_project_no_plugins(testdir):
     ) in result.stdout.str()
 
 
-def test_state(testdir):
+def test_state(testdir, copy_example_module):
     """Make sure that importing functions works."""
 
-    testdir.copy_example("testmodule")
+    copy_example_module("testmodule")
 
     result = testdir.runpytest("tests/test_state.py")
 
     result.assert_outcomes(passed=2)
 
 
-def test_cwd(testdir):
+def test_cwd(testdir, copy_example_module):
     """Ensure that the project fixture resets the cwd after each test case."""
 
-    testdir.copy_example("testmodule")
+    copy_example_module("testmodule")
 
     result = testdir.runpytest("tests/test_cwd.py")
 
     result.assert_outcomes(passed=2)
 
 
-def test_get_resource(testdir):
+def test_get_resource(testdir, copy_example_module):
     """Make sure that importing functions works."""
 
-    testdir.copy_example("testhandler")
+    copy_example_module("testhandler")
 
     result = testdir.runpytest("tests/test_get_resource_subtle_case.py")
 

@@ -1,5 +1,5 @@
 """
-Copyright 2021 Inmanta
+Copyright 2026 Inmanta
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,6 +16,23 @@ limitations under the License.
 Contact: code@inmanta.com
 """
 
+import pytest
 
-def test_basics(project):
-    project.compile("import test_conflict_dependencies")
+from inmanta import module
+
+if not hasattr(module, "ModuleV1"):
+    pytest.skip(
+        "Skipping V1 module tests for inmanta-core versions without V1 modules.",
+        allow_module_level=True,
+    )
+
+
+def test_module_under_test_v1(testdir: pytest.Testdir) -> None:
+    """
+    Make sure that the plugin compiles a V1 module under test, with its plugins.
+    """
+    testdir.copy_example("testmodulev1")
+
+    result = testdir.runpytest("tests/test_compile.py")
+
+    result.assert_outcomes(passed=1)

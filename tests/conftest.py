@@ -22,12 +22,13 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Iterator, Optional
+from typing import Callable, Iterator, Optional
 
 import pytest
 
 import pytest_inmanta.plugin
 from inmanta import env, loader, plugins
+from pytest_inmanta import dynamic_modules
 
 # be careful not to import any core>=6 objects directly
 from pytest_inmanta.core import SUPPORTS_MODULES_V2
@@ -94,6 +95,29 @@ def deactive_venv():
         plugin_module_finder.reset()
     plugins.PluginMeta.clear()
     loader.unload_inmanta_plugins()
+
+
+@pytest.fixture
+def copy_example_module(
+    testdir: pytest.Testdir, deactive_venv: None
+) -> Callable[[str], None]:
+    """
+    Returns a function that copies the V2 module in the given directory of examples/ into the test directory and makes it
+    the module under test, without installing it. The copy is served as an editable module for the rest of the test.
+
+    Use this fixture for tests of what the plugin does with the module under test: compile, deploy, plugin state, ...
+    Install the module with pip instead for tests of how the plugin handles the installation of the module under test, such
+    as the warning for a module that is not installed in editable mode. See test_basic_example_v2.py.
+    """
+    # The global finder of the dynamic modules drops every module outside of the current test project, so the copy gets a
+    # finder of its own. The deactive_venv fixture removes it from sys.meta_path after the test.
+    finder = dynamic_modules.DynamicModuleFinder()
+
+    def copy(example: str) -> None:
+        testdir.copy_example(example)
+        finder.install(example, str(testdir.tmpdir))
+
+    return copy
 
 
 @pytest.fixture
