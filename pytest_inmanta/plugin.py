@@ -110,21 +110,22 @@ def pytest_addoption(parser: "Parser") -> None:
     TestParameterRegistry.pytest_addoption(parser)
 
 
-# Environment variables of options that pytest-inmanta no longer has, with what to do instead
-REMOVED_ENVIRONMENT_VARIABLES: typing.Mapping[str, str] = {
+# Environment variables of options that pytest-inmanta no longer has, with what to do instead, if anything
+REMOVED_ENVIRONMENT_VARIABLES: typing.Mapping[str, typing.Optional[str]] = {
     "INMANTA_MODULE_REPO": "Use --pip-index-url or PIP_INDEX_URL to set the package indexes.",
     "INMANTA_INSTALL_MODE": "Use --pip-pre or PIP_PRE to allow pre-releases.",
-    "INMANTA_USE_MODULE_IN_PLACE": "A V1 module under test is always copied into the test project.",
+    "INMANTA_USE_MODULE_IN_PLACE": None,
 }
 
 
 def pytest_configure(config: pytest.Config) -> None:
     for variable, instead in REMOVED_ENVIRONMENT_VARIABLES.items():
         if variable in os.environ:
+            message = f"The {variable} environment variable is set, but pytest-inmanta ignores it."
+            if instead is not None:
+                message += f" {instead}"
             config.issue_config_time_warning(
-                pytest.PytestConfigWarning(
-                    f"The {variable} environment variable is set, but pytest-inmanta ignores it. {instead}"
-                ),
+                pytest.PytestConfigWarning(message),
                 stacklevel=2,
             )
 
