@@ -70,6 +70,7 @@ PIP_NO_SOURCE_WARNING = (
 )
 
 import pytest_inmanta.parameters as parameters
+from pytest_inmanta import dynamic_modules
 from pytest_inmanta.core import CORE_DEPENDENCY_CYCLE_EXCEPTION
 from pytest_inmanta.handler import DATA
 from pytest_inmanta.parameters import (
@@ -846,6 +847,7 @@ class Project:
         )
         self._should_load_plugins: typing.Optional[bool] = load_plugins
         self._plugins: typing.Optional[typing.Dict[str, FunctionType]] = None
+        dynamic_modules.FINDER.use_project(project_dir)
         self._load()
         self._capsys: typing.Optional["CaptureFixture"] = None
         self.ctx: typing.Optional[HandlerContext] = None
@@ -901,6 +903,8 @@ class Project:
         """
         with open(os.path.join(self._test_project_dir, "main.cf"), "w+") as fd:
             fd.write(model)
+
+        dynamic_modules.FINDER.prune()
 
         signature_init: inspect.Signature = inspect.Signature.from_callable(
             module.Project.__init__
@@ -1259,24 +1263,8 @@ class Project:
 
     def create_module(self, name: str, initcf: str = "", initpy: str = "") -> None:
         module_dir = os.path.join(self._test_project_dir, "libs", name)
-        os.mkdir(module_dir)
-        os.mkdir(os.path.join(module_dir, "model"))
-        os.mkdir(os.path.join(module_dir, "files"))
-        os.mkdir(os.path.join(module_dir, "templates"))
-        os.mkdir(os.path.join(module_dir, "plugins"))
-
-        with open(os.path.join(module_dir, "model", "_init.cf"), "w+") as fd:
-            fd.write(initcf)
-
-        with open(os.path.join(module_dir, "plugins", "__init__.py"), "w+") as fd:
-            fd.write(initpy)
-
-        with open(os.path.join(module_dir, "module.yml"), "w+") as fd:
-            fd.write(f"""name: {name}
-version: 0.1
-license: Test License
-            """)
-
+        dynamic_modules.write_module(module_dir, name, initcf, initpy)
+        dynamic_modules.FINDER.install(name, module_dir)
         ProjectLoader.register_dynamic_module(name)
 
     def _load(self) -> None:
@@ -1449,7 +1437,9 @@ license: Test License
     def add_mock_file(self, subdir: str, name: str, content: str) -> None:
         """
         This method can be used to register mock templates or files in the virtual "unittest" module.
+        The "plugins" subdir refers to the module's plugin package, inmanta_plugins/unittest.
         """
+        subdir = dynamic_modules.v1_to_v2_subdir("unittest", subdir)
         dir_name = os.path.join(self._test_project_dir, "libs", "unittest", subdir)
         if not os.path.exists(dir_name):
             os.mkdir(dir_name)
