@@ -44,13 +44,10 @@ def test_removed_option_environment_variable_warning_without_hint(testdir, monke
 
     result = testdir.runpytest("--collect-only")
 
-    assert (
-        result.stdout.re_match_lines(
-            [
-                r".*The INMANTA_USE_MODULE_IN_PLACE environment variable is set, but pytest-inmanta ignores it\.$",
-            ]
-        )
-        is None
+    result.stdout.re_match_lines(
+        [
+            r".*The INMANTA_USE_MODULE_IN_PLACE environment variable is set, but pytest-inmanta ignores it\.$",
+        ]
     )
 
 
