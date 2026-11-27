@@ -35,6 +35,25 @@ def test_removed_option_environment_variable_warning(testdir, monkeypatch):
     ) in result.stdout.str()
 
 
+def test_removed_option_environment_variable_warning_without_hint(testdir, monkeypatch):
+    """
+    The warning for the environment variable of a removed option without a replacement only says that it is ignored.
+    """
+    testdir.copy_example("testmodulev2")
+    monkeypatch.setenv("INMANTA_USE_MODULE_IN_PLACE", "true")
+
+    result = testdir.runpytest("--collect-only")
+
+    assert (
+        result.stdout.re_match_lines(
+            [
+                r".*The INMANTA_USE_MODULE_IN_PLACE environment variable is set, but pytest-inmanta ignores it\.$",
+            ]
+        )
+        is None
+    )
+
+
 def test_not_existing_venv_option(testdir, tmpdir):
     testdir.copy_example("testmodule")
     venv_path = os.path.join(tmpdir, str(uuid.uuid4()))
