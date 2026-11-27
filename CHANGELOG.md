@@ -8,7 +8,7 @@
 
 ### Updating
 
-- Remove `--install-mode`, `--module-repo`, `--use-module-in-place`, `INMANTA_INSTALL_MODE`, `INMANTA_MODULE_REPO` and `INMANTA_USE_MODULE_IN_PLACE` from your test setup: the options are rejected and the environment variables are ignored, with a warning. Use `--pip-pre` to allow pre-releases and `--pip-index-url` to set package indexes. A V1 module under test is always copied into the test project.
+- Remove `--install-mode`, `--module-repo`, `--use-module-in-place`, `INMANTA_INSTALL_MODE`, `INMANTA_MODULE_REPO` and `INMANTA_USE_MODULE_IN_PLACE` from your test setup: the options are rejected and the environment variables are ignored, with a warning. Use `--pip-pre` to allow pre-releases and `--pip-index-url` to set package indexes.
 
 ## v4.1.1 - ?
 
