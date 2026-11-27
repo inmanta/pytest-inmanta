@@ -126,18 +126,6 @@ def test_resource_bad_id_attribute(testdir):
     ) in result.stdout.str()
 
 
-def test_release_mode_validation(testdir):
-    """Set invalid release mode"""
-
-    testdir.copy_example("testmodule")
-
-    result = testdir.runpytest("tests/test_resource_run.py", "--install_mode", "other")
-    assert (
-        "error: argument --install_mode: invalid choice: 'other' (choose from"
-        in "\n".join(result.errlines)
-    )
-
-
 def test_import(testdir):
     """Make sure that importing functions works."""
 

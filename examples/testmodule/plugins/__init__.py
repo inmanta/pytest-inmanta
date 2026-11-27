@@ -4,9 +4,6 @@ Contact: code@inmanta.com
 License: Apache 2.0
 """
 
-import os
-from pathlib import Path
-
 import inmanta_plugins.std as std
 from inmanta.agent.handler import CRUDHandler, HandlerContext, provider
 from inmanta.plugins import PluginException, plugin
@@ -68,11 +65,6 @@ class ResourceHandler(ResourceHandler):
     ) -> None:
         ctx.warning("Oh no!")
         raise Exception()
-
-
-@plugin
-def create_testfile():
-    Path(os.path.realpath(__file__)).parent.parent.joinpath("testfile").touch()
 
 
 def regular_function():

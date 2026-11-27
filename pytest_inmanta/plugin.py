@@ -31,13 +31,10 @@ import typing
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
-from itertools import chain
-from pathlib import Path
 from textwrap import dedent
 from types import FunctionType
 from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple
 
-import pydantic
 import pytest
 import yaml
 from tornado import ioloop
@@ -76,8 +73,6 @@ import pytest_inmanta.parameters as parameters
 from pytest_inmanta.core import CORE_DEPENDENCY_CYCLE_EXCEPTION
 from pytest_inmanta.handler import DATA
 from pytest_inmanta.parameters import (
-    inm_mod_in_place,
-    inm_mod_repo,
     inm_no_load_plugins,
     inm_no_strict_deps_check,
     inm_venv,
@@ -113,6 +108,26 @@ DEFAULT = object()
 
 def pytest_addoption(parser: "Parser") -> None:
     TestParameterRegistry.pytest_addoption(parser)
+
+
+# Environment variables of options that pytest-inmanta no longer has, with what to do instead, if anything
+REMOVED_ENVIRONMENT_VARIABLES: typing.Mapping[str, typing.Optional[str]] = {
+    "INMANTA_MODULE_REPO": "Use --pip-index-url or PIP_INDEX_URL to set the package indexes.",
+    "INMANTA_INSTALL_MODE": "Use --pip-pre or PIP_PRE to allow pre-releases.",
+    "INMANTA_USE_MODULE_IN_PLACE": None,
+}
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    for variable, instead in REMOVED_ENVIRONMENT_VARIABLES.items():
+        if variable in os.environ:
+            message = f"The {variable} environment variable is set, but pytest-inmanta ignores it."
+            if instead is not None:
+                message += f" {instead}"
+            config.issue_config_time_warning(
+                pytest.PytestConfigWarning(message),
+                stacklevel=2,
+            )
 
 
 def get_module() -> typing.Tuple[module.Module, str]:
@@ -222,52 +237,6 @@ def project_shared_no_plugins(
     yield project_factory(load_plugins=False)
 
 
-def get_project_repos(repo_options: typing.Sequence[str]) -> typing.Sequence[object]:
-    """
-    Returns the list of repos for the project as a serializable object. For recent versions of core, includes repo types.
-
-    :param repo_options: The desired repos as plain strings in the form "[<type>:]<url>". If type is omitted, defaults to git
-        for backwards compatibility. Explicitly passing type is only supported for inmanta versions that accept type in the
-        project metadata.
-    """
-
-    def parse_repo(repo_str: str) -> object:
-        parts: typing.Sequence[str] = repo_str.split(":", maxsplit=1)
-        if not hasattr(module, "ModuleRepoType"):
-            # compatibility mode
-            return repo_str
-        else:
-            repo_info: module.ModuleRepoInfo
-            try:
-                repo_info = module.ModuleRepoInfo(url=parts[1], type=parts[0])
-            # there might be only one part or part might be just "https"
-            except (IndexError, pydantic.ValidationError):
-                repo_info = module.ModuleRepoInfo(url=repo_str)
-            if repo_info.type == module.ModuleRepoType.package:
-                alternative_text: str = (
-                    "is now deprecated and will raise a warning during compilation."
-                    " Use the --pip-index-url <index_url> pytest option instead or set"
-                    " the %s environment variable to address these warnings. "
-                )
-                if inm_mod_repo._value_set_using == ValueSetBy.ENV_VARIABLE:
-                    LOGGER.warning(
-                        "Setting a package source through the %s environment variable "
-                        + alternative_text,
-                        inm_mod_repo.environment_variable,
-                        parameters.pip_index_url.environment_variable,
-                    )
-                elif inm_mod_repo._value_set_using == ValueSetBy.CLI:
-                    LOGGER.warning(
-                        "Setting a package source through the --module-repo <index_url> cli option with type `package` "
-                        + alternative_text,
-                        parameters.pip_index_url.environment_variable,
-                    )
-
-            return repo_info.model_dump(mode="json")
-
-    return [parse_repo(repo) for repo in repo_options]
-
-
 @pytest.fixture(scope="session")
 def project_dir() -> str:
     """
@@ -296,33 +265,11 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
     This fixture can be overwritten in specific modules to modify the project.yml file
     that should be used there (i.e. set the agent_install_dependency_modules option)
     """
-    repo_options = inm_mod_repo.resolve(request.config)
-    repos: typing.Sequence[object] = get_project_repos(
-        chain.from_iterable(
-            repo.split(" ")
-            for repo in (
-                repo_options if isinstance(repo_options, list) else [repo_options]
-            )
-        )
-    )
-
     index_urls: Sequence[str] = parameters.pip_index_url.resolve(request.config)
-    repos_urls: List[str] = [
-        repo["url"]
-        for repo in repos
-        if repo["type"] == module.ModuleRepoType.package.value
-    ]
 
     pip_use_system_config = parameters.pip_use_system_config.resolve(request.config)
     pip_pre = parameters.pip_pre.resolve(request.config)
 
-    modulepath = ["libs"]
-    in_place = inm_mod_in_place.resolve(request.config)
-    if in_place:
-        modulepath.append(str(Path(CURDIR).parent))
-
-    # Backward compat: translate repo url to index url
-    index_urls = list(index_urls) + repos_urls
     if index_urls:
         index_url = index_urls[0]
         extra_index_url = index_urls[1:]
@@ -343,9 +290,8 @@ def project_metadata(request: pytest.FixtureRequest) -> module.ProjectMetadata:
     return module.ProjectMetadata(
         name="testcase",
         description="Project for testcase",
-        modulepath=modulepath,
+        modulepath=["libs"],
         downloadpath="libs",
-        install_mode=parameters.inm_install_mode.resolve(request.config).value,
         pip=pip_config,
     )
 
@@ -383,10 +329,7 @@ def project_factory(
     with open(os.path.join(project_dir, "project.yml"), "w+") as fd:
         yaml.safe_dump(project_metadata.model_dump(mode="json"), fd)
 
-    ensure_current_module_install(
-        os.path.join(project_dir, "libs"),
-        in_place=inm_mod_in_place.resolve(request.config),
-    )
+    ensure_current_module_install(os.path.join(project_dir, "libs"))
 
     def create_project(**kwargs: object):
         load_plugins = not inm_no_load_plugins.resolve(request.config)
@@ -434,7 +377,7 @@ def project_factory(
     sys.path = _sys_path
 
 
-def ensure_current_module_install(v1_modules_dir: str, in_place: bool = False) -> None:
+def ensure_current_module_install(v1_modules_dir: str) -> None:
     """
     Ensures that the current module is installed: if it is a v1 module, adds it to the modules path, otherwise verifies that it
     has been installed.
@@ -443,13 +386,16 @@ def ensure_current_module_install(v1_modules_dir: str, in_place: bool = False) -
     mod: module.Module
     path: str
     mod, path = get_module()
-    if not hasattr(module, "ModuleV2") or isinstance(mod, module.ModuleV1):
-        if not in_place:
-            shutil.copytree(
-                path,
-                os.path.join(v1_modules_dir, mod.name),
-                ignore=shutil.ignore_patterns("__pycache__"),
-            )
+    if not hasattr(module, "ModuleV2") or (
+        # Cores without V1 support have no ModuleV1
+        hasattr(module, "ModuleV1")
+        and isinstance(mod, module.ModuleV1)
+    ):
+        shutil.copytree(
+            path,
+            os.path.join(v1_modules_dir, mod.name),
+            ignore=shutil.ignore_patterns("__pycache__"),
+        )
     else:
         installed: typing.Optional[module.ModuleV2] = module.ModuleV2Source(
             urls=[]
@@ -872,8 +818,7 @@ class DeployResultCollection:
 class Project:
     """
     This class provides a TestCase class for creating module unit tests. It uses the current module and loads required
-    modules from the provided repositories. Additional repositories can be provided by setting the INMANTA_MODULE_REPO
-    environment variable. Repositories are separated with spaces.
+    modules from the configured pip indexes.
     """
 
     def __init__(

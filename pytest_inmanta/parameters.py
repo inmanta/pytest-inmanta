@@ -18,10 +18,8 @@ Contact: code@inmanta.com
 
 import os
 
-from inmanta.module import InstallMode
 from pytest_inmanta.test_parameter import (
     BooleanTestParameter,
-    EnumTestParameter,
     ListTestParameter,
     ParameterNotSetException,
     PathTestParameter,
@@ -54,19 +52,6 @@ inm_venv = PathTestParameter(
 )
 
 
-inm_mod_in_place = BooleanTestParameter(
-    argument="--use-module-in-place",
-    environment_variable="INMANTA_USE_MODULE_IN_PLACE",
-    usage=(
-        "Tell pytest-inmanta to run with the module in place, useful for debugging. "
-        "Makes inmanta add the parent directory of your module directory to it's directory path, instead of copying your "
-        "module to a temporary libs directory. "
-        "It allows testing the current module against specific versions of dependent modules. "
-        "Using this option can speed up the tests, because the module dependencies are not downloaded multiple times."
-    ),
-    group=param_group,
-)
-
 # TODO remove this in next major version bump
 inm_no_strict_deps_check = BooleanTestParameter(
     argument="--no-strict-deps-check",
@@ -74,47 +59,6 @@ inm_no_strict_deps_check = BooleanTestParameter(
     usage="[Deprecated] No effect",
     default=False,
     group=param_group,
-)
-
-
-# This is the legacy module repo option
-# TODO remove this in next major version bump
-inm_mod_repo_legacy = ListTestParameter(
-    argument="--module_repo",
-    environment_variable="INMANTA_MODULE_REPO",
-    usage=(
-        "Location to download modules from."
-        "Can be specified multiple times to add multiple locations"
-    ),
-)
-
-inm_mod_repo = ListTestParameter(
-    argument="--module-repo",
-    environment_variable=inm_mod_repo_legacy.environment_variable,
-    usage=inm_mod_repo_legacy.usage,
-    default=["https://github.com/inmanta/"],
-    group=param_group,
-    legacy=inm_mod_repo_legacy,
-)
-
-
-# This is the legacy install mode option
-# TODO remove this in next major version bump
-inm_install_mode_legacy = EnumTestParameter(
-    argument="--install_mode",
-    environment_variable="INMANTA_INSTALL_MODE",
-    usage="Install mode for v1 modules downloaded during this test",
-    enum=InstallMode,
-)
-
-inm_install_mode = EnumTestParameter(
-    argument="--install-mode",
-    environment_variable=inm_install_mode_legacy.environment_variable,
-    usage=inm_install_mode_legacy.usage,
-    enum=inm_install_mode_legacy.enum,
-    default=InstallMode.release,
-    group=param_group,
-    legacy=inm_install_mode_legacy,
 )
 
 
