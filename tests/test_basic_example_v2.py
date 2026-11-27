@@ -52,6 +52,9 @@ def testmodulev2_venv(
 ) -> Iterator[env.VirtualEnv]:
     """
     Yields a Python environment with testmodulev2 installed in it.
+
+    Only tests of how the plugin handles the installation of the module under test install it with pip. Other tests use
+    the copy_example_module fixture.
     """
     module_dir = testdir.copy_example("testmodulev2")
     with utils.module_v2_venv(

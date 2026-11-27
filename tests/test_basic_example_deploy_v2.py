@@ -19,10 +19,10 @@ Contact: code@inmanta.com
 # Note: These tests only function when the pytest output is not modified by plugins such as pytest-sugar!
 
 
-def test_basic_example(testdir):
+def test_basic_example(testdir, copy_example_module):
     """Make sure that our plugin works."""
 
-    testdir.copy_example("testmodule")
+    copy_example_module("testmodule")
 
     result = testdir.runpytest("tests/test_resource_run_v2.py")
 

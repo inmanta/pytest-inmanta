@@ -17,17 +17,28 @@ Contact: code@inmanta.com
 """
 
 
-def test_resource(testdir):
-    testdir.copy_example("testhandler")
+def test_resource(testdir, copy_example_module):
+    copy_example_module("testhandler")
 
     result = testdir.runpytest("tests/test_handler.py")
 
     result.assert_outcomes(passed=6)
 
 
-def test_dryrun(testdir):
-    testdir.copy_example("testhandler")
+def test_dryrun(testdir, copy_example_module):
+    copy_example_module("testhandler")
 
     result = testdir.runpytest("tests/test_dryrun.py")
 
     result.assert_outcomes(passed=8)
+
+
+def test_dynamic_modules(testdir, copy_example_module):
+    """
+    Modules created by the tests, and the unittest module, are loaded as editable V2 modules from their tree in libs/.
+    """
+    copy_example_module("testhandler")
+
+    result = testdir.runpytest("tests/test_dynamic_modules.py")
+
+    result.assert_outcomes(passed=3)

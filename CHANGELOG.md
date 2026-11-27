@@ -5,10 +5,13 @@
 - Fix compatibility with versions of inmanta-core that no longer support V1 modules.
 - Remove the `--install-mode`, `--module-repo` and `--use-module-in-place` options, with the `--install_mode` and `--module_repo` spellings. They only served V1 modules.
 - Warn when the environment variable of a removed option is set.
+- Create the modules of `Project.create_module`, including the `unittest` module, as V2 modules. They are loaded as editable modules from their tree in `libs/`, without installing them in the venv.
 
 ### Updating
 
 - Remove `--install-mode`, `--module-repo`, `--use-module-in-place`, `INMANTA_INSTALL_MODE`, `INMANTA_MODULE_REPO` and `INMANTA_USE_MODULE_IN_PLACE` from your test setup: the options are rejected and the environment variables are ignored, with a warning. Use `--pip-pre` to allow pre-releases and `--pip-index-url` to set package indexes.
+- A test that writes into the tree of a dynamic module directly must use the V2 layout: the plugins of module `<name>` live in `libs/<name>/inmanta_plugins/<name>/` instead of `libs/<name>/plugins/`. `Project.add_mock_file("plugins", ...)` maps to the new location.
+- A dynamic module can't take the name of a module installed in the venv.
 
 ## v4.1.1 - ?
 
